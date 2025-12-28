@@ -72,7 +72,7 @@ export async function getMCPStrategyResponse(question: string): Promise<string> 
       throw new Error('Gemini API key is not configured. Please check your environment variables.');
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
     const result = await model.generateContent([
       { text: MCP_STRATEGY_CONTEXT },

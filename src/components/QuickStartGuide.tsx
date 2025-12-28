@@ -1,4 +1,4 @@
-import { Sparkles, MessageSquare, BarChart3, Users, Settings, FileText } from 'lucide-react';
+import { Sparkles, MessageSquare, BarChart3, Users, Settings, FileText, Upload } from 'lucide-react';
 
 interface QuickStartGuideProps {
   onStartTour: () => void;
@@ -59,6 +59,25 @@ export function QuickStartGuide({ onStartTour, isAdmin }: QuickStartGuideProps) 
         <GuideSection
           title="Team Members"
           description="View all team members in the Team Members panel. See their roles and contact information."
+        />
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <Upload className="w-5 h-5 text-cyan-400" />
+          Adding Your Data
+        </h3>
+        <GuideSection
+          title="Upload Local Files"
+          description="Drag and drop files directly into Astra from the Fuel Stage. Supports PDF, Word, Excel, PowerPoint, text, and CSV files up to 50 MB each."
+        />
+        <GuideSection
+          title="Google Drive Sync"
+          description="Connect Google Drive to automatically sync documents from your Strategy, Meetings, Financial, and Projects folders."
+        />
+        <GuideSection
+          title="AI Classification"
+          description="Astra automatically analyzes and categorizes your documents so you can ask questions about any topic."
         />
       </div>
 

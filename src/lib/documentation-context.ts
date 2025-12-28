@@ -34,6 +34,48 @@ Sample Prompt: "Summarize key decisions from this week's meetings"
 Examples: P&Ls, balance sheets, budget forecasts, expense reports, financial dashboards
 Sample Prompt: "Summarize our financials and the alignment to our core values and mission"
 
+## Local File Upload
+
+### Overview
+Upload files directly from your computer without needing Google Drive. Drag and drop or browse to upload documents that Astra can analyze immediately.
+
+### Supported File Types
+- PDF documents
+- Microsoft Word (.docx, .doc)
+- Microsoft Excel (.xlsx, .xls)
+- Microsoft PowerPoint (.pptx, .ppt)
+- Plain text files (.txt)
+- Markdown files (.md)
+- CSV files
+
+### Upload Limits
+- Maximum file size: 50 MB per file
+- Maximum batch size: 10 files at once
+
+### How to Upload Files
+1. Navigate to Mission Control > Fuel Stage
+2. Click "Upload Files" or drag and drop files onto the upload area
+3. Wait for files to upload, verify, and classify
+4. Files appear in your Documents list once processing completes
+
+### AI Classification
+After upload, Astra's AI automatically:
+- Analyzes document content
+- Determines the appropriate category (Strategy, Finance, Marketing, etc.)
+- Makes the document searchable and queryable
+
+### Security
+- Files are stored in your team's private storage bucket
+- Only team members can access uploaded files
+- Data is encrypted in transit and at rest
+- Each team's data is completely isolated
+
+### When to Use Local Upload
+- Documents not stored in Google Drive
+- Email attachments you want Astra to analyze
+- Downloaded reports from other systems
+- Files from external sources
+
 ## Scheduled Reports
 
 ### Overview

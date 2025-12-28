@@ -151,7 +151,7 @@ export async function generateGuidedPrompts(dataSnapshot: UserDataSnapshot, hasF
       throw new Error('Gemini API key is not configured');
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
     const dataSummary = buildDataSummary(dataSnapshot);
     const availableTypes = getAvailableDataTypes(dataSnapshot);

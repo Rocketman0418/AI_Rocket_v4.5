@@ -52,7 +52,7 @@ interface TabConfig {
 | visualizations | Visualizations | BarChart3 | No | No |
 | ai-specialists | AI Specialists | Brain | No | Yes |
 | team-agents | Team Agents | Bot | No | Yes |
-| team-guidance | Team Guidance | Compass | No | Yes |
+| team-guidance | Team SOPs | Compass | No | Yes |
 
 #### Tab Behavior
 - Core tabs (first 3) always visible, cannot be closed
@@ -124,7 +124,7 @@ Features to display:
 - Visualizations (Opens tab)
 - AI Specialists (Coming Soon modal)
 - Team Agents (Coming Soon modal)
-- Team Guidance (Coming Soon modal)
+- Team SOPs (Coming Soon modal)
 
 **Section 5: Team Dashboard (Coming Soon)**
 - Placeholder section with "Coming Soon" badge

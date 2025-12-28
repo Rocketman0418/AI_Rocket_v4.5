@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { DollarSign, TrendingUp, Users, Calculator, Zap, Crown, Target, AlertCircle, CheckCircle, MessageSquare, Mail, Bell, ArrowRight, Timer, Rocket, Gift, Star, X, Sparkles, FileText, BarChart3, Bot, Briefcase, Shield, Beaker } from 'lucide-react';
+import { DollarSign, TrendingUp, Users, Calculator, Zap, Crown, Target, AlertCircle, CheckCircle, MessageSquare, ArrowRight, Timer, Rocket, Star, X, Sparkles, FileText, BarChart3, Bot, Briefcase, Shield, Beaker, Layout, BookOpen } from 'lucide-react';
 
 type StrategyType = 'trial' | 'freemium';
 
@@ -310,15 +310,7 @@ const PlanOverview: React.FC<{
               </div>
               <div className="flex items-start gap-2">
                 <X className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                <span className="text-gray-500">No Email Control</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <X className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                <span className="text-gray-500">No Custom Agents</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <X className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                <span className="text-gray-500">No AI Jobs</span>
+                <span className="text-gray-500">No AI Specialists</span>
               </div>
             </div>
           </div>
@@ -366,16 +358,20 @@ const PlanOverview: React.FC<{
                 <span>$29/Month Per Additional Member</span>
               </div>
               <div className="flex items-start gap-2">
-                <Mail className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <span>Email Control Features</span>
+                <Layout className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Create Up to 3 Team Dashboards</span>
               </div>
               <div className="flex items-start gap-2">
                 <Bot className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <span>Create Up to 3 Custom Agents</span>
+                <span>Create Up to 3 Team Agents</span>
               </div>
               <div className="flex items-start gap-2">
                 <Briefcase className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <span>Create Up to 3 AI Jobs</span>
+                <span>Create Up to 3 AI Specialists</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <BookOpen className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Create Up to 3 Team SOPs</span>
               </div>
             </div>
           </div>
@@ -416,11 +412,19 @@ const PlanOverview: React.FC<{
               </div>
               <div className="flex items-start gap-2">
                 <Briefcase className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <span>Unlimited AI Jobs</span>
+                <span>Unlimited AI Specialists</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Layout className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Unlimited Team Dashboards</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <BookOpen className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Unlimited Team SOPs</span>
               </div>
               <div className="flex items-start gap-2">
                 <Sparkles className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <span>Create with Astra (Build Custom Software)</span>
+                <span>Build with Astra (Create Custom Software)</span>
               </div>
               <div className="flex items-start gap-2">
                 <Beaker className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -805,21 +809,28 @@ const ComprehensiveComparison: React.FC<any> = ({ formatCurrency, formatNumber }
                 highlight="plus"
               />
               <ComparisonRow
-                feature="Email Control"
-                free="No"
-                pro="Yes"
-                plus="Yes"
-                highlight="pro"
-              />
-              <ComparisonRow
-                feature="Custom Agents"
+                feature="Team Dashboards"
                 free="None"
                 pro="Up to 3"
                 plus="Unlimited"
                 highlight="plus"
               />
               <ComparisonRow
-                feature="AI Jobs"
+                feature="Team Agents"
+                free="None"
+                pro="Up to 3"
+                plus="Unlimited"
+                highlight="plus"
+              />
+              <ComparisonRow
+                feature="AI Specialists"
+                free="None"
+                pro="Up to 3"
+                plus="Unlimited"
+                highlight="plus"
+              />
+              <ComparisonRow
+                feature="Team SOPs"
                 free="None"
                 pro="Up to 3"
                 plus="Unlimited"

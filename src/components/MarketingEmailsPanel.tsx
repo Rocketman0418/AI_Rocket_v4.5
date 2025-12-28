@@ -1,18 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Send, Clock, CheckCircle, Eye, Edit, Copy, Trash2 } from 'lucide-react';
+import { Plus, Send, Clock, CheckCircle, Eye, Edit, Copy, Trash2, RefreshCw, Pause, Play, History } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { MarketingEmailComposer } from './MarketingEmailComposer';
 
 interface MarketingEmail {
   id: string;
   subject: string;
-  status: 'draft' | 'scheduled' | 'sending' | 'sent';
+  status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'recurring';
   scheduled_for: string | null;
   sent_at: string | null;
   total_recipients: number;
   successful_sends: number;
   failed_sends: number;
   created_at: string;
+  is_recurring: boolean;
+  frequency: string | null;
+  next_run_at: string | null;
+  last_run_at: string | null;
+  run_count: number;
+  parent_recurring_id: string | null;
 }
 
 export function MarketingEmailsPanel() {
@@ -114,6 +120,8 @@ export function MarketingEmailsPanel() {
         return <Send className="w-4 h-4" />;
       case 'sent':
         return <CheckCircle className="w-4 h-4" />;
+      case 'recurring':
+        return <RefreshCw className="w-4 h-4" />;
       default:
         return null;
     }
@@ -129,8 +137,55 @@ export function MarketingEmailsPanel() {
         return 'text-blue-400';
       case 'sent':
         return 'text-green-400';
+      case 'recurring':
+        return 'text-cyan-400';
       default:
         return 'text-gray-400';
+    }
+  };
+
+  const handlePauseRecurring = async (id: string) => {
+    try {
+      await supabase
+        .from('marketing_emails')
+        .update({ status: 'draft', is_recurring: false })
+        .eq('id', id);
+      await loadEmails();
+    } catch (error) {
+      console.error('Error pausing recurring email:', error);
+    }
+  };
+
+  const handleResumeRecurring = async (email: MarketingEmail) => {
+    try {
+      const nextRunAt = new Date();
+      switch (email.frequency) {
+        case 'daily':
+          nextRunAt.setDate(nextRunAt.getDate() + 1);
+          break;
+        case 'weekly':
+          nextRunAt.setDate(nextRunAt.getDate() + 7);
+          break;
+        case 'biweekly':
+          nextRunAt.setDate(nextRunAt.getDate() + 14);
+          break;
+        case 'monthly':
+          nextRunAt.setMonth(nextRunAt.getMonth() + 1);
+          break;
+      }
+      nextRunAt.setHours(9, 0, 0, 0);
+
+      await supabase
+        .from('marketing_emails')
+        .update({
+          status: 'recurring',
+          is_recurring: true,
+          next_run_at: nextRunAt.toISOString()
+        })
+        .eq('id', email.id);
+      await loadEmails();
+    } catch (error) {
+      console.error('Error resuming recurring email:', error);
     }
   };
 
@@ -183,7 +238,7 @@ export function MarketingEmailsPanel() {
       </div>
 
       <div className="flex items-center gap-2 bg-slate-800 rounded-lg p-1">
-        {['all', 'draft', 'scheduled', 'sent'].map(status => (
+        {['all', 'recurring', 'draft', 'scheduled', 'sent'].map(status => (
           <button
             key={status}
             onClick={() => setFilterStatus(status)}
@@ -191,8 +246,9 @@ export function MarketingEmailsPanel() {
               filterStatus === status
                 ? 'bg-slate-700 text-white'
                 : 'text-gray-400 hover:text-white'
-            }`}
+            } ${status === 'recurring' ? 'flex items-center gap-1.5' : ''}`}
           >
+            {status === 'recurring' && <RefreshCw className="w-3.5 h-3.5" />}
             {status}
           </button>
         ))}
@@ -230,10 +286,22 @@ export function MarketingEmailsPanel() {
                 </td>
               </tr>
             ) : (
-              filteredEmails.map((email) => (
-                <tr key={email.id} className="hover:bg-slate-700/50 transition-colors">
+              filteredEmails.filter(e => !e.parent_recurring_id).map((email) => (
+                <tr key={email.id} className={`hover:bg-slate-700/50 transition-colors ${email.is_recurring ? 'bg-cyan-900/10' : ''}`}>
                   <td className="px-6 py-4">
                     <div className="text-white font-medium">{email.subject}</div>
+                    {email.is_recurring && email.frequency && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs px-2 py-0.5 bg-cyan-900/50 text-cyan-300 rounded-full capitalize">
+                          {email.frequency}
+                        </span>
+                        {email.run_count > 0 && (
+                          <span className="text-xs text-gray-400">
+                            {email.run_count} sent
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <div className={`flex items-center gap-2 ${getStatusColor(email.status)}`}>
@@ -246,21 +314,33 @@ export function MarketingEmailsPanel() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-gray-300">
-                      {getSuccessRate(email)}
-                      {email.status === 'sent' && email.failed_sends > 0 && (
-                        <span className="text-red-400 text-sm ml-2">
-                          ({email.failed_sends} failed)
-                        </span>
+                      {email.is_recurring ? (
+                        email.run_count > 0 ? `${email.run_count} runs` : 'Not run yet'
+                      ) : (
+                        <>
+                          {getSuccessRate(email)}
+                          {email.status === 'sent' && email.failed_sends > 0 && (
+                            <span className="text-red-400 text-sm ml-2">
+                              ({email.failed_sends} failed)
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-gray-300">
-                    {email.status === 'scheduled'
-                      ? formatDate(email.scheduled_for)
-                      : email.status === 'sent'
-                      ? formatDate(email.sent_at)
-                      : formatDate(email.created_at)
-                    }
+                    {email.is_recurring && email.next_run_at ? (
+                      <div>
+                        <div className="text-xs text-gray-500">Next:</div>
+                        <div>{formatDate(email.next_run_at)}</div>
+                      </div>
+                    ) : email.status === 'scheduled' ? (
+                      formatDate(email.scheduled_for)
+                    ) : email.status === 'sent' ? (
+                      formatDate(email.sent_at)
+                    ) : (
+                      formatDate(email.created_at)
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
@@ -274,6 +354,24 @@ export function MarketingEmailsPanel() {
                       >
                         <Eye className="w-4 h-4" />
                       </button>
+                      {email.status === 'recurring' && (
+                        <button
+                          onClick={() => handlePauseRecurring(email.id)}
+                          className="p-2 text-gray-400 hover:text-yellow-400 transition-colors"
+                          title="Pause Recurring"
+                        >
+                          <Pause className="w-4 h-4" />
+                        </button>
+                      )}
+                      {email.status === 'draft' && email.frequency && (
+                        <button
+                          onClick={() => handleResumeRecurring(email)}
+                          className="p-2 text-gray-400 hover:text-green-400 transition-colors"
+                          title="Resume Recurring"
+                        >
+                          <Play className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDuplicate(email)}
                         className="p-2 text-gray-400 hover:text-purple-400 transition-colors"
@@ -281,7 +379,7 @@ export function MarketingEmailsPanel() {
                       >
                         <Copy className="w-4 h-4" />
                       </button>
-                      {email.status === 'draft' && (
+                      {(email.status === 'draft' || email.status === 'recurring') && (
                         <button
                           onClick={() => handleDelete(email.id)}
                           className="p-2 text-gray-400 hover:text-red-400 transition-colors"

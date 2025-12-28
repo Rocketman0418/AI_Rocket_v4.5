@@ -99,7 +99,7 @@ export const ManualReportBoosterModal: React.FC<ManualReportBoosterModalProps> =
       };
 
       // Generate AI suggestions
-      const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
       // Build category summary for AI prompt
       const categoryLines = Object.entries(dataSnapshot.categories)

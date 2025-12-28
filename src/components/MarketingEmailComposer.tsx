@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, Eye, Code, Send, Clock, Mail, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Sparkles, Eye, Code, Send, Clock, Mail, Users, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { getFeatureContext } from '../lib/marketing-context';
@@ -20,6 +20,8 @@ interface EmailData {
   };
   scheduled_for: string | null;
   context_type?: 'full' | 'core' | 'benefits' | 'useCases';
+  is_recurring?: boolean;
+  frequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly';
 }
 
 const INITIAL_DATA: EmailData = {
@@ -29,8 +31,17 @@ const INITIAL_DATA: EmailData = {
   html_content: '',
   recipient_filter: { type: 'all' },
   scheduled_for: null,
-  context_type: 'full'
+  context_type: 'full',
+  is_recurring: false,
+  frequency: 'weekly'
 };
+
+const FREQUENCY_OPTIONS = [
+  { value: 'daily', label: 'Daily', description: 'Every day' },
+  { value: 'weekly', label: 'Weekly', description: 'Every 7 days' },
+  { value: 'biweekly', label: 'Bi-weekly', description: 'Every 14 days' },
+  { value: 'monthly', label: 'Monthly', description: 'Every 30 days' }
+] as const;
 
 export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailComposerProps) {
   const { user } = useAuth();
@@ -43,7 +54,7 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
   const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0 });
   const [allUsers, setAllUsers] = useState<Array<{ id: string; email: string; name: string }>>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
-  const [scheduleType, setScheduleType] = useState<'immediate' | 'scheduled'>('immediate');
+  const [scheduleType, setScheduleType] = useState<'immediate' | 'scheduled' | 'recurring'>('immediate');
   const [draftId, setDraftId] = useState<string | null>(emailId);
   const [previewRequestCount, setPreviewRequestCount] = useState(0);
 
@@ -81,9 +92,15 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
           special_notes: data.special_notes,
           html_content: data.html_content,
           recipient_filter: data.recipient_filter,
-          scheduled_for: data.scheduled_for
+          scheduled_for: data.scheduled_for,
+          context_type: data.context_type || 'full',
+          is_recurring: data.is_recurring || false,
+          frequency: data.frequency || 'weekly'
         });
-        if (data.html_content) {
+        if (data.is_recurring) {
+          setScheduleType('recurring');
+          setStep(3);
+        } else if (data.html_content) {
           setStep(2);
         }
       }
@@ -173,6 +190,7 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
         html_content: emailData.html_content,
         recipient_filter: emailData.recipient_filter,
         scheduled_for: emailData.scheduled_for,
+        context_type: emailData.context_type,
         status: 'draft'
       };
 
@@ -196,6 +214,73 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
       }
     } catch (error) {
       console.error('Error saving draft:', error);
+    }
+  };
+
+  const calculateNextRunAt = (frequency: string): string => {
+    const now = new Date();
+    switch (frequency) {
+      case 'daily':
+        now.setDate(now.getDate() + 1);
+        break;
+      case 'weekly':
+        now.setDate(now.getDate() + 7);
+        break;
+      case 'biweekly':
+        now.setDate(now.getDate() + 14);
+        break;
+      case 'monthly':
+        now.setMonth(now.getMonth() + 1);
+        break;
+    }
+    now.setHours(9, 0, 0, 0);
+    return now.toISOString();
+  };
+
+  const saveRecurringEmail = async () => {
+    if (!confirm(`Set up recurring ${emailData.frequency} email to ${getRecipientCount()} recipients?`)) {
+      return;
+    }
+
+    setSending(true);
+    try {
+      const nextRunAt = calculateNextRunAt(emailData.frequency || 'weekly');
+
+      const payload = {
+        subject: emailData.subject,
+        content_description: emailData.content_description,
+        special_notes: emailData.special_notes,
+        html_content: '',
+        recipient_filter: emailData.recipient_filter,
+        context_type: emailData.context_type,
+        status: 'recurring',
+        is_recurring: true,
+        frequency: emailData.frequency,
+        next_run_at: nextRunAt,
+        run_count: 0,
+        created_by: user?.id
+      };
+
+      if (draftId) {
+        const { error } = await supabase
+          .from('marketing_emails')
+          .update(payload)
+          .eq('id', draftId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('marketing_emails')
+          .insert(payload);
+        if (error) throw error;
+      }
+
+      alert(`Recurring email set up successfully! First email will be sent ${emailData.frequency === 'daily' ? 'tomorrow' : `in ${emailData.frequency === 'weekly' ? '7' : emailData.frequency === 'biweekly' ? '14' : '30'} days`} at 9:00 AM.`);
+      onClose();
+    } catch (error) {
+      console.error('Error saving recurring email:', error);
+      alert('Failed to set up recurring email');
+    } finally {
+      setSending(false);
     }
   };
 
@@ -643,6 +728,71 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
                     />
                   </div>
                 )}
+
+                <label className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-900/40 to-cyan-900/40 border border-blue-700/50 rounded-lg cursor-pointer hover:from-blue-900/60 hover:to-cyan-900/60 transition-colors">
+                  <input
+                    type="radio"
+                    checked={scheduleType === 'recurring'}
+                    onChange={() => setScheduleType('recurring')}
+                    className="w-4 h-4"
+                  />
+                  <RefreshCw className="w-5 h-5 text-blue-400" />
+                  <div className="flex-1">
+                    <div className="text-white font-medium">Recurring Email</div>
+                    <div className="text-sm text-gray-400">Generate fresh content and send automatically on a schedule</div>
+                  </div>
+                </label>
+
+                {scheduleType === 'recurring' && (
+                  <div className="ml-7 mt-3 space-y-4">
+                    <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                      <label className="block text-sm font-medium text-gray-300 mb-3">
+                        Send Frequency
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {FREQUENCY_OPTIONS.map((option) => (
+                          <label
+                            key={option.value}
+                            className={`flex flex-col p-3 rounded-lg cursor-pointer transition-all ${
+                              emailData.frequency === option.value
+                                ? 'bg-blue-600/30 border-2 border-blue-500'
+                                : 'bg-slate-800 border-2 border-transparent hover:bg-slate-700'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="frequency"
+                              value={option.value}
+                              checked={emailData.frequency === option.value}
+                              onChange={(e) => setEmailData(prev => ({
+                                ...prev,
+                                frequency: e.target.value as any
+                              }))}
+                              className="sr-only"
+                            />
+                            <span className="text-white font-medium">{option.label}</span>
+                            <span className="text-xs text-gray-400">{option.description}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-blue-900/20 border border-blue-800 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <Sparkles className="w-5 h-5 text-blue-400 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-blue-200 font-medium">How Recurring Emails Work</p>
+                          <ul className="text-sm text-gray-400 mt-2 space-y-1 list-disc list-inside">
+                            <li>Fresh email content is generated each time using AI</li>
+                            <li>Your content description serves as the template</li>
+                            <li>Emails are sent at 9:00 AM on the scheduled day</li>
+                            <li>You can pause or edit the recurring email anytime</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="bg-slate-800 rounded-lg p-6 space-y-3">
@@ -657,11 +807,19 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
                     <span className="text-white font-medium">{getRecipientCount()} users</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Send Time:</span>
+                    <span className="text-gray-400">Send Type:</span>
                     <span className="text-white font-medium">
-                      {scheduleType === 'immediate' ? 'Immediately' : 'Scheduled'}
+                      {scheduleType === 'immediate' ? 'Immediately' : scheduleType === 'scheduled' ? 'Scheduled' : `Recurring (${emailData.frequency})`}
                     </span>
                   </div>
+                  {scheduleType === 'recurring' && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">First Send:</span>
+                      <span className="text-white font-medium">
+                        {new Date(calculateNextRunAt(emailData.frequency || 'weekly')).toLocaleDateString()} at 9:00 AM
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -680,14 +838,24 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
 
           <div className="flex items-center gap-3">
             {step === 1 && (
-              <button
-                onClick={generateEmail}
-                disabled={!canProceedFromStep1 || generating}
-                className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                <Sparkles className="w-5 h-5" />
-                {generating ? 'Generating...' : 'Generate Preview'}
-              </button>
+              <>
+                <button
+                  onClick={() => setStep(3)}
+                  disabled={!canProceedFromStep1}
+                  className="flex items-center gap-2 px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                  Set Up as Recurring
+                </button>
+                <button
+                  onClick={generateEmail}
+                  disabled={!canProceedFromStep1 || generating}
+                  className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  {generating ? 'Generating...' : 'Generate Preview'}
+                </button>
+              </>
             )}
 
             {step === 2 && (
@@ -714,11 +882,20 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
 
             {step === 4 && (
               <button
-                onClick={sendEmail}
+                onClick={scheduleType === 'recurring' ? saveRecurringEmail : sendEmail}
                 disabled={sending}
-                className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg hover:from-green-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className={`flex items-center gap-2 px-6 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all ${
+                  scheduleType === 'recurring'
+                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
+                    : 'bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600'
+                }`}
               >
-                {scheduleType === 'scheduled' ? (
+                {scheduleType === 'recurring' ? (
+                  <>
+                    <RefreshCw className="w-5 h-5" />
+                    {sending ? 'Setting Up...' : 'Set Up Recurring Email'}
+                  </>
+                ) : scheduleType === 'scheduled' ? (
                   <>
                     <Clock className="w-5 h-5" />
                     {sending ? 'Scheduling...' : 'Schedule Email'}

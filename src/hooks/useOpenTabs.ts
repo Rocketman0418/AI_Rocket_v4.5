@@ -82,8 +82,8 @@ export const TAB_CONFIGS: TabConfig[] = [
   },
   {
     id: 'team-guidance',
-    label: 'Team Guidance',
-    shortLabel: 'Guidance',
+    label: 'Team SOPs',
+    shortLabel: 'SOPs',
     icon: 'Compass',
     isCore: false,
     isComingSoon: true,

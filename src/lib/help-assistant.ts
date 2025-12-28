@@ -25,7 +25,16 @@ CORE FEATURES:
    - Admins can also set up automated scheduled reports (daily, weekly, monthly) from Team Settings
    - Reports provide regular insights and summaries
 
-4. Google Drive Integration:
+4. Local File Upload:
+   - Upload files directly from your computer without Google Drive
+   - Drag and drop or browse to select files
+   - Supports: PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), text (.txt, .md), CSV
+   - Up to 50 MB per file, 10 files per batch
+   - AI automatically categorizes documents after upload
+   - Files are securely stored in your team's private storage
+   - Access via Mission Control > Fuel Stage > Upload Files button
+
+5. Google Drive Integration:
    - Admins can connect Google Drive to sync documents
    - Astra analyzes synced documents to answer questions
    - Team members can view synced documents but only admins can delete them
@@ -48,13 +57,13 @@ CORE FEATURES:
    - Disconnecting Drive does NOT delete synced data - all existing documents remain safe
    - When reconnecting, Astra recognizes existing data and only syncs new/updated files
 
-5. Team Collaboration:
+6. Team Collaboration:
    - Real-time chat synchronization
    - @mentions with notifications
    - Team members panel shows all users
    - Notifications for mentions and important activity
 
-6. Launch Preparation Guide (Mission Control):
+7. Launch Preparation Guide (Mission Control):
    - Accessed via "Mission Control" in the left sidebar
    - Three stages to prepare your team: Fuel, Boosters, and Guidance
    - Earn Launch Points by completing tasks in each stage
@@ -62,7 +71,9 @@ CORE FEATURES:
 
    FUEL STAGE:
    - Add data to power your AI
-   - Connect Google Drive and add documents to Strategy, Meetings, Financial, and Projects folders
+   - Connect Google Drive OR upload files directly from your computer
+   - Add documents to Strategy, Meetings, Financial, and Projects folders
+   - Upload local files: drag-and-drop PDFs, Word, Excel, PowerPoint, text files
    - 5 levels: Level 1 (1 document) to Level 5 (10 strategy, 10 projects, 100 meetings, 10 financial)
    - Points: 10-50 per level
 
@@ -106,8 +117,9 @@ MEMBER CAPABILITIES:
 - Chat with Astra in Private and Team modes
 - Create and save visualizations using the "Create Visualizations" button
 - Create, manage, edit, and delete their own reports
+- Upload local files (PDF, Word, Excel, PowerPoint, text, CSV)
 - View all team reports including scheduled reports
-- View synced documents
+- View synced and uploaded documents
 - Collaborate in Team mode
 - Update personal profile and preferences
 
@@ -126,7 +138,7 @@ export async function getHelpResponse(question: string): Promise<string> {
       throw new Error('Gemini API key is not configured. Please check your environment variables.');
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
     const result = await model.generateContent([
       { text: APP_HELP_CONTEXT },

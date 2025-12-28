@@ -18,6 +18,7 @@ import { MarketingLogo } from './components/MarketingLogo';
 import { UserMetricsDashboard } from './components/UserMetricsDashboard';
 import { ProtectedMetricsRoute } from './components/ProtectedMetricsRoute';
 import { PricingStrategyPage } from './components/PricingStrategyPage';
+import { PlansPage } from './components/PlansPage';
 import { MCPStrategyPage } from './components/MCPStrategyPage';
 import { DataStrategyPage } from './components/DataStrategyPage';
 import { PasswordResetPage } from './components/PasswordResetPage';
@@ -285,6 +286,9 @@ const AppContent: React.FC = () => {
         path="/data-strategy"
         element={<DataStrategyPage />}
       />
+
+      {/* Plans Page - Public Route */}
+      <Route path="/plans" element={<PlansPage />} />
 
       {/* Build Agents - Protected Route */}
       <Route

@@ -71,9 +71,18 @@ Deno.serve(async (req: Request) => {
     );
 
     const results = [];
+    const STAGGER_DELAY_MS = 60000; // 60 seconds between reports to avoid TPM rate limits
 
-    // Process each report
-    for (const report of reportsToRun) {
+    // Process each report with staggering
+    for (let i = 0; i < reportsToRun.length; i++) {
+      const report = reportsToRun[i];
+
+      // Add delay between reports (skip delay for first report)
+      if (i > 0) {
+        console.log(`⏳ Waiting ${STAGGER_DELAY_MS / 1000} seconds before next report to avoid rate limits...`);
+        await new Promise(resolve => setTimeout(resolve, STAGGER_DELAY_MS));
+      }
+
       try {
         console.log(`\n🚀 Running report: ${report.title} (${report.id})`);
 

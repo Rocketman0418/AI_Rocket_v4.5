@@ -154,6 +154,66 @@ export const PRODUCT_FEATURES = {
         "Visual progression indicators and milestone celebrations",
         "Motivation to explore advanced features and maintain engagement"
       ]
+    },
+    {
+      name: "Team SOPs (Coming Soon)",
+      description: "Create guidance documents and playbooks that help your team stay aligned and make better decisions",
+      icon: "🧭",
+      benefits: [
+        "Build standard operating procedures for consistent team execution",
+        "Create playbooks for common business scenarios",
+        "AI-assisted document generation based on your business context",
+        "Keep your team aligned with centralized guidance documents",
+        "Version history and collaborative editing"
+      ]
+    },
+    {
+      name: "Agent Builder (Coming Soon)",
+      description: "Design and deploy custom AI Agents to complete tasks autonomously using visual workflow builders",
+      icon: "🔧",
+      benefits: [
+        "Visual drag-and-drop workflow designer powered by n8n",
+        "No coding required to build powerful automations",
+        "Connect to 400+ apps and services",
+        "Deploy agents that work 24/7 on your behalf",
+        "Unlocks at Boosters Level 5 in Launch Preparation"
+      ]
+    },
+    {
+      name: "Team Dashboard (Coming Soon)",
+      description: "Real-time AI-updated team insights dashboard showing the metrics that matter most to your business",
+      icon: "📊",
+      benefits: [
+        "Live team activity and engagement metrics",
+        "AI-generated insights updated in real-time",
+        "Customizable widgets for your key business metrics",
+        "Track team performance and collaboration patterns",
+        "Instant visibility into what matters most"
+      ]
+    },
+    {
+      name: "AI Specialists (Coming Soon)",
+      description: "Create specialized AI team members like Business Coach, Finance Director, or Marketing Manager",
+      icon: "👤",
+      benefits: [
+        "Role-based AI personas with domain expertise",
+        "Each specialist has deep knowledge in their field",
+        "Available 24/7 to answer questions and provide guidance",
+        "Trained on your business data for personalized advice",
+        "Unlocks at Boosters Level 5 in Launch Preparation"
+      ]
+    },
+    {
+      name: "Team Agents (Coming Soon)",
+      description: "Deploy task-specific AI agents that handle specific workflows autonomously",
+      icon: "🤖",
+      benefits: [
+        "Workflow-focused agents for specific tasks",
+        "Meeting summarization, document processing, data extraction",
+        "Different from AI Specialists - agents focus on tasks, specialists on roles",
+        "Automate repetitive business processes",
+        "Scale your operations without scaling headcount"
+      ]
     }
   ],
 

@@ -78,7 +78,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('receive_report_emails, name')
+      .select('receive_report_emails, name, team_id, teams(name)')
       .eq('email', userEmail)
       .maybeSingle();
 
@@ -97,6 +97,10 @@ Deno.serve(async (req: Request) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const teamName = userData?.teams?.name || '';
+    const displayReportTitle = teamName ? `${teamName} ${reportTitle}` : reportTitle;
+    console.log(`Team name: ${teamName}, Display title: ${displayReportTitle}`);
 
     const { data: deliveryRecord, error: deliveryError } = await supabase
       .from('report_email_deliveries')
@@ -120,7 +124,7 @@ Deno.serve(async (req: Request) => {
 
     console.log('Generating email content with Gemini...');
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
     const emailTemplateStyles = `
       body {
@@ -291,7 +295,7 @@ Deno.serve(async (req: Request) => {
 
     const prompt = `You are Astra, an AI assistant. Generate an HTML email that comprehensively summarizes THIS ENTIRE REPORT.
 
-REPORT TITLE: ${reportTitle}
+REPORT TITLE: ${displayReportTitle}
 REPORT TYPE: ${isTeamReport ? 'Team Report' : 'Personal Report'} - ${reportFrequency}
 RECIPIENT: ${firstName}
 
@@ -304,7 +308,7 @@ YOUR TASK: Create a VISUALLY RICH email that covers the entire report with more 
 REQUIRED EMAIL STRUCTURE:
 
 1. GREETING (1-2 sentences):
-   <p class="greeting">Hi ${firstName}! Your ${reportTitle} is ready</p>
+   <p class="greeting">Hi ${firstName}! Your ${displayReportTitle} is ready</p>
    <p class="intro-text">Brief friendly intro (1-2 sentences max)...</p>
 
 2. "IN THIS REPORT" - LIMIT TO 3-5 MAIN SECTIONS ONLY (not every single point):
@@ -411,7 +415,7 @@ ${emailTemplateStyles}
         </table>
       </div>
       <div class="header">
-        <h1>${reportTitle}</h1>
+        <h1>${displayReportTitle}</h1>
         <p class="tagline">Your ${reportFrequency} report from Astra</p>
       </div>
       <div class="content">
@@ -442,7 +446,7 @@ Return ONLY the complete HTML code. No markdown formatting or code blocks.`;
         <div class="metadata-title">Report Details</div>
         <div class="metadata-row">
           <div class="metadata-label">Report Name</div>
-          <div class="metadata-value">${reportTitle}</div>
+          <div class="metadata-value">${displayReportTitle}</div>
         </div>
         <div class="metadata-row">
           <div class="metadata-label">Report Type</div>
@@ -465,7 +469,7 @@ Return ONLY the complete HTML code. No markdown formatting or code blocks.`;
     console.log('Email content generated');
 
     console.log(`Sending email to ${userEmail}...`);
-    const emailSubject = `Your ${reportTitle} is Ready`;
+    const emailSubject = `${displayReportTitle} is Ready`;
 
     const resendResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",

@@ -85,6 +85,18 @@ Create specialized AI team members like Business Coach, Finance Director, Market
 - **Color**: Teal
 - **Status**: Coming Soon
 
+### 13. Team SOPs
+Create guidance documents and playbooks that help your team stay aligned and make better decisions. Standard Operating Procedures ensure consistency across your organization.
+- **Icon**: Compass
+- **Color**: Orange
+- **Status**: Coming Soon
+
+### 14. Team Agents
+Deploy task-specific AI agents that handle specific workflows like meeting summarization, document processing, or data extraction. Unlike AI Specialists (role-based), Team Agents are workflow-focused.
+- **Icon**: Bot
+- **Color**: Cyan
+- **Status**: Coming Soon
+
 ---
 
 *For detailed product information, see ASTRA_INTELLIGENCE_PRODUCT_OVERVIEW.md*

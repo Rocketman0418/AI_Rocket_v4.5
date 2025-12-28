@@ -133,7 +133,37 @@ export const helpFAQ: FAQItem[] = [
   {
     category: 'data-sync',
     question: 'What is AI Data Sync?',
-    answer: 'AI Data Sync is the process of connecting your Google Drive folders to Astra Intelligence. Once synced, Astra can search, analyze, and provide insights from your documents. Your data is securely processed and stored, allowing Astra to answer questions about your business information.'
+    answer: 'AI Data Sync is the process of connecting your data sources to Astra Intelligence. You can sync Google Drive folders or upload files directly from your computer. Once synced, Astra can search, analyze, and provide insights from your documents. Your data is securely processed and stored, allowing Astra to answer questions about your business information.'
+  },
+  {
+    category: 'data-sync',
+    question: 'How do I upload local files?',
+    answer: 'In the Fuel Stage of Mission Control, click the "Upload Files" button or drag and drop files directly onto the upload area. You can upload PDFs, Word documents (.docx), Excel spreadsheets (.xlsx), PowerPoint presentations (.pptx), text files (.txt, .md), and CSV files. Files are limited to 50 MB each, with up to 10 files per batch.'
+  },
+  {
+    category: 'data-sync',
+    question: 'What file types can I upload locally?',
+    answer: 'Astra supports local uploads of: PDF files, Microsoft Word documents (.docx, .doc), Excel spreadsheets (.xlsx, .xls), PowerPoint presentations (.pptx, .ppt), plain text files (.txt), Markdown files (.md), and CSV files. Each file can be up to 50 MB, and you can upload up to 10 files at a time.'
+  },
+  {
+    category: 'data-sync',
+    question: 'What happens after I upload a file?',
+    answer: 'After uploading, Astra processes your file through several stages: uploading (transferring the file), verifying (checking the file is valid), and classifying (AI analyzes the content to determine the category like Strategy, Finance, Marketing, etc.). Once complete, the file appears in your Documents list and Astra can answer questions about it.'
+  },
+  {
+    category: 'data-sync',
+    question: 'Are my uploaded files secure?',
+    answer: 'Yes! All uploaded files are securely stored in your team\'s private storage bucket. Only your team members can access them. Files are encrypted in transit and at rest, and each team\'s data is completely isolated from other teams.'
+  },
+  {
+    category: 'data-sync',
+    question: 'Can I delete uploaded files?',
+    answer: 'Yes, admins can delete uploaded files from the Documents list in the Fuel Stage. Click on the Documents card to see all synced and uploaded documents, then use the delete option to remove any file. Deleted files are permanently removed from Astra\'s database.'
+  },
+  {
+    category: 'data-sync',
+    question: 'Do I need Google Drive to use Astra?',
+    answer: 'No! While Google Drive integration provides powerful automatic syncing, you can also upload files directly from your computer using the Local File Upload feature. This is great for documents that aren\'t in Google Drive, such as email attachments, downloaded reports, or files from other systems.'
   },
   {
     category: 'data-sync',
