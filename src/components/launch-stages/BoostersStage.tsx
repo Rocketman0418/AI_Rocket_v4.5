@@ -535,7 +535,7 @@ export const BoostersStage: React.FC<BoostersStageProps> = ({ progress, fuelProg
         </div>
 
         {/* Action Button */}
-        {currentLevel >= 1 && (
+        {currentLevel >= 4 && (
           <button
             onClick={onComplete}
             className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-semibold py-3 px-6 rounded-lg transition-all flex items-center justify-center space-x-2 shadow-lg"
@@ -545,9 +545,9 @@ export const BoostersStage: React.FC<BoostersStageProps> = ({ progress, fuelProg
           </button>
         )}
 
-        {currentLevel < 1 && (
+        {currentLevel < 4 && (
           <p className="text-center text-gray-400 text-xs">
-            Complete Level 1 to unlock Guidance
+            Complete Level 4 to unlock Guidance
           </p>
         )}
       </div>

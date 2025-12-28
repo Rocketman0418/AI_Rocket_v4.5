@@ -6,7 +6,7 @@ interface LaunchProgressData {
   user_email: string;
   team_name: string;
   team_total_points: number;
-  current_stage: 'fuel' | 'boosters' | 'guidance' | 'ready' | 'launched';
+  current_stage: 'fuel' | 'boosters' | 'guidance' | 'launched';
   total_points: number;
   is_launched: boolean;
   launched_at: string | null;
@@ -51,12 +51,11 @@ export const SetupProgressPanel: React.FC<SetupProgressPanelProps> = ({ progress
     ? progressData.reduce((sum, p) => sum + p.total_level, 0) / totalUsers
     : 0;
 
-  // Calculate distribution by current stage
+  // Calculate distribution by achieved stage
   const stageDistribution = [
     { stage: 'fuel', name: 'Fuel', count: progressData.filter(p => p.current_stage === 'fuel').length, color: 'orange' },
     { stage: 'boosters', name: 'Boosters', count: progressData.filter(p => p.current_stage === 'boosters').length, color: 'cyan' },
-    { stage: 'guidance', name: 'Guidance', count: progressData.filter(p => p.current_stage === 'guidance').length, color: 'purple' },
-    { stage: 'ready', name: 'Ready', count: progressData.filter(p => p.current_stage === 'ready').length, color: 'green' },
+    { stage: 'guidance', name: 'Guidance', count: progressData.filter(p => p.current_stage === 'guidance').length, color: 'green' },
     { stage: 'launched', name: 'Launched', count: progressData.filter(p => p.current_stage === 'launched').length, color: 'blue' },
   ];
 
@@ -128,7 +127,7 @@ export const SetupProgressPanel: React.FC<SetupProgressPanelProps> = ({ progress
       <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-blue-400" />
-          Users by Current Stage
+          Users by Achieved Stage
         </h3>
         <div className="space-y-3">
           {stageDistribution.map((item, index) => (
@@ -142,7 +141,6 @@ export const SetupProgressPanel: React.FC<SetupProgressPanelProps> = ({ progress
                     h-full flex items-center justify-center text-xs font-medium text-white transition-all
                     ${item.color === 'orange' ? 'bg-gradient-to-r from-orange-500 to-orange-600' : ''}
                     ${item.color === 'cyan' ? 'bg-gradient-to-r from-cyan-500 to-cyan-600' : ''}
-                    ${item.color === 'purple' ? 'bg-gradient-to-r from-purple-500 to-purple-600' : ''}
                     ${item.color === 'green' ? 'bg-gradient-to-r from-green-500 to-green-600' : ''}
                     ${item.color === 'blue' ? 'bg-gradient-to-r from-blue-500 to-blue-600' : ''}
                   `}
@@ -233,7 +231,7 @@ export const SetupProgressPanel: React.FC<SetupProgressPanelProps> = ({ progress
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">User</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Team</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Current Stage</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Achieved Stage</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Fuel</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Boosters</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase">Guidance</th>
@@ -259,8 +257,7 @@ export const SetupProgressPanel: React.FC<SetupProgressPanelProps> = ({ progress
                           inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium capitalize
                           ${user.current_stage === 'fuel' ? 'bg-orange-500/20 text-orange-400' : ''}
                           ${user.current_stage === 'boosters' ? 'bg-cyan-500/20 text-cyan-400' : ''}
-                          ${user.current_stage === 'guidance' ? 'bg-purple-500/20 text-purple-400' : ''}
-                          ${user.current_stage === 'ready' ? 'bg-green-500/20 text-green-400' : ''}
+                          ${user.current_stage === 'guidance' ? 'bg-green-500/20 text-green-400' : ''}
                           ${user.current_stage === 'launched' ? 'bg-blue-500/20 text-blue-400' : ''}
                         `}>
                           {user.current_stage}

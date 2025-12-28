@@ -729,12 +729,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen = true, o
         const boostersProgress = userStageProgress['boosters'] || { level: 0, points_earned: 0 };
         const guidanceProgress = userStageProgress['guidance'] || { level: 0, points_earned: 0 };
 
+        const computeAchievedStage = (): 'fuel' | 'boosters' | 'guidance' | 'launched' => {
+          if (status.is_launched) return 'launched';
+          if (guidanceProgress.level >= 1 && boostersProgress.level >= 4) return 'guidance';
+          if (boostersProgress.level >= 1) return 'boosters';
+          return 'fuel';
+        };
+
         return {
           user_id: status.user_id,
           user_email: user?.email || 'Unknown',
           team_name: team?.name || 'No team',
           team_total_points: team?.total_points || 0,
-          current_stage: status.current_stage,
+          current_stage: computeAchievedStage(),
           total_points: status.total_points,
           is_launched: status.is_launched,
           launched_at: status.launched_at,

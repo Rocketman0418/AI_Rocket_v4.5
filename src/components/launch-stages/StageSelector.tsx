@@ -76,7 +76,7 @@ export const StageSelector: React.FC<StageSelectorProps> = ({
   // Check if stages are unlocked
   const fuelUnlocked = true; // Always unlocked
   const boostersUnlocked = fuelLevel >= 1;
-  const guidanceUnlocked = fuelLevel >= 1 && boostersLevel >= 1;
+  const guidanceUnlocked = fuelLevel >= 1 && boostersLevel >= 4;
 
   // Check if stages should show NEW indicator
   const boostersIsNew = boostersUnlocked && boostersLevel === 0;
@@ -349,7 +349,8 @@ export const StageSelector: React.FC<StageSelectorProps> = ({
 
                   {isLocked && (
                     <p className="text-gray-500 text-xs mt-3">
-                      Complete previous stage Level 1 to unlock
+                      {stage.id === 'boosters' && 'Complete Fuel Level 1 to unlock'}
+                      {stage.id === 'guidance' && 'Complete Boosters Level 4 to unlock'}
                     </p>
                   )}
 
@@ -644,7 +645,7 @@ export const StageSelector: React.FC<StageSelectorProps> = ({
 
               <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
                 <p className="text-sm text-blue-300 text-center">
-                  <span className="font-medium">🚀 Launch Ready:</span> Complete Level 1 in all three stages to unlock launch capability!
+                  <span className="font-medium">Launch Requirements:</span> Fuel Level 1, Boosters Level 4, and Guidance Level 2
                 </p>
               </div>
 
