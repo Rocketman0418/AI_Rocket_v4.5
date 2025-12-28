@@ -1,0 +1,832 @@
+import { useState, useEffect } from 'react';
+import {
+  Rocket,
+  Fuel,
+  Zap,
+  Compass,
+  Trophy,
+  Users,
+  FileText,
+  BarChart3,
+  MessageSquare,
+  ChevronRight,
+  Settings,
+  Info,
+  Brain,
+  Bot,
+  Clock,
+  FileBarChart,
+  RefreshCw,
+  Plus,
+  LayoutDashboard,
+  X,
+  Star,
+  Database,
+  Folder,
+  HelpCircle,
+  Sparkles
+} from 'lucide-react';
+import { useLaunchPreparation } from '../hooks/useLaunchPreparation';
+import { useFuelLevel } from '../hooks/useFuelLevel';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
+import { TAB_CONFIGS } from '../hooks/useOpenTabs';
+import { TabType, TabConfig } from '../types';
+import ComingSoonModal from './ComingSoonModal';
+import FeatureInfoModal from './FeatureInfoModal';
+import { DocumentsListModal } from './launch-stages/DocumentsListModal';
+import { CategoriesDetailModal } from './launch-stages/CategoriesDetailModal';
+import { TeamMembersPanel } from './TeamMembersPanel';
+import { calculateStageProgress } from '../lib/launch-preparation-utils';
+import { incrementalSyncAllFolders } from '../lib/manual-folder-sync';
+
+interface MissionControlPageProps {
+  onOpenTab: (tab: TabType) => void;
+  onNavigateToStage?: (stage: 'fuel' | 'boosters' | 'guidance') => void;
+  onOpenAdminSettings?: () => void;
+  onOpenFolderManager?: () => void;
+  onOpenHelpCenter?: (tab?: 'quick-start' | 'whats-new' | 'faq' | 'ask-astra') => void;
+}
+
+const stageConfig = {
+  fuel: { icon: Fuel, color: 'orange', label: 'Fuel', gradient: 'from-orange-500 to-amber-500' },
+  boosters: { icon: Zap, color: 'cyan', label: 'Boosters', gradient: 'from-cyan-500 to-blue-500' },
+  guidance: { icon: Compass, color: 'purple', label: 'Guidance', gradient: 'from-purple-500 to-pink-500' }
+};
+
+const featureIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  Rocket,
+  MessageSquare,
+  FileBarChart,
+  Users,
+  BarChart3,
+  Brain,
+  Bot,
+  Compass,
+  LayoutDashboard
+};
+
+const colorClasses: Record<string, { bg: string; border: string; text: string; gradient: string }> = {
+  emerald: { bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', text: 'text-emerald-400', gradient: 'from-emerald-500 to-emerald-600' },
+  purple: { bg: 'bg-purple-500/20', border: 'border-purple-500/30', text: 'text-purple-400', gradient: 'from-purple-500 to-purple-600' },
+  teal: { bg: 'bg-teal-500/20', border: 'border-teal-500/30', text: 'text-teal-400', gradient: 'from-teal-500 to-teal-600' },
+  pink: { bg: 'bg-pink-500/20', border: 'border-pink-500/30', text: 'text-pink-400', gradient: 'from-pink-500 to-pink-600' },
+  orange: { bg: 'bg-orange-500/20', border: 'border-orange-500/30', text: 'text-orange-400', gradient: 'from-orange-500 to-orange-600' },
+  sky: { bg: 'bg-sky-500/20', border: 'border-sky-500/30', text: 'text-sky-400', gradient: 'from-sky-500 to-sky-600' }
+};
+
+interface PointsLogEntry {
+  id: string;
+  user_id: string;
+  user_email: string;
+  points_earned: number;
+  achievement_type: string;
+  created_at: string;
+}
+
+interface TeamMemberLeaderboard {
+  user_id: string;
+  email: string;
+  name: string | null;
+  total_points: number;
+}
+
+export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpenAdminSettings, onOpenFolderManager, onOpenHelpCenter }: MissionControlPageProps) {
+  const { user } = useAuth();
+  const { stageProgress, loading: launchLoading } = useLaunchPreparation();
+  const { fuelData, loading: fuelLoading, refresh: refreshFuelLevel } = useFuelLevel();
+
+  const [teamPoints, setTeamPoints] = useState<number>(0);
+  const [memberCount, setMemberCount] = useState<number>(0);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const [comingSoonFeature, setComingSoonFeature] = useState<TabConfig | null>(null);
+  const [infoFeature, setInfoFeature] = useState<TabConfig | null>(null);
+  const [showDocumentsModal, setShowDocumentsModal] = useState(false);
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false);
+  const [documentsFilterCategory, setDocumentsFilterCategory] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [showPointsModal, setShowPointsModal] = useState(false);
+  const [pointsLog, setPointsLog] = useState<PointsLogEntry[]>([]);
+  const [leaderboard, setLeaderboard] = useState<TeamMemberLeaderboard[]>([]);
+  const [loadingPointsLog, setLoadingPointsLog] = useState(false);
+  const [showSyncInfoModal, setShowSyncInfoModal] = useState(false);
+  const [showTeamMembersPanel, setShowTeamMembersPanel] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return;
+
+      try {
+        const teamId = user.user_metadata?.team_id;
+        if (!teamId) return;
+
+        const role = user.user_metadata?.role || 'member';
+        setIsAdmin(role === 'admin');
+
+        const { data: teamData } = await supabase
+          .from('teams')
+          .select('total_launch_points')
+          .eq('id', teamId)
+          .maybeSingle();
+        setTeamPoints(teamData?.total_launch_points || 0);
+
+        const { count } = await supabase
+          .from('users')
+          .select('id', { count: 'exact', head: true })
+          .eq('team_id', teamId);
+        setMemberCount(count || 0);
+      } catch (err) {
+        console.error('Error fetching team data:', err);
+      }
+    };
+
+    fetchData();
+  }, [user]);
+
+  const getStageProgress = (stage: 'fuel' | 'boosters' | 'guidance') => {
+    return stageProgress.find(p => p.stage === stage);
+  };
+
+  const handleFeatureClick = (feature: TabConfig) => {
+    if (feature.isComingSoon) {
+      setComingSoonFeature(feature);
+    } else {
+      onOpenTab(feature.id);
+    }
+  };
+
+  const handleSync = async () => {
+    if (!user || syncing) return;
+
+    setSyncing(true);
+    setSyncMessage(null);
+
+    try {
+      const teamId = user?.user_metadata?.team_id;
+      if (!teamId) {
+        setSyncMessage({ type: 'error', text: 'Team ID not found' });
+        setSyncing(false);
+        return;
+      }
+
+      const result = await incrementalSyncAllFolders({
+        teamId,
+        userId: user.id
+      });
+
+      if (result.success) {
+        setSyncMessage({ type: 'success', text: 'Syncing new documents...' });
+        setTimeout(() => {
+          refreshFuelLevel();
+          setSyncMessage(null);
+        }, 3000);
+      } else {
+        setSyncMessage({ type: 'error', text: result.message || 'Sync failed' });
+      }
+    } catch (err) {
+      console.error('Sync failed:', err);
+      setSyncMessage({ type: 'error', text: 'Failed to sync documents' });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleOpenPointsModal = async () => {
+    setShowPointsModal(true);
+    setLoadingPointsLog(true);
+    try {
+      const teamId = user?.user_metadata?.team_id;
+      if (!teamId) {
+        setLoadingPointsLog(false);
+        return;
+      }
+
+      const { data: teamUsers } = await supabase
+        .from('users')
+        .select('id, email, name')
+        .eq('team_id', teamId);
+
+      if (!teamUsers || teamUsers.length === 0) {
+        setPointsLog([]);
+        setLeaderboard([]);
+        setLoadingPointsLog(false);
+        return;
+      }
+
+      const userIds = teamUsers.map(u => u.id);
+      const userEmails: Record<string, string> = teamUsers.reduce((acc, u) => {
+        acc[u.id] = u.email;
+        return acc;
+      }, {} as Record<string, string>);
+      const userNames: Record<string, string | null> = teamUsers.reduce((acc, u) => {
+        acc[u.id] = u.name;
+        return acc;
+      }, {} as Record<string, string | null>);
+
+      const { data: progressData, error } = await supabase
+        .from('launch_preparation_progress')
+        .select('id, user_id, stage, level, points_earned, achievements, updated_at')
+        .in('user_id', userIds)
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+
+      const userTotalPoints: Record<string, number> = {};
+      const activityLog: PointsLogEntry[] = [];
+
+      (progressData || []).forEach(entry => {
+        if (!userTotalPoints[entry.user_id]) {
+          userTotalPoints[entry.user_id] = 0;
+        }
+        userTotalPoints[entry.user_id] += entry.points_earned;
+
+        if (entry.points_earned > 0) {
+          const achievements = entry.achievements as string[] || [];
+          if (achievements.length > 0) {
+            achievements.forEach(achievement => {
+              activityLog.push({
+                id: `${entry.id}-${achievement}`,
+                user_id: entry.user_id,
+                user_email: userEmails[entry.user_id] || 'Unknown',
+                points_earned: Math.round(entry.points_earned / achievements.length),
+                achievement_type: achievement,
+                created_at: entry.updated_at
+              });
+            });
+          } else {
+            activityLog.push({
+              id: entry.id,
+              user_id: entry.user_id,
+              user_email: userEmails[entry.user_id] || 'Unknown',
+              points_earned: entry.points_earned,
+              achievement_type: `${entry.stage}_level_${entry.level}`,
+              created_at: entry.updated_at
+            });
+          }
+        }
+      });
+
+      const leaderboardData: TeamMemberLeaderboard[] = teamUsers.map(u => ({
+        user_id: u.id,
+        email: u.email,
+        name: u.name,
+        total_points: userTotalPoints[u.id] || 0
+      })).sort((a, b) => b.total_points - a.total_points);
+
+      setLeaderboard(leaderboardData);
+      activityLog.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setPointsLog(activityLog.slice(0, 50));
+    } catch (err) {
+      console.error('Error fetching points log:', err);
+    } finally {
+      setLoadingPointsLog(false);
+    }
+  };
+
+  const formatAchievementType = (type: string) => {
+    return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+
+  const coreFeatureTabs: TabConfig[] = [
+    {
+      id: 'private',
+      label: 'Astra Chat',
+      shortLabel: 'Chat',
+      icon: 'MessageSquare',
+      isCore: true,
+      isComingSoon: false,
+      order: -2,
+      description: 'Have confidential conversations with AI that understands your business context and provides personalized insights.',
+      color: 'emerald'
+    },
+    {
+      id: 'reports',
+      label: 'AI Reports',
+      shortLabel: 'Reports',
+      icon: 'FileBarChart',
+      isCore: true,
+      isComingSoon: false,
+      order: -1,
+      description: 'Schedule automated reports delivered to your inbox. Stay informed with daily, weekly, or monthly insights.',
+      color: 'purple'
+    }
+  ];
+  const featureTabs = [...coreFeatureTabs, ...TAB_CONFIGS.filter(t => !t.isCore)];
+
+  return (
+    <div className="flex flex-col h-full bg-slate-900" data-tour="mission-control-page">
+      <div className="flex-1 overflow-y-auto">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-8 space-y-6">
+              <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-5">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center">
+                      <Rocket className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-white">AI Rocket Features</h2>
+                      <p className="text-xs text-slate-400">Click to open or learn more</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onOpenHelpCenter?.('whats-new')}
+                    className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-500/30 rounded-xl text-sm text-amber-400 font-medium transition-all"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span className="hidden sm:inline">What's New</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+                  {featureTabs.map(feature => {
+                    const IconComponent = featureIconMap[feature.icon];
+                    const colors = colorClasses[feature.color] || colorClasses.emerald;
+
+                    return (
+                      <button
+                        key={feature.id}
+                        onClick={() => handleFeatureClick(feature)}
+                        className={`
+                          group relative p-4 rounded-xl border transition-all text-left
+                          ${feature.isComingSoon
+                            ? 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
+                            : `${colors.bg} ${colors.border} hover:scale-[1.02]`
+                          }
+                        `}
+                      >
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setInfoFeature(feature);
+                          }}
+                          className="absolute top-2 right-2 p-1 opacity-50 hover:opacity-100 hover:bg-slate-700/50 rounded-lg transition-all"
+                        >
+                          <Info className="w-3.5 h-3.5 text-slate-400" />
+                        </button>
+
+                        <div className="flex flex-col items-center text-center">
+                          <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-2 ${feature.isComingSoon ? 'bg-slate-700' : colors.bg}`}>
+                            {IconComponent && <IconComponent className={`w-5 h-5 ${feature.isComingSoon ? 'text-slate-400' : colors.text}`} />}
+                          </div>
+                          <span className={`text-xs font-medium leading-tight ${feature.isComingSoon ? 'text-slate-400' : 'text-white'}`}>
+                            <span className="hidden md:inline">{feature.label}</span>
+                            <span className="md:hidden">{feature.shortLabel}</span>
+                          </span>
+                          {feature.isComingSoon && (
+                            <span className="flex items-center gap-0.5 text-[10px] text-slate-500 mt-1">
+                              <Clock className="w-2.5 h-2.5" />
+                              Soon
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-5" data-tour="launch-points">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
+                      <Trophy className="w-5 h-5 text-white" />
+                    </div>
+                    <h2 className="text-base font-bold text-white">Team Launch Points</h2>
+                  </div>
+                  <button
+                    onClick={handleOpenPointsModal}
+                    className="flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-500/30 rounded-xl px-4 py-2 transition-all"
+                  >
+                    <Star className="w-4 h-4 text-amber-400" />
+                    <span className="text-xl font-bold text-white">{teamPoints.toLocaleString()}</span>
+                    <span className="text-sm text-amber-300">pts</span>
+                    <ChevronRight className="w-4 h-4 text-amber-400" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {(['fuel', 'boosters', 'guidance'] as const).map(stage => {
+                    const config = stageConfig[stage];
+                    const progress = getStageProgress(stage);
+                    const StageIcon = config.icon;
+                    const level = progress?.level || 0;
+                    const progressPercent = calculateStageProgress(stage, level);
+
+                    return (
+                      <button
+                        key={stage}
+                        onClick={() => onNavigateToStage?.(stage)}
+                        className="group bg-slate-700/50 hover:bg-slate-700 rounded-xl p-4 border border-slate-600/50 hover:border-slate-500 transition-all text-left"
+                      >
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className={`w-10 h-10 bg-gradient-to-br ${config.gradient} rounded-xl flex items-center justify-center`}>
+                            <StageIcon className="w-5 h-5 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="text-base font-semibold text-white">{config.label}</span>
+                              <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-slate-300 transition-colors" />
+                            </div>
+                            <span className="text-sm text-slate-400">Lv {level}/5</span>
+                          </div>
+                        </div>
+                        <div className="h-2 bg-slate-600 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full bg-gradient-to-r ${config.gradient} transition-all duration-500`}
+                            style={{ width: `${progressPercent}%` }}
+                          />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-4 space-y-6">
+              <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-5" data-tour="data-sync">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Database className="w-5 h-5 text-blue-400" />
+                    <h3 className="text-base font-semibold text-white">AI Data Sync</h3>
+                    <button
+                      onClick={() => setShowSyncInfoModal(true)}
+                      className="p-1 hover:bg-slate-700 rounded-lg transition-colors"
+                    >
+                      <HelpCircle className="w-4 h-4 text-slate-500 hover:text-slate-300" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isAdmin && (
+                      <button
+                        onClick={() => onOpenFolderManager?.()}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm text-slate-300 transition-colors"
+                      >
+                        <Folder className="w-3.5 h-3.5" />
+                        Add + Manage
+                      </button>
+                    )}
+                    <button
+                      onClick={handleSync}
+                      disabled={syncing}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm text-white transition-colors disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                      {syncing ? 'Syncing...' : 'Sync Now'}
+                    </button>
+                  </div>
+                </div>
+
+                {syncMessage && (
+                  <p className={`text-sm mb-3 ${syncMessage.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                    {syncMessage.text}
+                  </p>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowDocumentsModal(true)}
+                    className="bg-slate-700/50 hover:bg-slate-700 rounded-xl p-4 text-left transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="w-5 h-5 text-orange-400" />
+                      <span className="text-sm text-slate-400">Documents</span>
+                    </div>
+                    <div className="text-2xl font-bold text-white">
+                      {fuelLoading ? '...' : fuelData?.fully_synced_documents || 0}
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowCategoriesModal(true)}
+                    className="bg-slate-700/50 hover:bg-slate-700 rounded-xl p-4 text-left transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <BarChart3 className="w-5 h-5 text-cyan-400" />
+                      <span className="text-sm text-slate-400">Categories</span>
+                    </div>
+                    <div className="text-2xl font-bold text-white">
+                      {fuelLoading ? '...' : fuelData?.category_count || 0}
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowTeamMembersPanel(true)}
+                className="w-full bg-slate-800/50 hover:bg-slate-800 rounded-2xl border border-slate-700 hover:border-emerald-500/50 p-5 transition-all text-left cursor-pointer"
+                data-tour="team-panel"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Users className="w-5 h-5 text-emerald-400" />
+                    <span className="text-base font-semibold text-white">Team</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base text-slate-300">{memberCount} member{memberCount !== 1 ? 's' : ''}</span>
+                    <ChevronRight className="w-5 h-5 text-slate-500" />
+                  </div>
+                </div>
+                {isAdmin && (
+                  <p className="text-sm text-emerald-400 mt-2">Click to manage and invite members</p>
+                )}
+              </button>
+
+              {isAdmin && (
+                <button
+                  onClick={() => onOpenAdminSettings?.()}
+                  className="w-full bg-slate-800/50 hover:bg-slate-800 rounded-2xl border border-slate-700 hover:border-slate-600 p-5 transition-all text-left"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Settings className="w-5 h-5 text-slate-400" />
+                      <span className="text-base font-medium text-white">Admin Settings</span>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-slate-500" />
+                  </div>
+                  <p className="text-sm text-slate-500 mt-2">Folders, members, team config</p>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {comingSoonFeature && (
+        <ComingSoonModal
+          feature={comingSoonFeature}
+          isOpen={true}
+          onClose={() => setComingSoonFeature(null)}
+        />
+      )}
+
+      {infoFeature && (
+        <FeatureInfoModal
+          feature={infoFeature}
+          isOpen={true}
+          onClose={() => setInfoFeature(null)}
+          onOpenFeature={() => handleFeatureClick(infoFeature)}
+        />
+      )}
+
+      {showDocumentsModal && (
+        <DocumentsListModal
+          isOpen={showDocumentsModal}
+          onClose={() => {
+            setShowDocumentsModal(false);
+            setDocumentsFilterCategory(null);
+          }}
+          onDocumentDeleted={() => {}}
+          initialCategory={documentsFilterCategory}
+        />
+      )}
+
+      {showCategoriesModal && (
+        <CategoriesDetailModal
+          isOpen={showCategoriesModal}
+          onClose={() => setShowCategoriesModal(false)}
+          onCategoryClick={(category) => {
+            setDocumentsFilterCategory(category);
+            setShowCategoriesModal(false);
+            setShowDocumentsModal(true);
+          }}
+        />
+      )}
+
+      {showPointsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
+                  <Trophy className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">Team Launch Points</h2>
+                  <p className="text-sm text-slate-400">Total: {teamPoints.toLocaleString()} points</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPointsModal(false)}
+                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-4 border-b border-slate-700">
+                <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-amber-400" />
+                  Points Leaderboard
+                </h3>
+                {loadingPointsLog ? (
+                  <div className="flex items-center justify-center py-4">
+                    <RefreshCw className="w-5 h-5 text-slate-400 animate-spin" />
+                  </div>
+                ) : leaderboard.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-4">No team members found</p>
+                ) : (
+                  <div className="space-y-2">
+                    {leaderboard.map((member, index) => (
+                      <div
+                        key={member.user_id}
+                        className={`flex items-center justify-between rounded-lg p-3 ${
+                          index === 0 ? 'bg-amber-500/10 border border-amber-500/30' :
+                          index === 1 ? 'bg-slate-400/10 border border-slate-400/30' :
+                          index === 2 ? 'bg-orange-700/10 border border-orange-700/30' :
+                          'bg-slate-700/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm ${
+                            index === 0 ? 'bg-amber-500 text-white' :
+                            index === 1 ? 'bg-slate-400 text-white' :
+                            index === 2 ? 'bg-orange-700 text-white' :
+                            'bg-slate-600 text-slate-300'
+                          }`}>
+                            {index + 1}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-white">
+                              {member.name || member.email.split('@')[0]}
+                            </p>
+                            <p className="text-xs text-slate-400">{member.email}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-lg font-bold text-amber-400">{member.total_points}</span>
+                          <span className="text-xs text-slate-500 ml-1">pts</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 border-b border-slate-700">
+                <h3 className="text-sm font-medium text-white mb-2">How to Earn Points</h3>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="flex items-center gap-2 bg-slate-700/50 rounded-lg p-2">
+                    <Fuel className="w-3.5 h-3.5 text-orange-400" />
+                    <span className="text-slate-300">Fuel: +10-50</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-700/50 rounded-lg p-2">
+                    <Zap className="w-3.5 h-3.5 text-cyan-400" />
+                    <span className="text-slate-300">Boosters: +10-50</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-700/50 rounded-lg p-2">
+                    <Compass className="w-3.5 h-3.5 text-green-400" />
+                    <span className="text-slate-300">Guidance: +10-50</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4">
+                <h3 className="text-sm font-medium text-white mb-3">Recent Activity</h3>
+                {loadingPointsLog ? (
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="w-5 h-5 text-slate-400 animate-spin" />
+                  </div>
+                ) : pointsLog.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Star className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                    <p className="text-sm text-slate-400">No points earned yet</p>
+                    <p className="text-xs text-slate-500 mt-1">Complete tasks to earn Launch Points</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {pointsLog.map(entry => (
+                      <div key={entry.id} className="flex items-center justify-between bg-slate-700/30 rounded-lg p-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-white truncate">
+                              {formatAchievementType(entry.achievement_type)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 truncate">{entry.user_email}</p>
+                        </div>
+                        <div className="flex items-center gap-2 ml-3">
+                          <span className="text-sm font-bold text-amber-400">+{entry.points_earned}</span>
+                          <span className="text-xs text-slate-500">
+                            {new Date(entry.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSyncInfoModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-md">
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center">
+                  <Database className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-lg font-bold text-white">AI Data Sync</h2>
+              </div>
+              <button
+                onClick={() => setShowSyncInfoModal(false)}
+                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <p className="text-sm text-slate-300">
+                AI Data Sync connects your Google Drive folders to power Astra's intelligence. Here's how it works:
+              </p>
+
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-500/20 rounded flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs font-bold text-blue-400">1</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">Connect Google Drive</p>
+                    <p className="text-xs text-slate-400">Link your Google account to enable folder access</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-500/20 rounded flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs font-bold text-blue-400">2</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">Select Folders</p>
+                    <p className="text-xs text-slate-400">Choose which folders to sync (strategy, meetings, financials, projects)</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-500/20 rounded flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs font-bold text-blue-400">3</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">Automatic Processing</p>
+                    <p className="text-xs text-slate-400">Documents are securely processed and categorized for AI analysis</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-blue-500/20 rounded flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs font-bold text-blue-400">4</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">Ask Astra Anything</p>
+                    <p className="text-xs text-slate-400">Get insights from your synced documents in chat</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-700/50 rounded-lg p-3 mt-4">
+                <p className="text-xs text-slate-400">
+                  <strong className="text-slate-300">Tip:</strong> Use "Sync Now" to manually trigger a sync after adding new files. Documents are also synced automatically every few hours.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTeamMembersPanel && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center">
+                  <Users className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-lg font-bold text-white">Team Members</h2>
+              </div>
+              <button
+                onClick={() => setShowTeamMembersPanel(false)}
+                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <TeamMembersPanel />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
