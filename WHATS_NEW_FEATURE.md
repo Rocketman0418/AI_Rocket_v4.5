@@ -269,7 +269,24 @@ This guided experience helps teams understand the value of each data type and en
 
 ### December 2025 Updates
 
-#### 1. AI-Powered Report Emails (v1.2.0)
+#### 1. Local File Sync - Unlimited Data from Any Source (v1.3.0)
+**Type:** New Feature
+**Description:**
+You can now sync unlimited data from both your local files AND Google Drive folders! Upload documents directly to Astra without needing to store them in Google Drive first.
+
+Key capabilities:
+- Drag-and-drop any supported file directly into Astra
+- Supports PDFs, Word docs (.docx), Excel (.xlsx), PowerPoint (.pptx), and text files (.txt, .md, .csv, .json)
+- Files are processed and categorized automatically by AI
+- All uploaded files count toward your Fuel Level
+- View and manage local uploads alongside Google Drive documents
+- Delete local files when no longer needed
+
+Combined with Google Drive sync, you now have complete flexibility to power Astra with ALL your business data from any source.
+
+**Display Order:** 1300
+
+#### 2. AI-Powered Report Emails (v1.2.0)
 **Type:** New Feature
 **Description:**
 Your scheduled reports now come with beautifully designed email summaries! Astra generates visually rich emails that make it easy to stay informed without logging in.
@@ -331,6 +348,37 @@ Fixed an issue where meeting documents weren't appearing during Astra Guided Cha
 The "What's New" feature provides a professional, user-friendly way to keep the team informed about platform updates. It's easily accessible, well-organized, and designed to highlight the continuous improvement of Astra Intelligence.
 
 ### Quick Add SQL Snippets
+
+**Local File Sync - Unlimited Data:**
+```sql
+INSERT INTO whats_new (
+  title,
+  description,
+  version,
+  feature_type,
+  date_added,
+  is_published,
+  display_order
+) VALUES (
+  'Local File Sync - Unlimited Data from Any Source',
+  'You can now sync unlimited data from both your local files AND Google Drive folders! Upload documents directly to Astra without needing to store them in Google Drive first.
+
+Key capabilities:
+- Drag-and-drop any supported file directly into Astra
+- Supports PDFs, Word docs (.docx), Excel (.xlsx), PowerPoint (.pptx), and text files (.txt, .md, .csv, .json)
+- Files are processed and categorized automatically by AI
+- All uploaded files count toward your Fuel Level
+- View and manage local uploads alongside Google Drive documents
+- Delete local files when no longer needed
+
+Combined with Google Drive sync, you now have complete flexibility to power Astra with ALL your business data from any source.',
+  '1.3.0',
+  'new_feature',
+  '2025-12-28',
+  true,
+  1300
+);
+```
 
 **AI-Powered Report Emails:**
 ```sql

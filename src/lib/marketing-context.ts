@@ -26,10 +26,11 @@ export const PRODUCT_FEATURES = {
     },
     {
       name: "AI Data Sync System",
-      description: "Intelligent three-phase document processing that discovers, stores, and classifies your business data automatically",
+      description: "Sync unlimited data from both Google Drive folders AND local file uploads - intelligent document processing that discovers, stores, and classifies your business data automatically",
       icon: "🔄",
       benefits: [
-        "Automatic file discovery from connected Google Drive folders",
+        "Unlimited data sync from Google Drive folders AND local file uploads",
+        "Drag-and-drop local files directly into Astra (PDFs, Word, Excel, PowerPoint, text files)",
         "Smart Data AI analyzes content and auto-categorizes documents by business context",
         "Real-time sync progress tracking with detailed statistics",
         "Incremental sync for efficient updates without re-processing everything",
@@ -68,12 +69,13 @@ export const PRODUCT_FEATURES = {
       ]
     },
     {
-      name: "Google Drive Integration",
-      description: "Connect your Google Drive to give Astra access to all your business documents",
+      name: "Google Drive & Local File Integration",
+      description: "Connect your Google Drive OR upload files directly - give Astra access to all your business documents from any source",
       icon: "📁",
       benefits: [
-        "Automatically sync and index your documents",
-        "Ask questions about any file in your Drive",
+        "Sync unlimited data from Google Drive folders",
+        "Upload local files directly without needing cloud storage",
+        "Ask questions about any synced document",
         "Multi-folder support - connect any folders and AI organizes them automatically"
       ]
     },
@@ -180,6 +182,7 @@ export const PRODUCT_FEATURES = {
       "Your data never leaves your controlled environment"
     ],
     dataSync: [
+      "Sync unlimited data from Google Drive AND local file uploads",
       "Automatic three-phase sync: discover, store, classify",
       "Real-time progress tracking shows exactly what is happening",
       "Incremental sync updates only what has changed",
@@ -214,7 +217,7 @@ export const PRODUCT_FEATURES = {
     },
     {
       title: "Intelligent Data Sync",
-      description: "Connect any Google Drive folders and watch as AI automatically discovers, stores, and classifies your documents based on their content"
+      description: "Sync unlimited data from Google Drive folders OR upload local files directly - AI automatically discovers, stores, and classifies your documents based on their content"
     },
     {
       title: "Business Analytics",
@@ -258,8 +261,8 @@ export const PRODUCT_FEATURES = {
     },
     {
       title: "AI Data Sync: Intelligent Document Processing",
-      subtitle: "Three-phase automation that organizes your business knowledge",
-      description: "Connect your Google Drive folders and watch the magic happen. The AI Data Sync system works in three phases: (1) Discovery - automatically scans your connected folders to find all relevant documents, (2) Storage - indexes and stores document content for instant retrieval, (3) Classification - Smart Data AI analyzes each document and automatically categorizes it based on content and business context. You see real-time progress as files move through each phase, with detailed statistics showing exactly what is happening. The Fuel Level indicator fills up as more data is processed, showing you how much intelligence powers Astra. Incremental sync means only new or changed files get processed, keeping everything current without wasting time re-processing unchanged documents."
+      subtitle: "Unlimited data from Google Drive AND local uploads",
+      description: "Connect your Google Drive folders OR upload files directly from your computer - the choice is yours. The AI Data Sync system works in three phases: (1) Discovery - automatically scans your connected folders or processes uploaded files to find all relevant documents, (2) Storage - indexes and stores document content for instant retrieval, (3) Classification - Smart Data AI analyzes each document and automatically categorizes it based on content and business context. Upload PDFs, Word docs, Excel spreadsheets, PowerPoint presentations, and text files directly without needing cloud storage. You see real-time progress as files move through each phase, with detailed statistics showing exactly what is happening. The Fuel Level indicator fills up as more data is processed, showing you how much intelligence powers Astra. Incremental sync means only new or changed files get processed, keeping everything current without wasting time re-processing unchanged documents."
     },
     {
       title: "Automated Competitive Intelligence",

@@ -20,17 +20,19 @@ Track your progress, achievements, and Launch Points after launching. View perso
 - **Color**: Cyan
 - **Status**: Active (v1.1)
 
-### 3. AI Data Sync & Connected Folders
-Connect your Google Drive folders to power Astra with your business data. Organize documents into four categories: Strategy (business plans, goals), Meetings (notes, agendas), Financial (budgets, reports), and Projects (project docs, timelines).
+### 3. AI Data Sync & Connected Folders (ENHANCED)
+Sync unlimited data from both Google Drive folders AND local file uploads to power Astra with your complete business knowledge. Organize documents into five categories: Strategy (business plans, goals), Meetings (notes, agendas), Financial (budgets, reports), Projects (project docs, timelines), and Local Uploads.
 - **Icon**: RefreshCw
 - **Color**: Orange
-- **Supported File Types**: Google Docs, Sheets, Slides, PDFs, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), Text files
+- **Supported File Types**: Google Docs, Sheets, Slides, PDFs, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), Text files (.txt, .md, .csv, .json)
 - **Features**:
-  - Real-time sync progress tracking
-  - Automatic document categorization
-  - Incremental sync for new files
+  - **Unlimited Google Drive Sync**: Connect multiple folders and sync all your cloud documents
+  - **Local File Upload**: Drag-and-drop any supported file directly into Astra
+  - Real-time sync progress tracking with Fuel Level indicator
+  - Automatic document categorization by AI
+  - Incremental sync for efficient updates
   - Document management and deletion
-  - Fuel Level progression based on synced documents
+  - Fuel Level progression based on total synced documents
 
 ### 4. Smart Visualizations
 Turn conversations into actionable insights with AI-generated charts, graphs, and visual reports.

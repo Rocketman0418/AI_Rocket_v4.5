@@ -10,6 +10,7 @@ interface Document {
   file_size: number;
   mime_type: string;
   synced_at: string;
+  file_modified_at: string | null;
   chunk_count: number;
   source_type: 'google_drive' | 'local_upload';
 }
@@ -21,7 +22,7 @@ interface DocumentsListModalProps {
   initialCategory?: string | null;
 }
 
-type SortField = 'file_name' | 'category' | 'synced_at' | 'file_size' | 'source_type';
+type SortField = 'file_name' | 'category' | 'synced_at' | 'file_modified_at';
 type SortDirection = 'asc' | 'desc';
 
 const MIME_TYPE_ICONS: Record<string, React.FC<{ className?: string }>> = {
@@ -52,14 +53,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   reference: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
   other: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
 };
-
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -185,11 +178,10 @@ export const DocumentsListModal: React.FC<DocumentsListModalProps> = ({
         case 'synced_at':
           comparison = new Date(a.synced_at).getTime() - new Date(b.synced_at).getTime();
           break;
-        case 'file_size':
-          comparison = a.file_size - b.file_size;
-          break;
-        case 'source_type':
-          comparison = a.source_type.localeCompare(b.source_type);
+        case 'file_modified_at':
+          const aDate = a.file_modified_at ? new Date(a.file_modified_at).getTime() : 0;
+          const bDate = b.file_modified_at ? new Date(b.file_modified_at).getTime() : 0;
+          comparison = aDate - bDate;
           break;
       }
       return sortDirection === 'asc' ? comparison : -comparison;
@@ -262,7 +254,13 @@ export const DocumentsListModal: React.FC<DocumentsListModalProps> = ({
                 onClick={() => handleSort('synced_at')}
                 className={`px-2 py-1 text-xs rounded ${sortField === 'synced_at' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
               >
-                Date
+                Sync Date
+              </button>
+              <button
+                onClick={() => handleSort('file_modified_at')}
+                className={`px-2 py-1 text-xs rounded ${sortField === 'file_modified_at' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+              >
+                File Date
               </button>
               <button
                 onClick={() => handleSort('file_name')}
@@ -275,12 +273,6 @@ export const DocumentsListModal: React.FC<DocumentsListModalProps> = ({
                 className={`px-2 py-1 text-xs rounded ${sortField === 'category' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
               >
                 Category
-              </button>
-              <button
-                onClick={() => handleSort('file_size')}
-                className={`px-2 py-1 text-xs rounded ${sortField === 'file_size' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
-              >
-                Size
               </button>
               <button
                 onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
@@ -314,7 +306,7 @@ export const DocumentsListModal: React.FC<DocumentsListModalProps> = ({
 
                 return (
                   <div
-                    key={doc.google_file_id}
+                    key={`${doc.google_file_id}_${doc.category || 'uncategorized'}`}
                     className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 hover:bg-gray-800 transition-colors"
                   >
                     <div className="flex items-start gap-3">
@@ -341,8 +333,10 @@ export const DocumentsListModal: React.FC<DocumentsListModalProps> = ({
                                   {doc.category}
                                 </span>
                               )}
-                              <span className="text-xs text-gray-500">{formatFileSize(doc.file_size)}</span>
-                              <span className="text-xs text-gray-500">Synced {formatDate(doc.synced_at)}</span>
+                              {doc.file_modified_at && (
+                                <span className="text-xs text-gray-500">File: {formatDate(doc.file_modified_at)}</span>
+                              )}
+                              <span className="text-xs text-gray-500">Synced: {formatDate(doc.synced_at)}</span>
                             </div>
                           </div>
 
