@@ -131,128 +131,153 @@ const PlanOverview: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
-          <div className="p-4 bg-gray-900/50">
-            <h3 className="text-lg font-bold mb-1">Free Plan</h3>
-            <div className="text-2xl font-bold">$0</div>
-            <div className="text-xs text-gray-400">Forever free</div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden flex flex-col">
+          <div className="p-6 bg-gray-900/50">
+            <h3 className="text-xl font-bold mb-2">Free Plan</h3>
+            <div className="text-3xl font-bold mb-1">$0</div>
+            <div className="text-sm text-gray-400">Forever free</div>
+            <div className="text-xs text-green-500 mt-2 font-semibold">Starts with 10-day trial</div>
           </div>
-          <div className="p-4 flex-1">
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
+          <div className="p-6 flex-1">
+            <div className="space-y-3 text-sm">
+              <div className="flex items-start gap-2">
+                <MessageSquare className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                 <span>Unlimited Chat Usage</span>
               </div>
-              <div className="flex items-center gap-2">
-                <FileText className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
+              <div className="flex items-start gap-2">
+                <FileText className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                 <span>Unlimited Data Sync</span>
               </div>
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                <span>3 Visualizations/Week</span>
+              <div className="flex items-start gap-2">
+                <BarChart3 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>3 Custom Visualizations Per Week</span>
               </div>
-              <div className="flex items-center gap-2">
-                <FileText className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                <span>1 Report/Week</span>
+              <div className="flex items-start gap-2">
+                <FileText className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>1 Automated Report Per Week</span>
               </div>
-              <div className="flex items-center gap-2">
-                <X className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+              <div className="flex items-start gap-2">
+                <X className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
                 <span className="text-gray-500">No Financial Analysis</span>
               </div>
-              <div className="flex items-center gap-2">
-                <X className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+              <div className="flex items-start gap-2">
+                <X className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
                 <span className="text-gray-500">No Team Features</span>
               </div>
-              <div className="flex items-center gap-2">
-                <X className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+              <div className="flex items-start gap-2">
+                <X className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
                 <span className="text-gray-500">No AI Specialists</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-gray-800 rounded-lg border-2 border-blue-500 overflow-hidden flex flex-col relative">
-          <div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">
+        <div className="bg-gray-800 rounded-xl border-2 border-blue-500 overflow-hidden flex flex-col relative">
+          <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
             POPULAR
           </div>
-          <div className="p-4 bg-gradient-to-br from-blue-500/20 to-blue-600/10">
-            <h3 className="text-lg font-bold mb-1">Pro Plan</h3>
-            <div className="text-2xl font-bold">$99<span className="text-sm text-gray-400">/mo</span></div>
-            <div className="text-[10px] text-blue-400 font-semibold">Intro Price (then $149/mo)</div>
+          <div className="p-6 bg-gradient-to-br from-blue-500/20 to-blue-600/10">
+            <h3 className="text-xl font-bold mb-2">Pro Plan</h3>
+            <div className="text-3xl font-bold mb-1">$99<span className="text-lg text-gray-400">/month</span></div>
+            <div className="text-sm text-blue-400 font-semibold">Intro Price for First 500 Subscribers</div>
+            <div className="text-xs text-blue-300 mt-1">Then $149/mo</div>
+            <div className="text-xs text-green-500 mt-2 font-semibold">Starts with 10-day trial</div>
           </div>
-          <div className="p-4 flex-1">
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center gap-2">
-                <Zap className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+          <div className="p-6 flex-1">
+            <div className="space-y-3 text-sm">
+              <div className="flex items-start gap-2">
+                <Zap className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
                 <span className="font-semibold">Everything in Free, Plus:</span>
               </div>
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                <span>Unlimited Visualizations</span>
+              <div className="flex items-start gap-2">
+                <BarChart3 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Unlimited Custom Visualizations</span>
               </div>
-              <div className="flex items-center gap-2">
-                <FileText className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                <span>Unlimited Reports</span>
+              <div className="flex items-start gap-2">
+                <FileText className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Unlimited Automated Reports</span>
               </div>
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
+              <div className="flex items-start gap-2">
+                <DollarSign className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                 <span>Financial Analysis</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Users className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                <span>1 Team (You + 2 Free)</span>
+              <div className="flex items-start gap-2">
+                <Users className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>1 Team (You + 2 Free Members)</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Layout className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                <span>Up to 3 Dashboards/Agents/SOPs</span>
+              <div className="flex items-start gap-2">
+                <DollarSign className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>$29/Month Per Additional Member</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Briefcase className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                <span>Up to 3 AI Specialists</span>
+              <div className="flex items-start gap-2">
+                <Layout className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Create Up to 3 Team Dashboards</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Bot className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Create Up to 3 Team Agents</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Briefcase className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Create Up to 3 AI Specialists</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <BookOpen className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Create Up to 3 Team SOPs</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-gray-800 rounded-lg border-2 border-cyan-500 overflow-hidden flex flex-col relative">
-          <div className="absolute top-0 right-0 bg-cyan-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">
+        <div className="bg-gray-800 rounded-xl border-2 border-cyan-500 overflow-hidden flex flex-col relative">
+          <div className="absolute top-0 right-0 bg-cyan-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
             ADVANCED
           </div>
-          <div className="p-4 bg-gradient-to-br from-cyan-500/20 to-cyan-600/10">
-            <h3 className="text-lg font-bold mb-1">Ultra Plan</h3>
-            <div className="text-2xl font-bold">$149<span className="text-sm text-gray-400">/mo</span></div>
-            <div className="text-[10px] text-cyan-400 font-semibold">Intro Price (then $249/mo)</div>
+          <div className="p-6 bg-gradient-to-br from-cyan-500/20 to-cyan-600/10">
+            <h3 className="text-xl font-bold mb-2">Ultra Plan</h3>
+            <div className="text-3xl font-bold mb-1">$149<span className="text-lg text-gray-400">/month</span></div>
+            <div className="text-sm text-cyan-400 font-semibold">Intro Price for First 500 Subscribers</div>
+            <div className="text-xs text-cyan-300 mt-1">Then $249/mo</div>
+            <div className="text-xs text-green-500 mt-2 font-semibold">Starts with 10-day trial</div>
           </div>
-          <div className="p-4 flex-1">
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center gap-2">
-                <Zap className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
+          <div className="p-6 flex-1">
+            <div className="space-y-3 text-sm">
+              <div className="flex items-start gap-2">
+                <Zap className="w-4 h-4 text-cyan-500 mt-0.5 flex-shrink-0" />
                 <span className="font-semibold">Everything in Pro, Plus:</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Users className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                <span>Up to 3 Teams</span>
+              <div className="flex items-start gap-2">
+                <Users className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Up to 3 Teams (Each with 2 Free Members)</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Bot className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                <span>Unlimited Agents/Dashboards/SOPs</span>
+              <div className="flex items-start gap-2">
+                <DollarSign className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>$19/Month Per Additional Member</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Briefcase className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
+              <div className="flex items-start gap-2">
+                <Bot className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Unlimited Custom Agents</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Briefcase className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                 <span>Unlimited AI Specialists</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                <span>Build with Astra</span>
+              <div className="flex items-start gap-2">
+                <Layout className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Unlimited Team Dashboards</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Beaker className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
+              <div className="flex items-start gap-2">
+                <BookOpen className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Unlimited Team SOPs</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Sparkles className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Build with Astra (Create Custom Software)</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Beaker className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                 <span>Beta Access to New Features</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                <span>$19/mo per additional member</span>
               </div>
             </div>
           </div>
