@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
+const FEEDBACK_DISABLED = true;
 const QUESTIONS_PER_PROMPT = 5;
 const FEEDBACK_INTERVAL_DAYS = 7;
 const FEEDBACK_POINTS_REWARD = 30;
@@ -37,6 +38,10 @@ export function useFeedbackPrompt() {
   const [userFinancialAccess, setUserFinancialAccess] = useState<boolean>(true);
 
   useEffect(() => {
+    if (FEEDBACK_DISABLED) {
+      setLoading(false);
+      return;
+    }
     if (user?.id) {
       checkFeedbackStatus().catch(err => {
         console.error('Error in feedback status check:', err);

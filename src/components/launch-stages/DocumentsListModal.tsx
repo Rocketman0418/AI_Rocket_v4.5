@@ -71,7 +71,7 @@ export const DocumentsListModal: React.FC<DocumentsListModalProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>(initialCategory || 'all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
-  const [sortField, setSortField] = useState<SortField>('synced_at');
+  const [sortField, setSortField] = useState<SortField>('file_modified_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<Document | null>(null);
@@ -143,7 +143,8 @@ export const DocumentsListModal: React.FC<DocumentsListModalProps> = ({
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      const isDateField = field === 'synced_at' || field === 'file_modified_at';
+      setSortDirection(isDateField ? 'desc' : 'asc');
     }
   };
 
@@ -251,16 +252,16 @@ export const DocumentsListModal: React.FC<DocumentsListModalProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500">Sort:</span>
               <button
-                onClick={() => handleSort('synced_at')}
-                className={`px-2 py-1 text-xs rounded ${sortField === 'synced_at' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
-              >
-                Sync Date
-              </button>
-              <button
                 onClick={() => handleSort('file_modified_at')}
                 className={`px-2 py-1 text-xs rounded ${sortField === 'file_modified_at' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
               >
                 File Date
+              </button>
+              <button
+                onClick={() => handleSort('synced_at')}
+                className={`px-2 py-1 text-xs rounded ${sortField === 'synced_at' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+              >
+                Sync Date
               </button>
               <button
                 onClick={() => handleSort('file_name')}

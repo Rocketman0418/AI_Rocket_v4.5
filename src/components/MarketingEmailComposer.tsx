@@ -50,7 +50,7 @@ const FREQUENCY_OPTIONS = [
 
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => ({
   value: i,
-  label: i === 0 ? '12:00 AM' : i < 12 ? `${i}:00 AM` : i === 12 ? '12:00 PM' : `${i - 12}:00 PM`
+  label: i === 0 ? '12:00 AM ET' : i < 12 ? `${i}:00 AM ET` : i === 12 ? '12:00 PM ET' : `${i - 12}:00 PM ET`
 }));
 
 export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailComposerProps) {
@@ -252,27 +252,47 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
   };
 
   const calculateNextRunAt = (frequency: string, customDays?: number, sendHour?: number): string => {
-    const now = new Date();
     const hour = sendHour ?? 9;
+    const now = new Date();
+    const etFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    const etParts = etFormatter.formatToParts(now);
+    const etYear = parseInt(etParts.find(p => p.type === 'year')?.value || '2024');
+    const etMonth = parseInt(etParts.find(p => p.type === 'month')?.value || '1') - 1;
+    const etDay = parseInt(etParts.find(p => p.type === 'day')?.value || '1');
+    let targetDate = new Date(Date.UTC(etYear, etMonth, etDay, hour + 5, 0, 0));
+    const testDate = new Date(targetDate);
+    const etOffsetCheck = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric',
+      hour12: false
+    }).format(testDate);
+    const actualHour = parseInt(etOffsetCheck);
+    if (actualHour !== hour) {
+      targetDate = new Date(targetDate.getTime() + (hour - actualHour) * 60 * 60 * 1000);
+    }
     switch (frequency) {
       case 'daily':
-        now.setDate(now.getDate() + 1);
+        targetDate.setUTCDate(targetDate.getUTCDate() + 1);
         break;
       case 'weekly':
-        now.setDate(now.getDate() + 7);
+        targetDate.setUTCDate(targetDate.getUTCDate() + 7);
         break;
       case 'biweekly':
-        now.setDate(now.getDate() + 14);
+        targetDate.setUTCDate(targetDate.getUTCDate() + 14);
         break;
       case 'monthly':
-        now.setMonth(now.getMonth() + 1);
+        targetDate.setUTCMonth(targetDate.getUTCMonth() + 1);
         break;
       case 'custom':
-        now.setDate(now.getDate() + (customDays || 3));
+        targetDate.setUTCDate(targetDate.getUTCDate() + (customDays || 3));
         break;
     }
-    now.setHours(hour, 0, 0, 0);
-    return now.toISOString();
+    return targetDate.toISOString();
   };
 
   const saveRecurringEmail = async () => {
@@ -920,7 +940,7 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
                         ))}
                       </select>
                       <p className="text-xs text-gray-500 mt-2">
-                        Emails will be sent at this time on the scheduled day
+                        Emails will be sent at this time (Eastern Time) on the scheduled day
                       </p>
                     </div>
 

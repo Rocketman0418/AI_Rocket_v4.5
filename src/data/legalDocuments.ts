@@ -1,239 +1,218 @@
 export const PRIVACY_POLICY = {
   title: 'Privacy Policy',
-  lastUpdated: '2025-12-14',
+  lastUpdated: '2025-12-22',
   content: `
 # Privacy Policy
 
-**Last Updated: December 14, 2025**
+**Last Updated: December 22, 2025**
 
 ## Introduction
 
-Welcome to RocketHub's Astra Intelligence platform ("Service"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Service.
+This Privacy Policy applies to Health Rocket Ventures LLC, a New York limited liability company doing business as RocketHub.ai ("Company," "we," "us," or "our"). This policy governs the collection, use, disclosure, and protection of your information across all of our products, services, websites, and applications, including but not limited to our AI Rocket and Health Rocket product lines, Astra Intelligence platform, and any future products, services, or brands operated by Health Rocket Ventures LLC or its subsidiaries.
+
+By accessing or using any of our services, you acknowledge that you have read, understood, and agree to be bound by this Privacy Policy. If you do not agree with our policies and practices, please do not use our services.
+
+## Nature of Our Services
+
+Health Rocket Ventures LLC is not a healthcare provider, medical facility, or "Covered Entity" under the Health Insurance Portability and Accountability Act (HIPAA). Our services are intended for general productivity, wellness, and business purposes only. Users should not upload or store Protected Health Information (PHI), sensitive medical records, or any data subject to HIPAA or similar healthcare privacy regulations through our services.
 
 ## Information We Collect
 
 ### Information You Provide
-- **Account Information**: Name, email address, and password when you create an account
-- **Profile Information**: Optional information such as company name and role
-- **User Content**: Messages, data, documents, and files you upload to the Service
-- **Communication Data**: Support requests, feedback, and other communications with us
+
+- **Account Information**: When you create an account, we collect your name, email address, and password.
+- **Profile Information**: You may optionally provide additional information such as company name, job title, profile photo, and other details to enhance your experience.
+- **User Content**: This includes messages, data, documents, files, and any other content you upload, create, or share through our services.
+- **Communication Data**: We collect information from your communications with us, including support requests, feedback, and other correspondence.
+- **Payment Information**: If you make purchases, we collect billing information necessary to process your transactions. Payment card details are processed by our third-party payment processors and are not stored on our servers.
 
 ### Automatically Collected Information
-- **Usage Data**: How you interact with our Service, features used, and time spent
-- **Device Information**: Browser type, operating system, IP address
-- **Analytics**: We use analytics to understand how users interact with our Service
+
+- **Usage Data**: We collect information about how you interact with our services, including features used, actions taken, time spent, and navigation patterns.
+- **Device Information**: We collect information about the devices you use to access our services, including browser type, operating system, device identifiers, and IP address.
+- **Analytics Data**: We use analytics tools to understand how users interact with our services to improve functionality and user experience.
 
 ## How We Use Your Information
 
-We use your information to:
-- Provide, maintain, and improve our Service
-- Process your requests and transactions
-- Send administrative information and updates
-- Respond to your inquiries and provide customer support
-- Analyze usage patterns to enhance user experience
-- Detect, prevent, and address technical issues and security threats
-- Comply with legal obligations
+We use the information we collect to provide, maintain, and improve our services; process your requests, transactions, and subscriptions; send administrative information, updates, and service-related communications; respond to your inquiries and provide customer support; analyze usage patterns to enhance user experience and develop new features; detect, prevent, and address technical issues, security threats, and fraudulent activity; personalize your experience across our services; and comply with legal obligations and enforce our terms of service.
 
 ## AI Processing
 
-Our Service uses AI to provide intelligent insights from your data:
-- Your content is processed to generate AI responses and visualizations
-- We use third-party AI services (Google Gemini) to power our intelligence features
-- Your data is sent to these services in accordance with their privacy policies
-- We do not train AI models on your private data without explicit consent
+Our services utilize artificial intelligence to provide intelligent insights, automation, and enhanced functionality. Your content may be processed by AI systems to generate responses, recommendations, visualizations, and other outputs. We use third-party AI processing services to power these features, and your data is transmitted to these services in accordance with their respective privacy policies and our data processing agreements.
+
+**Important**: We do not use your private data to train AI models without your explicit consent. Any AI processing is performed solely to deliver the services you have requested. For further details on how our AI systems interact with your data, please refer to our Terms of Service.
 
 ## Data Sharing and Disclosure
 
 We do not sell your personal information. We may share your information in the following circumstances:
 
 ### With Your Consent
-We may share information when you explicitly authorize us to do so.
+
+We may share information when you explicitly authorize us to do so, such as when you choose to share content with other users or connect third-party services.
 
 ### Service Providers
-We may share information with third-party service providers who perform services on our behalf, including:
-- Cloud hosting (Supabase)
-- AI processing (Google Gemini)
-- Email delivery services
-- Analytics providers
 
-### Team Collaboration
-If you're part of a team, certain information may be shared with your team members according to your team's permissions.
+We may share information with third-party service providers who perform services on our behalf, including cloud hosting and infrastructure providers, AI and machine learning processing services, payment processors, email delivery and communication services, analytics providers, workflow automation services, and customer support tools. These providers are contractually obligated to use your information only for the purposes of providing services to us and in compliance with this Privacy Policy.
+
+A current list of our third-party service providers (sub-processors) is available upon request by contacting support@rockethub.ai.
+
+### Team and Organizational Collaboration
+
+If you are part of a team or organization using our services, certain information may be shared with other members of your team according to the permissions and settings configured by your organization's administrator.
 
 ### Legal Requirements
-We may disclose information if required by law or in response to legal process.
+
+We may disclose information if required by law, subpoena, court order, or other legal process, or if we believe in good faith that such disclosure is necessary to protect our rights, protect your safety or the safety of others, investigate fraud, or respond to a government request.
 
 ### Business Transfers
-In connection with a merger, acquisition, or sale of assets, your information may be transferred.
+
+In connection with a merger, acquisition, reorganization, sale of assets, or bankruptcy, your information may be transferred to the acquiring entity. We will provide notice before your personal information becomes subject to a different privacy policy.
+
+## Third-Party Integrations
+
+Our services may offer integrations with third-party platforms and services to enhance functionality. When you choose to connect a third-party service, you authorize us to access certain information from that service as permitted by your settings and that service's policies.
+
+### What We Access
+
+The specific data accessed depends on the integration and permissions you grant. This may include documents, files, emails, calendar information, or other data necessary to provide the integrated functionality you have requested.
+
+### How We Use Integration Data
+
+Data accessed through integrations is used solely to provide the features and services you have enabled. This may include reading and analyzing documents to provide AI-powered insights, synchronizing information between services, and creating or organizing content on your behalf when you request it. We do not use data from third-party integrations to train AI models, and we do not share this data with additional third parties except as necessary to provide the requested services.
+
+### Managing Integrations
+
+You control which integrations are active and can disconnect them at any time through your account settings. When you disconnect an integration, we stop accessing data from that service. You may also revoke access through the third-party service's own permission settings.
+
+### Token and Credential Security
+
+Access tokens and credentials for third-party services are encrypted and stored securely. We use industry-standard OAuth 2.0 protocols where available. These credentials are never exposed to your browser or other client applications.
 
 ## Data Storage and Security
 
-- **Storage**: Your data is stored on secure cloud servers provided by Supabase
-- **Encryption**: Data is encrypted in transit using SSL/TLS
-- **Access Controls**: We implement role-based access controls and authentication
-- **Backups**: Regular backups are maintained for data recovery purposes
-- **Retention**: We retain your data as long as your account is active or as needed to provide services
+We implement appropriate technical and organizational measures to protect your information, including secure cloud storage with reputable infrastructure providers, encryption of data in transit using SSL/TLS protocols, role-based access controls and authentication mechanisms, regular security assessments and monitoring, and regular backups for data recovery purposes.
+
+We retain your data for as long as your account is active or as needed to provide services to you. Upon account deletion, we will delete or anonymize your personal information within a reasonable timeframe, except where retention is required by law or legitimate business purposes. For specific data retention schedules and deletion protocols, please refer to our Terms of Service.
 
 ## Your Rights and Choices
 
 ### Access and Correction
-You can access and update your account information through your profile settings.
+
+You can access and update your account information through your profile settings at any time.
 
 ### Data Deletion
-You can request deletion of your account and associated data by contacting support.
 
-### Opt-Out
-You can opt out of non-essential communications through your account settings.
+You can request deletion of your account and associated data by contacting us at support@rockethub.ai. We will process your request in accordance with applicable law.
+
+### Communication Preferences
+
+You can opt out of promotional communications through your account settings or by following the unsubscribe instructions in our emails. Note that you may still receive transactional or service-related communications.
 
 ### Data Export
-You can request a copy of your data by contacting support.
 
-## Cookies and Tracking
+You can request a copy of your personal data by contacting us at support@rockethub.ai.
 
-We use cookies and similar technologies to:
-- Maintain your session and authentication
-- Remember your preferences
-- Analyze usage patterns
-- Improve our Service
+## Cookies and Tracking Technologies
 
-You can control cookies through your browser settings.
+We use cookies, device identifiers, local storage, software development kits (SDKs), and similar tracking technologies in our websites and mobile applications to maintain your session and authentication, remember your preferences and settings, analyze usage patterns and improve our services, and provide personalized experiences.
 
-## Third-Party Services
-
-Our Service integrates with third-party services:
-- **Google Drive**: For document access (with your permission)
-- **Gmail**: For email access (with your permission)
-- **Google Gemini AI**: For AI processing
-- **N8N**: For workflow automation
-
-Each service has its own privacy policy governing their use of your information.
-
-## Google Services Integration
-
-Our Service requests access to your Google account to provide core functionality. This section explains exactly what we access and why.
-
-### Google OAuth Permissions Requested
-
-When you connect your Google account, we request the following permissions:
-
-### Basic Profile Information (openid, userinfo.email)
-- **What we access**: Your Google account email address and basic profile identifier
-- **Why we need it**: To identify your account and associate your Google Drive connection with your RocketHub account
-- **How we use it**: Displayed in your settings to confirm which Google account is connected
-
-### Google Drive (Full Access)
-- **What we access**: Files and folders in your Google Drive that you select for Astra to analyze
-- **Why we need it**: To read documents (meeting notes, strategy files, financial reports) that power Astra's intelligence features
-- **What we can do**: Read, create, edit, and delete files. However, we ONLY access folders you explicitly select in the folder configuration
-- **How we use it**:
-  - Reading: To analyze your documents and provide AI-powered insights
-  - Creating: To create new folders (like "Astra Meeting Files") when you use guided setup
-  - We do NOT edit or delete your existing files
-
-### Google Drive Data Processing
-
-**Documents you share with Astra:**
-- Are processed by our AI system (Google Gemini) to generate insights
-- Are stored in our secure database for vector search and retrieval
-- Are associated with your team for collaborative access
-- Are NOT used to train AI models
-- Are NOT shared with third parties except for AI processing
-
-### Google Drive Data Retention
-- **Active connection**: Your selected documents remain synchronized while your account is active
-- **Disconnection**: When you disconnect Google Drive, we stop accessing your Drive
-- **Account deletion**: When you delete your RocketHub account, all associated document data is permanently deleted
-
-### Limiting Google Drive Access
-
-Although we request full Drive access for technical functionality:
-- We ONLY access folders you explicitly configure in Settings
-- You control which folders Astra can read through the folder selection interface
-- You can change or remove folder access at any time
-- You can disconnect Google Drive entirely through Settings
-
-### Google Token Security
-- Your Google access tokens are encrypted and stored securely
-- Tokens are automatically refreshed and never exposed to the browser
-- We use OAuth 2.0 industry-standard security protocols
-- You can revoke access at any time through Google Account Settings (myaccount.google.com/permissions)
+You can control cookies through your browser settings and manage mobile tracking through your device settings. Please note that disabling certain tracking technologies may affect the functionality of our services.
 
 ## Children's Privacy
 
-Our Service is not intended for users under 13 years of age. We do not knowingly collect information from children under 13.
+Our services are not intended for users under 13 years of age (or the applicable age of consent in your jurisdiction). We do not knowingly collect personal information from children. If we become aware that we have collected personal information from a child without appropriate consent, we will take steps to delete that information promptly.
 
 ## International Data Transfers
 
-Your information may be transferred to and processed in countries other than your country of residence. We ensure appropriate safeguards are in place for such transfers.
+Your information may be transferred to and processed in countries other than your country of residence, including the United States, where our servers and service providers are located. These countries may have data protection laws that differ from those in your jurisdiction.
 
-## Changes to This Policy
-
-We may update this Privacy Policy from time to time. We will notify you of material changes by:
-- Posting the updated policy with a new "Last Updated" date
-- Sending an email notification to your registered email address
-- Displaying a notice in the Service
-
-## Contact Us
-
-If you have questions about this Privacy Policy, please contact us at:
-- **Email**: support@rockethub.ai
-- **Support Form**: Available in the app under Support menu
+Where we transfer personal data from the European Economic Area (EEA), United Kingdom, or Switzerland to countries that do not provide an adequate level of data protection, we rely on lawful transfer mechanisms such as the EU-U.S. Data Privacy Framework (DPF), the UK Extension to the DPF, the Swiss-U.S. DPF, or Standard Contractual Clauses (SCCs) approved by the European Commission and entered into with our sub-processors.
 
 ## Data Protection Rights (GDPR)
 
-If you are in the European Economic Area (EEA), you have certain data protection rights:
-- Right to access your personal data
-- Right to correct inaccurate data
-- Right to delete your data
-- Right to restrict processing
-- Right to data portability
-- Right to object to processing
-- Right to withdraw consent
+If you are located in the European Economic Area (EEA), United Kingdom, or Switzerland, you have certain data protection rights under the General Data Protection Regulation and similar laws. These include the right to access your personal data, the right to correct inaccurate data, the right to delete your data ("right to be forgotten"), the right to restrict processing of your data, the right to data portability, the right to object to processing, and the right to withdraw consent at any time where processing is based on consent.
 
-To exercise these rights, please contact us using the information above.
+To exercise these rights, please contact us at support@rockethub.ai. You also have the right to lodge a complaint with your local data protection authority.
 
-## California Privacy Rights (CCPA)
+## California Privacy Rights (CCPA/CPRA)
 
-If you are a California resident, you have specific rights:
-- Right to know what personal information is collected
-- Right to know if personal information is sold or disclosed
-- Right to say no to the sale of personal information
-- Right to access your personal information
-- Right to equal service and price
+If you are a California resident, you have specific rights under the California Consumer Privacy Act and California Privacy Rights Act. These include the right to know what personal information is collected, used, shared, or sold; the right to delete personal information held by us and our service providers; the right to opt out of the sale or sharing of personal information (note: we do not sell personal information); the right to correct inaccurate personal information; the right to limit use of sensitive personal information; and the right to non-discrimination for exercising your privacy rights.
 
-We do not sell personal information of California residents.
+We do not sell the personal information of California residents. To exercise your rights, please contact us at support@rockethub.ai.
+
+## Changes to This Policy
+
+We may update this Privacy Policy from time to time to reflect changes in our practices, technologies, legal requirements, or other factors. We will notify you of material changes by posting the updated policy with a new "Last Updated" date, sending an email notification to your registered email address, and/or displaying a prominent notice within our services. We encourage you to review this Privacy Policy periodically.
+
+## Contact Us
+
+If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us at:
+
+**Health Rocket Ventures LLC**
+d/b/a RocketHub.ai
+Email: support@rockethub.ai
+https://rockethub.ai
   `.trim()
 };
 
 export const TERMS_OF_SERVICE = {
   title: 'Terms of Service',
-  lastUpdated: '2025-11-24',
+  lastUpdated: '2025-12-22',
   content: `
 # Terms of Service
 
-**Last Updated: November 24, 2025**
+**Last Updated: December 22, 2025**
+
+## Definitions
+
+"RocketHub.ai," "we," "us," or "our" refers to Health Rocket Ventures LLC, a New York limited liability company doing business as RocketHub.ai.
 
 ## Agreement to Terms
 
-By accessing or using RocketHub's Astra Intelligence platform ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the Service.
+By accessing or using RocketHub.ai's Astra Intelligence platform ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, do not use the Service.
 
 ## Description of Service
 
-Astra Intelligence is an AI-powered platform that provides:
-- Intelligent insights from your data
-- AI-assisted conversations and collaboration
-- Data visualization and reporting
-- Team collaboration features
-- Integration with third-party services
+Astra Intelligence is an AI-powered platform that provides intelligent insights from your data, AI-assisted conversations and collaboration, data visualization and reporting, team collaboration features, and integration with third-party services.
+
+## Privacy
+
+Your privacy is important to us. Our collection, use, and protection of your personal information is governed by our Privacy Policy, available at https://airocket.app/privacy. By using the Service, you consent to the data practices described in the Privacy Policy. The Privacy Policy is incorporated into and made part of these Terms.
+
+## Confidentiality
+
+### Definition of Confidential Information
+
+"Confidential Information" means any non-public business, technical, or financial information disclosed by either party to the other in connection with the Service, including but not limited to business strategies, financial data, customer lists, proprietary processes, trade secrets, and any other information that a reasonable person would understand to be confidential given the nature of the information and circumstances of disclosure.
+
+### Obligations
+
+Each party agrees to: (a) protect the other party's Confidential Information with at least the same degree of care it uses to protect its own confidential information, but no less than reasonable care; (b) use such Confidential Information only for the purpose of performing its obligations or exercising its rights under these Terms; and (c) not disclose such Confidential Information to any third party except as expressly permitted herein or with prior written consent.
+
+### Exclusions
+
+Confidential Information does not include information that:
+
+- Is or becomes publicly available through no fault of the receiving party
+- Was rightfully known to the receiving party prior to disclosure without restriction
+- Is rightfully received from a third party without confidentiality restrictions
+- Is independently developed by the receiving party without use of or reference to the disclosing party's Confidential Information
+
+### Required Disclosures
+
+A party may disclose Confidential Information to the extent required by law or court order, provided that the party gives the other party prompt written notice (where legally permitted) to allow the other party to seek protective measures.
 
 ## Account Registration
 
 ### Account Creation
+
 - You must provide accurate and complete information when creating an account
 - You are responsible for maintaining the security of your account credentials
-- You must be at least 13 years old to use the Service
+- You must be at least 16 years old to use the Service
 - One person or entity may not maintain multiple accounts
 
 ### Account Security
+
 - You are responsible for all activities that occur under your account
 - Notify us immediately of any unauthorized access or security breach
 - We are not liable for any loss or damage from your failure to secure your account
@@ -241,10 +220,13 @@ Astra Intelligence is an AI-powered platform that provides:
 ## Acceptable Use
 
 ### Permitted Uses
+
 You may use the Service for lawful business and personal purposes consistent with these Terms.
 
 ### Prohibited Uses
+
 You may NOT:
+
 - Violate any applicable laws or regulations
 - Infringe on intellectual property rights of others
 - Upload malicious code, viruses, or harmful content
@@ -260,13 +242,16 @@ You may NOT:
 ## User Content
 
 ### Your Content
+
 - You retain ownership of content you upload to the Service
 - You grant us a license to use, store, and process your content to provide the Service
 - You are responsible for ensuring you have rights to all content you upload
 - You represent that your content does not violate any laws or third-party rights
 
 ### Content Standards
+
 Your content must not:
+
 - Contain illegal material or promote illegal activities
 - Be defamatory, obscene, or offensive
 - Infringe on intellectual property rights
@@ -274,27 +259,80 @@ Your content must not:
 - Contain malware or malicious code
 
 ### Content Removal
+
 We reserve the right to remove content that violates these Terms without notice.
+
+## Copyright Policy
+
+RocketHub.ai respects the intellectual property rights of others and expects users of the Service to do the same.
+
+### Reporting Copyright Infringement
+
+If you believe that your copyrighted work has been copied or used in a way that constitutes copyright infringement, please notify us by sending a written notice to support@rockethub.ai. Your notice should include: (a) identification of the copyrighted work claimed to have been infringed; (b) identification of the material that is claimed to be infringing and information sufficient to locate it within the Service; (c) your contact information; (d) a statement that you have a good faith belief that the use is not authorized by the copyright owner, its agent, or the law; and (e) a statement, under penalty of perjury, that the information in your notice is accurate and that you are the copyright owner or authorized to act on behalf of the owner.
+
+### Response to Notices
+
+Upon receiving a valid copyright infringement notice, we will promptly remove or disable access to the allegedly infringing content, including any associated vectorized data or processed derivatives, and notify the user who uploaded the content. Repeat infringers may have their accounts terminated.
+
+## Data Storage and Portability
+
+The Service accesses data stored in your connected third-party services (such as Google Drive) but does not store your source data on our systems. Your source data remains in your possession and control at all times.
+
+Reports, visualizations, and other outputs generated by the Service are stored within your account and may be exported in PDF format at any time.
+
+Upon account termination or cancellation, your generated outputs will be retained for sixty (60) days, during which time you may export them. After this period, all generated outputs will be permanently deleted from our systems.
 
 ## AI Services
 
 ### AI Processing
+
 - The Service uses AI to analyze your content and generate insights
 - AI responses are generated automatically and may not always be accurate
 - You are responsible for reviewing and verifying AI-generated content
 - We do not guarantee the accuracy, completeness, or reliability of AI responses
 
+### Data Processing and Storage
+
+To provide personalized and relevant AI-assisted responses, the Service processes and stores your content in a vectorized format within your account environment. This allows Astra to reference your data when generating responses.
+
+Your data is not used to train the underlying AI models. The Service utilizes third-party AI providers (including Google Gemini and OpenAI) to generate responses. Your content is processed through these services to provide functionality but is not used to train or improve their foundational models. Your data remains siloed to your account and is not shared with or accessible by other users.
+
+### AI-Generated Outputs
+
+You retain ownership of any outputs generated by the Service that are derived from your content and data. You may use, modify, and commercialize such outputs for your business purposes.
+
+You acknowledge that: (a) AI-generated content may not be eligible for copyright protection under applicable law; (b) similar structural formats, templates, or processes may be generated for other users; and (c) you are solely responsible for reviewing outputs and ensuring your use does not infringe any third-party rights.
+
+We retain the right to use general processes, workflows, formats, and interface improvements derived from user interactions with the Service to improve our platform. We will not use your proprietary business data for any purpose other than providing the Service to you.
+
+### AI Limitations and Responsible Use
+
+The Service is designed to assist with business operations, insights, and recommendations. However, AI-generated outputs may contain errors, inaccuracies, or biases. You are responsible for reviewing, verifying, and exercising independent judgment before acting on any AI-generated content.
+
+**Human Oversight Required.** You agree to maintain appropriate human oversight when using outputs from the Service, particularly for decisions involving financial commitments, legal matters, personnel actions, or other significant business decisions.
+
+**Prohibited High-Risk Uses.** You may not use the Service for:
+
+- Automated decision-making that produces legal effects or similarly significant impacts on individuals without human review
+- Making employment decisions (hiring, termination, promotion) based solely on AI outputs
+- Determining creditworthiness or financial eligibility
+- Medical, legal, or professional advice in lieu of qualified professionals
+- Any use prohibited by applicable AI regulations
+
 ### Third-Party AI
-We use third-party AI services (Google Gemini). Your use of AI features is also subject to the third-party provider's terms.
+
+We use third-party AI services (Google Gemini and OpenAI). Your use of AI features is also subject to the third-party provider's terms.
 
 ## Team Accounts
 
 ### Team Administration
+
 - Team administrators have control over team settings and members
 - Administrators can access content shared within the team
 - Team members agree to share certain information with other team members
 
 ### Team Member Responsibilities
+
 - Follow your team's policies and guidelines
 - Respect other team members' content and privacy
 - Do not share team content outside the team without authorization
@@ -302,67 +340,88 @@ We use third-party AI services (Google Gemini). Your use of AI features is also 
 ## Payment Terms
 
 ### Pricing
+
 - Current pricing is available on our website and in the Service
 - Prices may change with notice to existing subscribers
 - You agree to pay all fees for the service plan you select
 
 ### Billing
+
 - Subscription fees are billed in advance on a recurring basis
 - You authorize us to charge your payment method
 - Failed payments may result in service suspension
 - Refunds are provided at our discretion
 
+### Taxes
+
+All fees are exclusive of all taxes, levies, or duties imposed by taxing authorities. You are responsible for paying all such taxes, levies, or duties, excluding only United States (federal or state) taxes based solely on RocketHub.ai's income.
+
 ### Cancellation
+
 - You may cancel your subscription at any time
 - Cancellation takes effect at the end of the current billing period
 - No refunds for partial billing periods unless required by law
 
+## Security
+
+We implement reasonable administrative, technical, and physical safeguards designed to protect the security and integrity of the Service. Access to third-party services you connect to the platform (such as Google Drive) is secured through industry-standard authentication protocols.
+
+While we take security seriously, no system is completely secure. In the event of a security incident that affects your account or data, we will notify you in accordance with applicable law.
+
+For questions about our security practices, contact us at support@rockethub.ai.
+
 ## Intellectual Property
 
 ### Our Rights
-- The Service, including all content, features, and functionality, is owned by RocketHub
+
+- The Service, including all content, features, and functionality, is owned by Health Rocket Ventures LLC
 - Our trademarks, logos, and branding may not be used without permission
 - These Terms do not grant you any intellectual property rights except as explicitly stated
 
 ### License to Use Service
+
 We grant you a limited, non-exclusive, non-transferable license to access and use the Service for its intended purpose.
 
 ## Third-Party Services
 
 ### Integrations
+
 The Service integrates with third-party services (Google Drive, Gmail, etc.):
+
 - You must comply with third-party terms of service
 - We are not responsible for third-party services
 - Integration availability may change without notice
 
 ### Third-Party Content
+
 We are not responsible for content or services provided by third parties.
 
 ## Disclaimers
 
 ### Service Availability
+
 - The Service is provided "AS IS" and "AS AVAILABLE"
 - We do not guarantee uninterrupted or error-free operation
 - We may modify, suspend, or discontinue features without notice
 
 ### No Warranties
+
 TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
 
 ### AI Limitations
+
 - AI-generated content may contain errors or inaccuracies
 - Do not rely solely on AI output for critical decisions
 - Always verify important information independently
 
 ## Limitation of Liability
 
-TO THE MAXIMUM EXTENT PERMITTED BY LAW:
-- WE ARE NOT LIABLE FOR INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES
-- OUR TOTAL LIABILITY SHALL NOT EXCEED THE AMOUNT YOU PAID US IN THE PAST 12 MONTHS
-- SOME JURISDICTIONS DO NOT ALLOW THESE LIMITATIONS, SO THEY MAY NOT APPLY TO YOU
+TO THE MAXIMUM EXTENT PERMITTED BY LAW: WE ARE NOT LIABLE FOR INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES. OUR TOTAL LIABILITY SHALL NOT EXCEED THE AMOUNT YOU PAID US IN THE PAST 12 MONTHS OR ONE HUNDRED DOLLARS ($100), WHICHEVER IS GREATER. SOME JURISDICTIONS DO NOT ALLOW THESE LIMITATIONS, SO THEY MAY NOT APPLY TO YOU.
 
 ## Indemnification
 
-You agree to indemnify and hold harmless RocketHub and its officers, directors, employees, and agents from any claims, damages, losses, liabilities, and expenses (including legal fees) arising from:
+You agree to indemnify and hold harmless Health Rocket Ventures LLC and its officers, directors, employees, and agents from any claims, damages, losses, liabilities, and expenses (including legal fees) arising from:
+
 - Your use of the Service
 - Your violation of these Terms
 - Your violation of any rights of another party
@@ -375,17 +434,25 @@ While we maintain backups, you are responsible for maintaining your own backups 
 ## Service Modifications
 
 We reserve the right to:
+
 - Modify or discontinue the Service or any features
 - Change these Terms with notice
 - Update pricing with notice to existing customers
 
+## Regulatory Compliance
+
+The regulatory landscape governing AI services is evolving. We reserve the right to modify, limit, or discontinue features of the Service as necessary to comply with applicable laws and regulations. If material changes to the Service are required due to regulatory developments, we will provide notice through the Service or via email. Your continued use of the Service following such changes constitutes acceptance of the modified terms.
+
 ## Termination
 
 ### By You
+
 You may terminate your account at any time through account settings or by contacting support.
 
 ### By Us
+
 We may suspend or terminate your account if:
+
 - You violate these Terms
 - Your account poses a security risk
 - You engage in fraudulent activity
@@ -393,55 +460,73 @@ We may suspend or terminate your account if:
 - Your payment fails
 
 ### Effect of Termination
+
 Upon termination:
+
 - Your access to the Service will cease
-- We may delete your data after a reasonable period
+- Your generated outputs will be retained for sixty (60) days, after which they will be permanently deleted
 - You remain liable for any outstanding fees
 - Sections of these Terms that by nature should survive will remain in effect
 
 ## Dispute Resolution
 
 ### Governing Law
-These Terms are governed by the laws of [Your Jurisdiction], without regard to conflict of law principles.
+
+These Terms are governed by the laws of the State of New York, without regard to conflict of law principles.
 
 ### Arbitration
-Any disputes shall be resolved through binding arbitration in accordance with [Arbitration Rules], except where prohibited by law.
+
+Any dispute, claim, or controversy arising out of or relating to these Terms or the Service shall be resolved through binding arbitration administered by the American Arbitration Association (AAA) in accordance with its Commercial Arbitration Rules. The arbitration shall take place in New York, New York. The arbitrator's decision shall be final and binding, and judgment on the award may be entered in any court of competent jurisdiction.
+
+### Small Claims Exception
+
+Notwithstanding the above, either party may bring an individual action in small claims court for disputes within that court's jurisdictional limits.
 
 ### Class Action Waiver
+
 You agree to resolve disputes individually and waive the right to participate in class actions.
 
 ### Exceptions
+
 Either party may seek injunctive relief in court for intellectual property or confidentiality matters.
 
 ## General Provisions
 
 ### Entire Agreement
-These Terms constitute the entire agreement between you and RocketHub regarding the Service.
+
+These Terms constitute the entire agreement between you and Health Rocket Ventures LLC regarding the Service.
 
 ### Severability
+
 If any provision is found unenforceable, the remaining provisions continue in effect.
 
 ### Waiver
+
 Our failure to enforce any provision does not constitute a waiver of that provision.
 
 ### Assignment
+
 You may not assign these Terms. We may assign these Terms without restriction.
 
 ### Force Majeure
+
 We are not liable for delays or failures due to circumstances beyond our reasonable control.
 
 ### Notices
+
 We may provide notices through the Service, by email, or by posting on our website.
 
 ## Contact Information
 
 For questions about these Terms, contact us at:
+
 - **Email**: support@rockethub.ai
 - **Support Form**: Available in the app under Support menu
 
 ## Changes to Terms
 
 We may update these Terms from time to time. Material changes will be communicated via:
+
 - Email notification
 - Notice in the Service
 - Updated "Last Updated" date
@@ -451,5 +536,7 @@ Continued use of the Service after changes constitutes acceptance of the updated
 ## Acknowledgment
 
 By using the Service, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our Privacy Policy.
+
+Questions? Contact us at support@rockethub.ai
   `.trim()
 };
