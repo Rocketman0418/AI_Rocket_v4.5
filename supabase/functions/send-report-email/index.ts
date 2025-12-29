@@ -478,7 +478,7 @@ Return ONLY the complete HTML code. No markdown formatting or code blocks.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Astra Intelligence <astra@airocket.app>",
+        from: "AI Rocket <astra@airocket.app>",
         to: userEmail,
         subject: emailSubject,
         html: emailHtml,

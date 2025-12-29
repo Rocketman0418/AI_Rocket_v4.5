@@ -15,13 +15,15 @@ interface EmailData {
   special_notes: string;
   html_content: string;
   recipient_filter: {
-    type: 'all' | 'specific' | 'preview_requests';
+    types: ('all_users' | 'specific' | 'preview_requests' | 'marketing_contacts')[];
     emails?: string[];
   };
   scheduled_for: string | null;
   context_type?: 'full' | 'core' | 'benefits' | 'useCases';
   is_recurring?: boolean;
-  frequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly';
+  frequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
+  custom_interval_days?: number;
+  send_hour?: number;
 }
 
 const INITIAL_DATA: EmailData = {
@@ -29,19 +31,27 @@ const INITIAL_DATA: EmailData = {
   content_description: '',
   special_notes: '',
   html_content: '',
-  recipient_filter: { type: 'all' },
+  recipient_filter: { types: ['all_users'] },
   scheduled_for: null,
   context_type: 'full',
   is_recurring: false,
-  frequency: 'weekly'
+  frequency: 'weekly',
+  custom_interval_days: 3,
+  send_hour: 9
 };
 
 const FREQUENCY_OPTIONS = [
   { value: 'daily', label: 'Daily', description: 'Every day' },
   { value: 'weekly', label: 'Weekly', description: 'Every 7 days' },
   { value: 'biweekly', label: 'Bi-weekly', description: 'Every 14 days' },
-  { value: 'monthly', label: 'Monthly', description: 'Every 30 days' }
+  { value: 'monthly', label: 'Monthly', description: 'Every 30 days' },
+  { value: 'custom', label: 'Custom', description: 'Set your own interval' }
 ] as const;
+
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => ({
+  value: i,
+  label: i === 0 ? '12:00 AM' : i < 12 ? `${i}:00 AM` : i === 12 ? '12:00 PM' : `${i - 12}:00 PM`
+}));
 
 export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailComposerProps) {
   const { user } = useAuth();
@@ -57,6 +67,7 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
   const [scheduleType, setScheduleType] = useState<'immediate' | 'scheduled' | 'recurring'>('immediate');
   const [draftId, setDraftId] = useState<string | null>(emailId);
   const [previewRequestCount, setPreviewRequestCount] = useState(0);
+  const [marketingContactsCount, setMarketingContactsCount] = useState(0);
 
   useEffect(() => {
     if (emailId) {
@@ -64,6 +75,7 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
     }
     loadUsers();
     loadPreviewRequests();
+    loadMarketingContactsCount();
   }, [emailId]);
 
   useEffect(() => {
@@ -86,16 +98,26 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
 
       if (error) throw error;
       if (data) {
+        let recipientFilter = data.recipient_filter;
+        if (recipientFilter?.type && !recipientFilter.types) {
+          const oldType = recipientFilter.type;
+          recipientFilter = {
+            types: [oldType === 'all' ? 'all_users' : oldType],
+            emails: recipientFilter.emails
+          };
+        }
         setEmailData({
           subject: data.subject,
           content_description: data.content_description,
           special_notes: data.special_notes,
           html_content: data.html_content,
-          recipient_filter: data.recipient_filter,
+          recipient_filter: recipientFilter,
           scheduled_for: data.scheduled_for,
           context_type: data.context_type || 'full',
           is_recurring: data.is_recurring || false,
-          frequency: data.frequency || 'weekly'
+          frequency: data.frequency || 'weekly',
+          custom_interval_days: data.custom_interval_days || 3,
+          send_hour: data.send_hour ?? 9
         });
         if (data.is_recurring) {
           setScheduleType('recurring');
@@ -134,6 +156,18 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
       setPreviewRequestCount(notYetSignedUp.length);
     } catch (error) {
       console.error('Error loading preview requests:', error);
+    }
+  };
+
+  const loadMarketingContactsCount = async () => {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_marketing_contacts_for_campaign');
+
+      if (error) throw error;
+      setMarketingContactsCount(data?.length || 0);
+    } catch (error) {
+      console.error('Error loading marketing contacts count:', error);
     }
   };
 
@@ -217,8 +251,9 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
     }
   };
 
-  const calculateNextRunAt = (frequency: string): string => {
+  const calculateNextRunAt = (frequency: string, customDays?: number, sendHour?: number): string => {
     const now = new Date();
+    const hour = sendHour ?? 9;
     switch (frequency) {
       case 'daily':
         now.setDate(now.getDate() + 1);
@@ -232,19 +267,29 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
       case 'monthly':
         now.setMonth(now.getMonth() + 1);
         break;
+      case 'custom':
+        now.setDate(now.getDate() + (customDays || 3));
+        break;
     }
-    now.setHours(9, 0, 0, 0);
+    now.setHours(hour, 0, 0, 0);
     return now.toISOString();
   };
 
   const saveRecurringEmail = async () => {
-    if (!confirm(`Set up recurring ${emailData.frequency} email to ${getRecipientCount()} recipients?`)) {
+    const frequencyLabel = emailData.frequency === 'custom'
+      ? `every ${emailData.custom_interval_days} days`
+      : emailData.frequency;
+    if (!confirm(`Set up recurring ${frequencyLabel} email to ${getRecipientCount()} recipients?`)) {
       return;
     }
 
     setSending(true);
     try {
-      const nextRunAt = calculateNextRunAt(emailData.frequency || 'weekly');
+      const nextRunAt = calculateNextRunAt(
+        emailData.frequency || 'weekly',
+        emailData.custom_interval_days,
+        emailData.send_hour
+      );
 
       const payload = {
         subject: emailData.subject,
@@ -256,6 +301,8 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
         status: 'recurring',
         is_recurring: true,
         frequency: emailData.frequency,
+        custom_interval_days: emailData.frequency === 'custom' ? emailData.custom_interval_days : null,
+        send_hour: emailData.send_hour,
         next_run_at: nextRunAt,
         run_count: 0,
         created_by: user?.id
@@ -274,7 +321,14 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
         if (error) throw error;
       }
 
-      alert(`Recurring email set up successfully! First email will be sent ${emailData.frequency === 'daily' ? 'tomorrow' : `in ${emailData.frequency === 'weekly' ? '7' : emailData.frequency === 'biweekly' ? '14' : '30'} days`} at 9:00 AM.`);
+      const sendHourLabel = HOUR_OPTIONS.find(h => h.value === emailData.send_hour)?.label || '9:00 AM';
+      const daysMessage = emailData.frequency === 'custom'
+        ? `in ${emailData.custom_interval_days} days`
+        : emailData.frequency === 'daily'
+          ? 'tomorrow'
+          : `in ${emailData.frequency === 'weekly' ? '7' : emailData.frequency === 'biweekly' ? '14' : '30'} days`;
+
+      alert(`Recurring email set up successfully! First email will be sent ${daysMessage} at ${sendHourLabel}.`);
       onClose();
     } catch (error) {
       console.error('Error saving recurring email:', error);
@@ -389,13 +443,23 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
   };
 
   const getRecipientCount = () => {
-    if (emailData.recipient_filter.type === 'all') {
-      return allUsers.length;
+    const types = emailData.recipient_filter.types || [];
+    let count = 0;
+
+    if (types.includes('all_users')) {
+      count += allUsers.length;
     }
-    if (emailData.recipient_filter.type === 'preview_requests') {
-      return previewRequestCount;
+    if (types.includes('preview_requests')) {
+      count += previewRequestCount;
     }
-    return selectedUserIds.length;
+    if (types.includes('marketing_contacts')) {
+      count += marketingContactsCount;
+    }
+    if (types.includes('specific')) {
+      count += selectedUserIds.length;
+    }
+
+    return count;
   };
 
   const canProceedFromStep1 = emailData.subject && emailData.content_description;
@@ -601,49 +665,44 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
           {step === 3 && (
             <div className="space-y-6 max-w-3xl mx-auto">
               <h3 className="text-xl font-bold text-white">Select Recipients</h3>
+              <p className="text-sm text-gray-400">Select one or more recipient groups. You can combine multiple groups.</p>
 
               <div className="space-y-4">
                 <label className="flex items-center gap-3 p-4 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
                   <input
-                    type="radio"
-                    checked={emailData.recipient_filter.type === 'all'}
-                    onChange={() => setEmailData(prev => ({
-                      ...prev,
-                      recipient_filter: { type: 'all' }
-                    }))}
-                    className="w-4 h-4"
+                    type="checkbox"
+                    checked={emailData.recipient_filter.types.includes('all_users')}
+                    onChange={(e) => {
+                      const types = e.target.checked
+                        ? [...emailData.recipient_filter.types, 'all_users']
+                        : emailData.recipient_filter.types.filter(t => t !== 'all_users');
+                      setEmailData(prev => ({
+                        ...prev,
+                        recipient_filter: { ...prev.recipient_filter, types }
+                      }));
+                    }}
+                    className="w-5 h-5 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500"
                   />
                   <div>
                     <div className="text-white font-medium">All Users</div>
-                    <div className="text-sm text-gray-400">Send to all {allUsers.length} users</div>
+                    <div className="text-sm text-gray-400">Send to all {allUsers.length} registered users</div>
                   </div>
                 </label>
 
                 <label className="flex items-center gap-3 p-4 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
                   <input
-                    type="radio"
-                    checked={emailData.recipient_filter.type === 'specific'}
-                    onChange={() => setEmailData(prev => ({
-                      ...prev,
-                      recipient_filter: { type: 'specific', emails: [] }
-                    }))}
-                    className="w-4 h-4"
-                  />
-                  <div className="flex-1">
-                    <div className="text-white font-medium">Specific Users</div>
-                    <div className="text-sm text-gray-400">Choose specific recipients</div>
-                  </div>
-                </label>
-
-                <label className="flex items-center gap-3 p-4 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
-                  <input
-                    type="radio"
-                    checked={emailData.recipient_filter.type === 'preview_requests'}
-                    onChange={() => setEmailData(prev => ({
-                      ...prev,
-                      recipient_filter: { type: 'preview_requests' }
-                    }))}
-                    className="w-4 h-4"
+                    type="checkbox"
+                    checked={emailData.recipient_filter.types.includes('preview_requests')}
+                    onChange={(e) => {
+                      const types = e.target.checked
+                        ? [...emailData.recipient_filter.types, 'preview_requests']
+                        : emailData.recipient_filter.types.filter(t => t !== 'preview_requests');
+                      setEmailData(prev => ({
+                        ...prev,
+                        recipient_filter: { ...prev.recipient_filter, types }
+                      }));
+                    }}
+                    className="w-5 h-5 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500"
                   />
                   <div>
                     <div className="text-white font-medium">Preview Requests (Not Yet Signed Up)</div>
@@ -651,7 +710,49 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
                   </div>
                 </label>
 
-                {emailData.recipient_filter.type === 'specific' && (
+                <label className="flex items-center gap-3 p-4 bg-gradient-to-r from-amber-900/30 to-orange-900/30 border border-amber-700/50 rounded-lg cursor-pointer hover:from-amber-900/40 hover:to-orange-900/40 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={emailData.recipient_filter.types.includes('marketing_contacts')}
+                    onChange={(e) => {
+                      const types = e.target.checked
+                        ? [...emailData.recipient_filter.types, 'marketing_contacts']
+                        : emailData.recipient_filter.types.filter(t => t !== 'marketing_contacts');
+                      setEmailData(prev => ({
+                        ...prev,
+                        recipient_filter: { ...prev.recipient_filter, types }
+                      }));
+                    }}
+                    className="w-5 h-5 rounded border-slate-600 bg-slate-700 text-amber-500 focus:ring-amber-500"
+                  />
+                  <div>
+                    <div className="text-white font-medium">Marketing Contacts</div>
+                    <div className="text-sm text-gray-400">Send to {marketingContactsCount} contacts (excludes users already in the system and unsubscribed contacts)</div>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-4 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={emailData.recipient_filter.types.includes('specific')}
+                    onChange={(e) => {
+                      const types = e.target.checked
+                        ? [...emailData.recipient_filter.types, 'specific']
+                        : emailData.recipient_filter.types.filter(t => t !== 'specific');
+                      setEmailData(prev => ({
+                        ...prev,
+                        recipient_filter: { ...prev.recipient_filter, types, emails: [] }
+                      }));
+                    }}
+                    className="w-5 h-5 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500"
+                  />
+                  <div className="flex-1">
+                    <div className="text-white font-medium">Specific Users</div>
+                    <div className="text-sm text-gray-400">Choose specific recipients from registered users</div>
+                  </div>
+                </label>
+
+                {emailData.recipient_filter.types.includes('specific') && (
                   <div className="ml-7 mt-3 max-h-64 overflow-y-auto bg-slate-900 rounded-lg p-4 space-y-2">
                     {allUsers.map(user => (
                       <label key={user.id} className="flex items-center gap-3 cursor-pointer hover:bg-slate-800 p-2 rounded transition-colors">
@@ -679,6 +780,11 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
                 <div className="flex items-center gap-2 text-gray-300 bg-blue-900/20 border border-blue-800 rounded-lg p-4">
                   <Users className="w-5 h-5 text-blue-400" />
                   <span className="font-medium">{getRecipientCount()} recipients selected</span>
+                  {emailData.recipient_filter.types.length > 1 && (
+                    <span className="text-sm text-gray-400 ml-2">
+                      (from {emailData.recipient_filter.types.length} groups)
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -749,7 +855,7 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
                       <label className="block text-sm font-medium text-gray-300 mb-3">
                         Send Frequency
                       </label>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-3 gap-3">
                         {FREQUENCY_OPTIONS.map((option) => (
                           <label
                             key={option.value}
@@ -775,6 +881,47 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
                           </label>
                         ))}
                       </div>
+
+                      {emailData.frequency === 'custom' && (
+                        <div className="mt-4 flex items-center gap-3">
+                          <label className="text-sm text-gray-300">Send every</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="365"
+                            value={emailData.custom_interval_days || 3}
+                            onChange={(e) => setEmailData(prev => ({
+                              ...prev,
+                              custom_interval_days: Math.max(1, Math.min(365, parseInt(e.target.value) || 1))
+                            }))}
+                            className="w-20 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-center focus:outline-none focus:border-blue-500"
+                          />
+                          <label className="text-sm text-gray-300">days</label>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                      <label className="block text-sm font-medium text-gray-300 mb-3">
+                        Send Time
+                      </label>
+                      <select
+                        value={emailData.send_hour ?? 9}
+                        onChange={(e) => setEmailData(prev => ({
+                          ...prev,
+                          send_hour: parseInt(e.target.value)
+                        }))}
+                        className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                      >
+                        {HOUR_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Emails will be sent at this time on the scheduled day
+                      </p>
                     </div>
 
                     <div className="bg-blue-900/20 border border-blue-800 rounded-lg p-4">
@@ -785,7 +932,7 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
                           <ul className="text-sm text-gray-400 mt-2 space-y-1 list-disc list-inside">
                             <li>Fresh email content is generated each time using AI</li>
                             <li>Your content description serves as the template</li>
-                            <li>Emails are sent at 9:00 AM on the scheduled day</li>
+                            <li>Emails are sent at your chosen time on the scheduled day</li>
                             <li>You can pause or edit the recurring email anytime</li>
                           </ul>
                         </div>
@@ -809,14 +956,14 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
                   <div className="flex justify-between">
                     <span className="text-gray-400">Send Type:</span>
                     <span className="text-white font-medium">
-                      {scheduleType === 'immediate' ? 'Immediately' : scheduleType === 'scheduled' ? 'Scheduled' : `Recurring (${emailData.frequency})`}
+                      {scheduleType === 'immediate' ? 'Immediately' : scheduleType === 'scheduled' ? 'Scheduled' : `Recurring (${emailData.frequency === 'custom' ? `every ${emailData.custom_interval_days} days` : emailData.frequency})`}
                     </span>
                   </div>
                   {scheduleType === 'recurring' && (
                     <div className="flex justify-between">
                       <span className="text-gray-400">First Send:</span>
                       <span className="text-white font-medium">
-                        {new Date(calculateNextRunAt(emailData.frequency || 'weekly')).toLocaleDateString()} at 9:00 AM
+                        {new Date(calculateNextRunAt(emailData.frequency || 'weekly', emailData.custom_interval_days, emailData.send_hour)).toLocaleDateString()} at {HOUR_OPTIONS.find(h => h.value === emailData.send_hour)?.label || '9:00 AM'}
                       </span>
                     </div>
                   )}

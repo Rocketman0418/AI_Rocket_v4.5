@@ -10,7 +10,8 @@ const corsHeaders = {
 interface CampaignRequest {
   marketingEmailId: string;
   recipientFilter?: {
-    type: 'all' | 'specific' | 'preview_requests';
+    type?: 'all' | 'specific' | 'preview_requests';
+    types?: ('all_users' | 'specific' | 'preview_requests' | 'marketing_contacts')[];
     emails?: string[];
   };
 }
@@ -62,8 +63,85 @@ Deno.serve(async (req: Request) => {
     }
 
     let recipients: { id: string | null; email: string; firstName: string }[] = [];
+    const seenEmails = new Set<string>();
 
-    if (recipientFilter?.type === 'specific' && recipientFilter.emails && recipientFilter.emails.length > 0) {
+    const addRecipient = (r: { id: string | null; email: string; firstName: string }) => {
+      const emailLower = r.email.toLowerCase();
+      if (!seenEmails.has(emailLower)) {
+        seenEmails.add(emailLower);
+        recipients.push(r);
+      }
+    };
+
+    let types: string[] = [];
+    if (recipientFilter?.types && recipientFilter.types.length > 0) {
+      types = recipientFilter.types;
+    } else if (recipientFilter?.type) {
+      types = [recipientFilter.type === 'all' ? 'all_users' : recipientFilter.type];
+    } else {
+      types = ['all_users'];
+    }
+
+    if (types.includes('all_users')) {
+      const { data: users, error } = await supabaseAdmin
+        .from('users')
+        .select('id, email, name');
+
+      if (error) {
+        console.error("Error fetching all users:", error);
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch users" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      users.forEach(u => addRecipient({
+        id: u.id,
+        email: u.email,
+        firstName: u.name?.split(' ')[0] || 'there'
+      }));
+    }
+
+    if (types.includes('preview_requests')) {
+      const { data: previewRequests, error } = await supabaseAdmin
+        .rpc('get_preview_requests_with_onboarding');
+
+      if (error) {
+        console.error("Error fetching preview requests:", error);
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch preview requests" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const notYetSignedUp = previewRequests.filter((req: any) => !req.user_onboarded);
+      notYetSignedUp.forEach((req: any) => addRecipient({
+        id: null,
+        email: req.email,
+        firstName: 'there'
+      }));
+    }
+
+    if (types.includes('marketing_contacts')) {
+      const { data: contacts, error } = await supabaseAdmin
+        .rpc('get_marketing_contacts_for_campaign');
+
+      if (error) {
+        console.error("Error fetching marketing contacts:", error);
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch marketing contacts" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      contacts.forEach((c: any) => addRecipient({
+        id: null,
+        email: c.email,
+        firstName: c.first_name || 'there'
+      }));
+    }
+
+    if (types.includes('specific') && recipientFilter?.emails && recipientFilter.emails.length > 0) {
       const { data: users, error } = await supabaseAdmin
         .from('users')
         .select('id, email, name')
@@ -77,44 +155,7 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      recipients = users.map(u => ({
-        id: u.id,
-        email: u.email,
-        firstName: u.name?.split(' ')[0] || 'there'
-      }));
-    } else if (recipientFilter?.type === 'preview_requests') {
-      const { data: previewRequests, error } = await supabaseAdmin
-        .rpc('get_preview_requests_with_onboarding');
-
-      if (error) {
-        console.error("Error fetching preview requests:", error);
-        return new Response(
-          JSON.stringify({ error: "Failed to fetch preview requests" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const notYetSignedUp = previewRequests.filter((req: any) => !req.user_onboarded);
-
-      recipients = notYetSignedUp.map((req: any) => ({
-        id: null,
-        email: req.email,
-        firstName: 'there'
-      }));
-    } else {
-      const { data: users, error } = await supabaseAdmin
-        .from('users')
-        .select('id, email, name');
-
-      if (error) {
-        console.error("Error fetching all users:", error);
-        return new Response(
-          JSON.stringify({ error: "Failed to fetch users" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      recipients = users.map(u => ({
+      users.forEach(u => addRecipient({
         id: u.id,
         email: u.email,
         firstName: u.name?.split(' ')[0] || 'there'
@@ -165,7 +206,7 @@ Deno.serve(async (req: Request) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "Astra Intelligence <astra@rockethub.ai>",
+            from: "AI Rocket <astra@airocket.app>",
             to: recipient.email,
             subject: emailData.subject,
             html: emailHtml,

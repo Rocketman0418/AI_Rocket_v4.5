@@ -102,8 +102,12 @@ Deno.serve(async (req: Request) => {
           template.recipient_filter
         );
 
-        const nextRunAt = calculateNextRunAt(template.frequency);
-        
+        const nextRunAt = calculateNextRunAt(
+          template.frequency,
+          template.custom_interval_days,
+          template.send_hour
+        );
+
         await supabaseAdmin
           .from('marketing_emails')
           .update({
@@ -148,8 +152,13 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-function calculateNextRunAt(frequency: string): string {
+function calculateNextRunAt(
+  frequency: string,
+  customIntervalDays?: number,
+  sendHour?: number
+): string {
   const now = new Date();
+  const hour = sendHour ?? 9;
   switch (frequency) {
     case 'daily':
       now.setDate(now.getDate() + 1);
@@ -163,10 +172,13 @@ function calculateNextRunAt(frequency: string): string {
     case 'monthly':
       now.setMonth(now.getMonth() + 1);
       break;
+    case 'custom':
+      now.setDate(now.getDate() + (customIntervalDays || 7));
+      break;
     default:
       now.setDate(now.getDate() + 7);
   }
-  now.setHours(9, 0, 0, 0);
+  now.setHours(hour, 0, 0, 0);
   return now.toISOString();
 }
 
@@ -178,111 +190,232 @@ async function generateEmailContent(
   contextType: string
 ): Promise<string> {
   const genAI = new GoogleGenerativeAI(geminiApiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
-  const templateReference = `
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta name="color-scheme" content="light dark">
-    <style>
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-        line-height: 1.6;
-        color: #e5e7eb !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        background-color: #0f172a !important;
-      }
-      .container {
-        max-width: 600px;
-        margin: 40px auto;
-        background-color: #1e293b !important;
-        border-radius: 12px;
-        overflow: hidden;
-      }
-      .header {
-        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-        color: white;
-        padding: 40px 30px;
-        text-align: center;
-      }
-      .content { padding: 40px 30px; }
-      .cta-button {
-        display: inline-block;
-        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-        color: white !important;
-        padding: 18px 48px;
-        border-radius: 12px;
-        text-decoration: none;
-        font-weight: 700;
-      }
-      .benefit-card {
-        background: #1e3a5f;
-        border: 1px solid #3b82f6;
-        border-radius: 10px;
-        padding: 20px 16px;
-        text-align: center;
-      }
-      .footer {
-        background: #0f172a;
-        padding: 30px;
-        text-align: center;
-        border-top: 1px solid #334155;
-        font-size: 13px;
-        color: #94a3b8;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <div class="header">
-        <h1>AI Rocket + Astra Intelligence</h1>
-        <p>AI that Works for Work</p>
-      </div>
-      <div class="content"><!-- Content here --></div>
-      <div class="footer"><!-- Footer --></div>
-    </div>
-  </body>
-</html>`;
+  const emailTemplateStyles = `
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      line-height: 1.6;
+      color: #e5e7eb;
+      margin: 0;
+      padding: 0;
+      background-color: #0f172a;
+    }
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background-color: #1e293b;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .email-wrapper {
+      background-color: #0f172a;
+      padding: 20px;
+    }
+    .logo-bar {
+      background-color: #1e293b;
+      padding: 20px 30px;
+      border-bottom: 1px solid #334155;
+    }
+    .header {
+      background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+      color: white;
+      padding: 40px 30px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .header .tagline {
+      margin: 8px 0 0 0;
+      font-size: 14px;
+      opacity: 0.95;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .greeting {
+      font-size: 20px;
+      font-weight: 600;
+      color: #f3f4f6;
+      margin-bottom: 16px;
+    }
+    .intro-text {
+      font-size: 16px;
+      color: #d1d5db;
+      margin-bottom: 24px;
+      line-height: 1.7;
+    }
+    .insight-card {
+      background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%);
+      border: 1px solid #3b82f6;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .cta-container {
+      text-align: center;
+      margin: 36px 0;
+    }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+      color: white !important;
+      padding: 18px 48px;
+      border-radius: 50px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 16px;
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+    }
+    .cta-subtext {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 12px;
+    }
+    .footer {
+      background: #0f172a;
+      padding: 24px;
+      text-align: center;
+      border-top: 1px solid #334155;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .footer a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+  `;
 
   const prompt = `You are an email marketing designer for AI Rocket / Astra Intelligence.
 
-BRAND GUIDELINES:
-- Use dark theme (#0f172a background, #1e293b containers)
-- Blue-purple gradient for CTAs (#3b82f6 to #8b5cf6)
-- Professional, friendly tone
-- CTA links to https://airocket.app
+TASK: Create a VISUALLY RICH marketing email with GRAPHICS and ICONS - minimal text, maximum visual impact.
 
-KEY MESSAGING:
-- Astra is powered by Gemini, Claude, and OpenAI working together
-- Multi-AI approach as a unique strength
+EMAIL SUBJECT: ${subject}
+CONTENT DESCRIPTION: ${contentDescription}
+${specialNotes ? `SPECIAL INSTRUCTIONS: ${specialNotes}` : ''}
 
-TEMPLATE STRUCTURE:
-${templateReference}
+IMPORTANT: This is a RECURRING email. Create FRESH, UNIQUE content. If instructed to vary content or pick random items, actually randomize your selection each time.
 
-USER REQUEST:
-Subject: ${subject}
-Content Description: ${contentDescription}
-${specialNotes ? `Special Instructions: ${specialNotes}` : ''}
+REQUIRED EMAIL STRUCTURE:
 
-IMPORTANT: This is a RECURRING email. The user may have specified to select random features or vary content. Make sure to create FRESH, UNIQUE content that differs from previous sends. If instructed to pick random items from a list, actually randomize your selection.
+1. GREETING (Very brief - 1 line max):
+   <p class="greeting">Hi {{firstName}}!</p>
+   <p class="intro-text">One sentence intro...</p>
 
-Generate a complete HTML email with:
-1. Header with "AI Rocket + Astra Intelligence"
-2. Personalized greeting with {{firstName}} variable
-3. Engaging content based on the description
-4. 4-6 benefit cards using HTML TABLE layout
-5. CTA buttons linking to https://airocket.app
-6. Professional footer
+2. VISUAL SECTION HEADERS - Create 3-4 main sections with BIG ICONS:
 
-Return ONLY the complete HTML code.`;
+   <!-- Section Header with Large Icon -->
+   <div style="margin-top: 32px; margin-bottom: 16px;">
+     <table width="100%" cellpadding="0" cellspacing="0" border="0">
+       <tr>
+         <td width="50" style="vertical-align: middle;">
+           <div style="width: 44px; height: 44px; background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%); border-radius: 12px; text-align: center; line-height: 44px; font-size: 24px;">EMOJI</div>
+         </td>
+         <td style="padding-left: 12px; vertical-align: middle;">
+           <div style="font-size: 18px; font-weight: 700; color: #f1f5f9;">SECTION TITLE</div>
+           <div style="font-size: 13px; color: #94a3b8;">Brief subtitle</div>
+         </td>
+       </tr>
+     </table>
+   </div>
+
+3. CONTENT CARDS - Under each section, add 2-3 insight cards with icons:
+
+   <div class="insight-card">
+     <table width="100%" cellpadding="0" cellspacing="0" border="0">
+       <tr>
+         <td width="32" style="vertical-align: top; padding-top: 4px;">
+           <span style="font-size: 20px;">EMOJI</span>
+         </td>
+         <td>
+           <div style="font-size: 15px; font-weight: 600; color: #93c5fd; margin-bottom: 4px;">Point Title</div>
+           <div style="font-size: 13px; color: #cbd5e1; line-height: 1.5;">One to two sentences max. Keep it brief and impactful.</div>
+         </td>
+       </tr>
+     </table>
+   </div>
+
+4. CTA BUTTON:
+   <div class="cta-container">
+     <a href="https://airocket.app" class="cta-button">Get Started</a>
+     <p class="cta-subtext">Transform how your team works with AI</p>
+   </div>
+
+DESIGN RULES:
+- Use LOTS of emojis as visual icons (varied and relevant)
+- Keep text SHORT - 1-2 sentences per card max
+- Create 3-4 visual sections with big headers
+- Under each section, 2-3 insight cards
+- Make it SCANNABLE - people should get the message from icons and headlines
+- Use TABLE layouts for email compatibility
+- NO walls of text - graphics over paragraphs
+
+BRAND COLORS:
+- Background: #0f172a (dark navy)
+- Container: #1e293b (slate)
+- Accent gradients: #3b82f6 to #06b6d4 (blue to cyan)
+- Text: #f1f5f9 (headers), #cbd5e1 (body), #93c5fd (highlights)
+
+HTML TEMPLATE:
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+${emailTemplateStyles}
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="container">
+      <div class="logo-bar">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td align="center">
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="vertical-align: middle;">
+                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); border-radius: 50%; display: inline-block; text-align: center; line-height: 40px; font-size: 20px;">&#128640;</div>
+                  </td>
+                  <td style="vertical-align: middle; padding-left: 12px;">
+                    <span style="font-size: 18px; font-weight: 600; color: #f1f5f9;">AI Rocket</span>
+                    <span style="font-size: 18px; color: #64748b; margin: 0 8px;">+</span>
+                    <span style="font-size: 18px; font-weight: 600; color: #5eead4;">Astra Intelligence</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <div class="header">
+        <h1>${subject}</h1>
+        <p class="tagline">AI that Works for Work</p>
+      </div>
+      <div class="content">
+        <!-- Greeting -->
+        <!-- Visual Section Headers with Icon -->
+        <!-- Insight Cards -->
+        <!-- CTA button -->
+      </div>
+      <div class="footer">
+        <p>You're receiving this from AI Rocket + Astra Intelligence.</p>
+        <p style="margin-top: 12px;"><a href="https://airocket.app">Visit AI Rocket</a></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+
+Return ONLY the complete HTML code. No markdown formatting or code blocks.`;
 
   const result = await model.generateContent(prompt);
   const response = result.response;
   let htmlContent = response.text();
   htmlContent = htmlContent.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
-  
+
   return htmlContent;
 }
 
@@ -295,34 +428,67 @@ async function sendCampaign(
   recipientFilter: any
 ): Promise<{ total: number; successful: number; failed: number }> {
   let recipients: { id: string | null; email: string; firstName: string }[] = [];
+  const seenEmails = new Set<string>();
 
-  if (recipientFilter?.type === 'preview_requests') {
-    const { data: previewRequests } = await supabase
-      .rpc('get_preview_requests_with_onboarding');
-    
-    const notYetSignedUp = previewRequests?.filter((req: any) => !req.user_onboarded) || [];
-    recipients = notYetSignedUp.map((req: any) => ({
-      id: null,
-      email: req.email,
-      firstName: 'there'
-    }));
-  } else if (recipientFilter?.type === 'specific' && recipientFilter.emails?.length > 0) {
+  const addRecipient = (r: { id: string | null; email: string; firstName: string }) => {
+    const emailLower = r.email.toLowerCase();
+    if (!seenEmails.has(emailLower)) {
+      seenEmails.add(emailLower);
+      recipients.push(r);
+    }
+  };
+
+  let types: string[] = [];
+  if (recipientFilter?.types && recipientFilter.types.length > 0) {
+    types = recipientFilter.types;
+  } else if (recipientFilter?.type) {
+    types = [recipientFilter.type === 'all' ? 'all_users' : recipientFilter.type];
+  } else {
+    types = ['all_users'];
+  }
+
+  if (types.includes('all_users')) {
     const { data: users } = await supabase
       .from('users')
-      .select('id, email, name')
-      .in('email', recipientFilter.emails);
-    
-    recipients = (users || []).map((u: any) => ({
+      .select('id, email, name');
+
+    (users || []).forEach((u: any) => addRecipient({
       id: u.id,
       email: u.email,
       firstName: u.name?.split(' ')[0] || 'there'
     }));
-  } else {
+  }
+
+  if (types.includes('preview_requests')) {
+    const { data: previewRequests } = await supabase
+      .rpc('get_preview_requests_with_onboarding');
+
+    const notYetSignedUp = previewRequests?.filter((req: any) => !req.user_onboarded) || [];
+    notYetSignedUp.forEach((req: any) => addRecipient({
+      id: null,
+      email: req.email,
+      firstName: 'there'
+    }));
+  }
+
+  if (types.includes('marketing_contacts')) {
+    const { data: contacts } = await supabase
+      .rpc('get_marketing_contacts_for_campaign');
+
+    (contacts || []).forEach((c: any) => addRecipient({
+      id: null,
+      email: c.email,
+      firstName: c.first_name || 'there'
+    }));
+  }
+
+  if (types.includes('specific') && recipientFilter?.emails?.length > 0) {
     const { data: users } = await supabase
       .from('users')
-      .select('id, email, name');
-    
-    recipients = (users || []).map((u: any) => ({
+      .select('id, email, name')
+      .in('email', recipientFilter.emails);
+
+    (users || []).forEach((u: any) => addRecipient({
       id: u.id,
       email: u.email,
       firstName: u.name?.split(' ')[0] || 'there'
@@ -367,7 +533,7 @@ async function sendCampaign(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "Astra Intelligence <astra@rockethub.ai>",
+          from: "AI Rocket <astra@airocket.app>",
           to: recipient.email,
           subject: subject,
           html: emailHtml,
