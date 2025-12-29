@@ -8,7 +8,6 @@ import { TeamMembersPanel } from './TeamMembersPanel';
 import { TeamSettingsModal } from './TeamSettingsModal';
 import { FEATURES } from '../config/features';
 import { HelpCenterTab } from './HelpCenter';
-import { LegalDocumentModal } from './LegalDocumentModal';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 
 interface UserSettingsModalProps {
@@ -50,8 +49,6 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ isOpen, on
   const [savingTeamName, setSavingTeamName] = useState(false);
   const [teamNameError, setTeamNameError] = useState('');
   const [teamNameSuccess, setTeamNameSuccess] = useState('');
-  const [showLegalModal, setShowLegalModal] = useState(false);
-  const [legalDocumentType, setLegalDocumentType] = useState<'privacy' | 'terms'>('privacy');
   const [savingReportEmails, setSavingReportEmails] = useState(false);
 
   const isAdmin = user?.user_metadata?.role === 'admin';
@@ -930,26 +927,24 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ isOpen, on
           <div className="bg-gray-700/50 rounded-lg p-6 border border-gray-600">
             <h3 className="text-lg font-semibold text-white mb-4">Legal Information</h3>
             <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={() => {
-                  setLegalDocumentType('privacy');
-                  setShowLegalModal(true);
-                }}
+              <a
+                href="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors min-h-[44px]"
               >
                 <Shield className="w-4 h-4" />
                 <span>Privacy Policy</span>
-              </button>
-              <button
-                onClick={() => {
-                  setLegalDocumentType('terms');
-                  setShowLegalModal(true);
-                }}
+              </a>
+              <a
+                href="/terms-of-service"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors min-h-[44px]"
               >
                 <FileText className="w-4 h-4" />
                 <span>Terms of Service</span>
-              </button>
+              </a>
             </div>
           </div>
         </div>
@@ -1018,13 +1013,6 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ isOpen, on
             </div>
           </div>
         </div>
-      )}
-
-      {showLegalModal && (
-        <LegalDocumentModal
-          type={legalDocumentType}
-          onClose={() => setShowLegalModal(false)}
-        />
       )}
     </div>
   );
