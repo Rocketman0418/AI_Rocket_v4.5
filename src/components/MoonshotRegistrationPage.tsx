@@ -296,7 +296,7 @@ export const MoonshotRegistrationPage: React.FC = () => {
             registration_id: registrationId,
             code: code,
             valid_from: '2026-01-15T00:00:00+00:00',
-            expires_at: '2026-01-31T23:59:59+00:00'
+            expires_at: '2026-04-15T23:59:59+00:00'
           });
 
         if (codeError) throw codeError;

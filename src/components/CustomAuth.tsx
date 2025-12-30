@@ -24,6 +24,7 @@ export const CustomAuth: React.FC = () => {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showTermsOfService, setShowTermsOfService] = useState(false);
+  const [moonshotNotYetValid, setMoonshotNotYetValid] = useState(false);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -202,10 +203,24 @@ export const CustomAuth: React.FC = () => {
         const upperCode = inviteCode.toUpperCase();
 
         if (upperCode.startsWith('MOON-')) {
-          setIsNewTeam(true);
           setInvitedTeamName(null);
           if (error && error.includes('Email does not match')) {
             setError('');
+          }
+
+          const { data: validation } = await supabase
+            .rpc('validate_moonshot_invite_code', { invite_code: upperCode });
+
+          const result = validation?.[0];
+          if (result?.is_valid) {
+            setIsNewTeam(true);
+            setMoonshotNotYetValid(false);
+          } else if (result?.error_message?.includes('not yet valid')) {
+            setIsNewTeam(true);
+            setMoonshotNotYetValid(true);
+          } else {
+            setIsNewTeam(false);
+            setMoonshotNotYetValid(false);
           }
           return;
         }
@@ -799,7 +814,15 @@ export const CustomAuth: React.FC = () => {
                 </div>
               </div>
 
-              {isNewTeam && (
+              {isNewTeam && moonshotNotYetValid && (
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                  <p className="text-amber-400 text-sm">
+                    Your Moonshot Challenge code will be valid starting January 15, 2026. Please return to create your account then.
+                  </p>
+                </div>
+              )}
+
+              {isNewTeam && !moonshotNotYetValid && (
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
                   <p className="text-blue-400 text-sm">
                     <strong>New Team Signup</strong> - You'll set your team name in the next step
@@ -865,7 +888,7 @@ export const CustomAuth: React.FC = () => {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (step === 'signup' && moonshotNotYetValid)}
             className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors flex items-center justify-center space-x-2 mt-3"
           >
             {loading ? (
