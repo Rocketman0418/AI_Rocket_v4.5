@@ -123,33 +123,38 @@ export const MoonshotChallengePage: React.FC = () => {
       </nav>
 
       {/* Hero Section */}
-      <section id="home" className="min-h-screen flex items-center justify-center pt-24 pb-16 px-4 relative">
+      <section id="home" className="min-h-[calc(100vh-60px)] flex items-center justify-center pt-16 pb-8 px-4 relative">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-500/20 rounded-full blur-3xl" />
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl" />
         </div>
 
         <div className="max-w-5xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-emerald-500 px-6 py-2 rounded-full text-sm font-semibold uppercase tracking-wider mb-10 animate-pulse">
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-emerald-500 px-5 py-1.5 rounded-full text-sm font-semibold uppercase tracking-wider mb-6 animate-pulse">
             Registration Opens Jan 5 | Challenge Starts Jan 15
           </div>
 
-          <div className="flex items-center justify-center gap-5 mb-3">
-            <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center text-4xl md:text-5xl" style={{ background: 'linear-gradient(145deg, #5BA4E6, #3B82C4)', boxShadow: '0 8px 32px rgba(59, 130, 196, 0.4)' }}>
+          <div className="flex items-center justify-center gap-4 mb-2">
+            <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-3xl md:text-4xl" style={{ background: 'linear-gradient(145deg, #5BA4E6, #3B82C4)', boxShadow: '0 8px 32px rgba(59, 130, 196, 0.4)' }}>
               🚀
             </div>
-            <h1 className="text-5xl md:text-7xl font-extrabold text-white">AI Rocket</h1>
+            <h1 className="text-4xl md:text-6xl font-extrabold text-white">AI Rocket</h1>
           </div>
-          <p className="text-gray-500 mb-8 tracking-wider">AI Built for Entrepreneurs and Their Teams</p>
+          <p className="text-gray-500 mb-5 tracking-wider text-sm">AI Built for Entrepreneurs and Their Teams</p>
 
-          <h2 className="text-4xl md:text-6xl lg:text-7xl font-black mb-4">
+          <h2 className="text-3xl md:text-5xl lg:text-6xl font-black mb-3">
             <span className="bg-gradient-to-r from-yellow-400 via-orange-400 to-orange-500 bg-clip-text text-transparent">$5M AI Moonshot Challenge</span>
           </h2>
-          <p className="text-xl md:text-2xl text-gray-400 mb-10 max-w-3xl mx-auto">
-            Free & Unlimited AI Tools to Launch Your AI-Powered Team
-          </p>
+          <div className="mb-6 max-w-3xl mx-auto">
+            <p className="text-lg md:text-xl text-gray-300">
+              Transform your Team to AI-Powered
+            </p>
+            <p className="text-lg md:text-xl text-gray-300">
+              Free & Unlimited Access to the Most Powerful AI-Suite for Work
+            </p>
+          </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto mb-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-6">
             {[
               { value: '$5M', label: 'Total Prize Pool' },
               { value: '300', label: 'Team Slots' },
@@ -157,41 +162,41 @@ export const MoonshotChallengePage: React.FC = () => {
               { value: '10', label: 'Winners' },
             ].map(stat => (
               <div key={stat.label} className="text-center">
-                <div className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-orange-500 to-emerald-500 bg-clip-text text-transparent">{stat.value}</div>
-                <div className="text-gray-400 mt-1">{stat.label}</div>
+                <div className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-orange-500 to-emerald-500 bg-clip-text text-transparent">{stat.value}</div>
+                <div className="text-gray-400 text-sm mt-1">{stat.label}</div>
               </div>
             ))}
           </div>
 
-          <div className="flex gap-4 justify-center flex-wrap">
+          <div className="flex gap-4 justify-center flex-wrap mb-6">
             <Link
               to="/moonshot/register"
-              className="px-8 py-4 rounded-full text-lg font-bold bg-gradient-to-r from-orange-500 to-emerald-500 text-white shadow-lg shadow-orange-500/40 hover:scale-105 transition-transform"
+              className="px-6 py-3 rounded-full text-base font-bold bg-gradient-to-r from-orange-500 to-emerald-500 text-white shadow-lg shadow-orange-500/40 hover:scale-105 transition-transform"
             >
               Register Now
             </Link>
             <button
               onClick={() => scrollToSection('terms')}
-              className="px-8 py-4 rounded-full text-lg font-bold bg-gray-800 text-white border border-white/10 hover:border-orange-500 transition-all"
+              className="px-6 py-3 rounded-full text-base font-bold bg-gray-800 text-white border border-white/10 hover:border-orange-500 transition-all"
             >
               View Terms
             </button>
           </div>
 
-          <div className="mt-10">
-            <p className="text-gray-400 mb-6">Powered by</p>
-            <div className="flex items-center justify-center gap-12 flex-wrap">
-              <div className="flex flex-col items-center gap-2">
-                <img src="/claude logo.png" alt="Claude" className="w-14 h-14 rounded-xl" />
-                <span className="text-white font-semibold">Claude</span>
+          <div>
+            <p className="text-gray-400 mb-3 text-sm">Powered by</p>
+            <div className="flex items-center justify-center gap-8 flex-wrap">
+              <div className="flex flex-col items-center gap-1">
+                <img src="/claude logo.png" alt="Claude" className="w-10 h-10 rounded-xl" />
+                <span className="text-white font-semibold text-xs">Claude</span>
               </div>
-              <div className="flex flex-col items-center gap-2">
-                <img src="/gemini app logo.jpeg" alt="Gemini" className="w-14 h-14 rounded-xl" />
-                <span className="text-white font-semibold">Gemini</span>
+              <div className="flex flex-col items-center gap-1">
+                <img src="/gemini app logo.jpeg" alt="Gemini" className="w-10 h-10 rounded-xl" />
+                <span className="text-white font-semibold text-xs">Gemini</span>
               </div>
-              <div className="flex flex-col items-center gap-2">
-                <img src="/gpt app logo.png" alt="OpenAI" className="w-14 h-14 rounded-xl bg-white p-2" />
-                <span className="text-white font-semibold">OpenAI</span>
+              <div className="flex flex-col items-center gap-1">
+                <img src="/gpt app logo.png" alt="OpenAI" className="w-10 h-10 rounded-xl bg-white p-1.5" />
+                <span className="text-white font-semibold text-xs">OpenAI</span>
               </div>
             </div>
           </div>
