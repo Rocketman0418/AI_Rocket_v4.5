@@ -101,9 +101,9 @@ export const MoonshotChallengePage: React.FC = () => {
           { id: 'home', label: 'Home' },
           { id: 'features', label: 'Features' },
           { id: 'prizes', label: 'Prizes' },
-          { id: 'rbg', label: 'RBG Matrix' },
-          { id: 'timeline', label: 'Timeline' },
           { id: 'how', label: 'How It Works' },
+          { id: 'timeline', label: 'Timeline' },
+          { id: 'rbg', label: 'RBG Matrix' },
           { id: 'eligibility', label: 'Eligibility' },
           { id: 'faq', label: 'FAQ' },
           { id: 'terms', label: 'Terms' },
@@ -131,7 +131,7 @@ export const MoonshotChallengePage: React.FC = () => {
 
         <div className="max-w-5xl mx-auto text-center relative z-10">
           <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-emerald-500 px-6 py-2 rounded-full text-sm font-semibold uppercase tracking-wider mb-10 animate-pulse">
-            Register Now | Challenge Starts Jan 15
+            Registration Opens Jan 5 | Challenge Starts Jan 15
           </div>
 
           <div className="flex items-center justify-center gap-5 mb-3">
@@ -349,6 +349,102 @@ export const MoonshotChallengePage: React.FC = () => {
         </div>
       </section>
 
+      {/* How It Works Section */}
+      <section id="how" className="py-24 px-4 max-w-7xl mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-extrabold mb-4">
+            <span className="bg-gradient-to-r from-orange-500 via-orange-400 to-emerald-500 bg-clip-text text-transparent">How It Works</span>
+          </h2>
+          <p className="text-xl text-gray-400">Simple steps to win $5M in prizes</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {[
+            { num: 1, icon: '✍️', title: 'Register Your Team', desc: 'Registration opens Jan 5. Provide your name, email, team name, and industry. Answer 5 quick questions and receive your unique launch code.' },
+            { num: 2, icon: '🎯', title: 'Enter the Challenge', desc: 'On Jan 15, use your launch code to create your account. First 300 teams to setup and launch their AI Rockets enter with Free & Unlimited 90-Day Access.' },
+            { num: 3, icon: '🚀', title: 'Use AI Rocket', desc: 'Get unlimited access for 90 days (Jan 15 - Apr 15). Transform your business with AI across Run, Build, and Grow dimensions.' },
+            { num: 4, icon: '📱', title: 'Engage & Share', desc: 'Share your transformation journey on social media tagging RocketHub.AI and AI Rocket for bonus points. Top 20 teams with social engagement earn extra points.' },
+            { num: 5, icon: '📝', title: 'Submit Application', desc: 'During Apr 6-10, submit your Prize Application with Impact Statement and RBG summaries (100 words each).' },
+            { num: 6, icon: '🏆', title: 'Win Prizes', desc: 'Winners announced Apr 13-16. Top 10 teams win equity prizes and Lifetime Ultra Plan subscriptions. Advisory Committee evaluates Impact Statement (25%), RBG answers (25%), and Astra scores (50%).' },
+          ].map((step, idx) => (
+            <div key={idx} className="bg-gray-800/80 border border-white/10 rounded-2xl p-8 text-center relative hover:border-orange-500 transition-all">
+              <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-emerald-500 flex items-center justify-center text-white font-bold border-4 border-gray-900">
+                {step.num}
+              </div>
+              <div className="text-4xl mb-4">{step.icon}</div>
+              <h3 className="text-xl font-bold text-white mb-3">{step.title}</h3>
+              <p className="text-gray-400">{step.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Accordion */}
+        <div className="max-w-3xl mx-auto mt-16 space-y-4">
+          {[
+            { title: 'Winner Criteria & Scoring', icon: '🎯', content: ['Impact Statement (25%): Your answer demonstrating alignment with our core mission', 'RBG Matrix Summaries (25%): Written summaries (100 words each for Run, Build, Grow)', 'Astra Intelligence Score (50%): Automated tracking of your AI Rocket usage', 'Social Media Bonus Points: Top 20 teams that mention AI Rocket on social media earn extra points'] },
+            { title: 'Social Media Bonus Points', icon: '📱', content: ['Bonus points awarded to the top 20 teams that mention AI Rocket in their social media posts', 'LinkedIn: Professional updates about your AI transformation journey', 'X/Twitter: Real-time insights and progress updates', 'Facebook: Community engagement and milestone celebrations', 'Posts must be authentic, substantive content about your experience'] },
+            { title: 'Team Structure', icon: '👥', content: ['Primary User: The registered team leader who manages the account', 'Additional Members: Additional team members can be invited once the team account is setup', 'Shared Access: All team members share the same Astra score', 'Team Collaboration: Coordinate across your team to maximize transformation'] },
+          ].map((accordion, idx) => (
+            <div key={idx} className="bg-gray-800/80 border border-white/10 rounded-2xl overflow-hidden">
+              <button
+                onClick={() => setExpandedAccordion(expandedAccordion === idx ? null : idx)}
+                className="w-full flex items-center justify-between p-6 text-left hover:bg-white/5 transition-all"
+              >
+                <div className="flex items-center gap-4">
+                  <span className="text-2xl">{accordion.icon}</span>
+                  <span className="text-lg font-bold text-white">{accordion.title}</span>
+                </div>
+                <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${expandedAccordion === idx ? 'rotate-180' : ''}`} />
+              </button>
+              {expandedAccordion === idx && (
+                <div className="px-6 pb-6">
+                  <ul className="space-y-3">
+                    {accordion.content.map((item, i) => (
+                      <li key={i} className="text-gray-400 border-b border-white/5 pb-3">{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Timeline Section */}
+      <section id="timeline" className="py-24 px-4 max-w-5xl mx-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-extrabold mb-4">
+            <span className="bg-gradient-to-r from-orange-500 via-orange-400 to-emerald-500 bg-clip-text text-transparent">Challenge Timeline</span>
+          </h2>
+          <p className="text-xl text-gray-400">90 days to transform your business with AI</p>
+        </div>
+
+        <div className="relative">
+          <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-orange-500 to-emerald-500 transform -translate-x-1/2 hidden md:block" />
+
+          {[
+            { date: 'Jan 5, 2026', title: '📝 Registration Opens', desc: 'Registration opens for entrepreneurs and teams. Complete the registration form with your team details and receive your unique launch code for Challenge entry on Jan 15.' },
+            { date: 'Jan 15, 2026', title: '🚀 Challenge Begins', desc: 'The first 300 teams to setup and successfully launch their AI Rockets enter the Challenge with Free & Unlimited 90-Day Access.' },
+            { date: 'Jan 15 - Apr 15', title: '💻 Challenge Period', desc: 'Use AI Rocket to transform your business. Astra Intelligence tracks your usage automatically. Share your transformation journey on social media for bonus points.' },
+            { date: 'Apr 6-10', title: '📝 Prize Applications', desc: 'Submit your Prize Application with Impact Statement and RBG Matrix summaries (100 words each for Run, Build, Grow).' },
+            { date: 'Apr 13', title: '🏅 Winners Decided', desc: 'AI Rocket Advisory Committee reviews all applications and Astra scores. Top 10 teams selected for equity prizes and Lifetime Ultra Plan subscriptions.' },
+            { date: 'Apr 13-16', title: '🏆 Winner Announcements', desc: 'Apr 13: All metrics & non-winner announcements. Apr 14: 3rd place. Apr 15: 2nd place. Apr 16: 1st place winner & Full AI Rocket App Launch!' },
+          ].map((item, idx) => (
+            <div key={idx} className={`flex items-center mb-12 ${idx % 2 === 1 ? 'md:flex-row-reverse' : ''}`}>
+              <div className="flex-1" />
+              <div className="w-5 h-5 rounded-full bg-gradient-to-r from-orange-500 to-emerald-500 border-4 border-gray-900 z-10 hidden md:block" />
+              <div className="flex-1">
+                <div className="bg-gray-800/80 border border-white/10 rounded-2xl p-6 mx-4 hover:border-orange-500 transition-all">
+                  <div className="text-orange-500 font-bold text-xl mb-2">{item.date}</div>
+                  <div className="text-white font-bold text-lg mb-2">{item.title}</div>
+                  <p className="text-gray-400">{item.desc}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* RBG Matrix Section */}
       <section id="rbg" className="py-24 px-4 max-w-7xl mx-auto">
         <div className="text-center mb-12">
@@ -361,7 +457,7 @@ export const MoonshotChallengePage: React.FC = () => {
         {/* Quote */}
         <div className="bg-gray-800/80 border-l-4 border-orange-500 rounded-xl p-6 max-w-3xl mx-auto mb-12">
           <p className="text-xl text-white italic mb-2">"With the cost of transformational AI nearly free, RBG (Run.Build.Grow with AI) can replace ROI as the goal for AI-Powered business."</p>
-          <cite className="text-gray-500">— RocketHub AI Philosophy</cite>
+          <cite className="text-gray-500">- RocketHub AI Philosophy</cite>
         </div>
 
         {/* Scoring Breakdown */}
@@ -396,102 +492,6 @@ export const MoonshotChallengePage: React.FC = () => {
                   <div key={i} className="bg-white/5 px-3 py-2 rounded-lg border-l-3 border-orange-500 text-sm text-gray-400">{ex}</div>
                 ))}
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Timeline Section */}
-      <section id="timeline" className="py-24 px-4 max-w-5xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-extrabold mb-4">
-            <span className="bg-gradient-to-r from-orange-500 via-orange-400 to-emerald-500 bg-clip-text text-transparent">Challenge Timeline</span>
-          </h2>
-          <p className="text-xl text-gray-400">90 days to transform your business with AI</p>
-        </div>
-
-        <div className="relative">
-          <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-orange-500 to-emerald-500 transform -translate-x-1/2 hidden md:block" />
-
-          {[
-            { date: 'Dec 18, 2025', title: '📝 Registration Opens', desc: 'Registration opens for entrepreneurs and teams. Complete the registration form with your team details and receive your unique launch code for Challenge entry on Jan 15.' },
-            { date: 'Jan 15, 2026', title: '🚀 Challenge Begins', desc: 'The first 300 teams to setup and successfully launch their AI Rockets enter the Challenge with Free & Unlimited 90-Day Access.' },
-            { date: 'Jan 15 - Apr 15', title: '💻 Challenge Period', desc: 'Use AI Rocket to transform your business. Astra Intelligence tracks your usage automatically. Complete social media requirements and share your transformation journey.' },
-            { date: 'Apr 6-10', title: '📝 Prize Applications', desc: 'Submit your Prize Application with Impact Statement and RBG Matrix summaries (100 words each for Run, Build, Grow).' },
-            { date: 'Apr 13', title: '🏅 Winners Decided', desc: 'AI Rocket Advisory Committee reviews all applications and Astra scores. Top 10 teams selected for equity prizes and Lifetime Ultra Plan subscriptions.' },
-            { date: 'Apr 13-16', title: '🏆 Winner Announcements', desc: 'Apr 13: All metrics & non-winner announcements. Apr 14: 3rd place. Apr 15: 2nd place. Apr 16: 1st place winner & Full AI Rocket App Launch!' },
-          ].map((item, idx) => (
-            <div key={idx} className={`flex items-center mb-12 ${idx % 2 === 1 ? 'md:flex-row-reverse' : ''}`}>
-              <div className="flex-1" />
-              <div className="w-5 h-5 rounded-full bg-gradient-to-r from-orange-500 to-emerald-500 border-4 border-gray-900 z-10 hidden md:block" />
-              <div className="flex-1">
-                <div className="bg-gray-800/80 border border-white/10 rounded-2xl p-6 mx-4 hover:border-orange-500 transition-all">
-                  <div className="text-orange-500 font-bold text-xl mb-2">{item.date}</div>
-                  <div className="text-white font-bold text-lg mb-2">{item.title}</div>
-                  <p className="text-gray-400">{item.desc}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section id="how" className="py-24 px-4 max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-extrabold mb-4">
-            <span className="bg-gradient-to-r from-orange-500 via-orange-400 to-emerald-500 bg-clip-text text-transparent">How It Works</span>
-          </h2>
-          <p className="text-xl text-gray-400">Simple steps to win $5M in prizes</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {[
-            { num: 1, icon: '✍️', title: 'Register Your Team', desc: 'Registration opens Dec 18. Provide your name, email, team name, and industry. Answer 5 quick questions and receive your unique launch code.' },
-            { num: 2, icon: '🎯', title: 'Enter the Challenge', desc: 'On Jan 15, use your launch code to create your account. First 300 teams to setup and launch their AI Rockets enter with Free & Unlimited 90-Day Access.' },
-            { num: 3, icon: '🚀', title: 'Use AI Rocket', desc: 'Get unlimited access for 90 days (Jan 15 - Apr 15). Transform your business with AI across Run, Build, and Grow dimensions.' },
-            { num: 4, icon: '📱', title: 'Engage & Share', desc: 'Complete minimum 5 social media posts tagging RocketHub.AI and AI Rocket. Share your transformation journey.' },
-            { num: 5, icon: '📝', title: 'Submit Application', desc: 'During Apr 6-10, submit your Prize Application with Impact Statement and RBG summaries (100 words each).' },
-            { num: 6, icon: '🏆', title: 'Win Prizes', desc: 'Winners announced Apr 13-16. Top 10 teams win equity prizes and Lifetime Ultra Plan subscriptions. Advisory Committee evaluates Impact Statement (25%), RBG answers (25%), and Astra scores (50%).' },
-          ].map((step, idx) => (
-            <div key={idx} className="bg-gray-800/80 border border-white/10 rounded-2xl p-8 text-center relative hover:border-orange-500 transition-all">
-              <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-emerald-500 flex items-center justify-center text-white font-bold border-4 border-gray-900">
-                {step.num}
-              </div>
-              <div className="text-4xl mb-4">{step.icon}</div>
-              <h3 className="text-xl font-bold text-white mb-3">{step.title}</h3>
-              <p className="text-gray-400">{step.desc}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Accordion */}
-        <div className="max-w-3xl mx-auto mt-16 space-y-4">
-          {[
-            { title: 'Winner Criteria & Scoring', icon: '🎯', content: ['Impact Statement (25%): Your answer demonstrating alignment with our core mission', 'RBG Matrix Summaries (25%): Written summaries (100 words each for Run, Build, Grow)', 'Astra Intelligence Score (50%): Automated tracking of your AI Rocket usage', 'Social Media Posts: Minimum 5 unique posts tagging RocketHub and AI Rocket'] },
-            { title: 'Social Media Requirements', icon: '📱', content: ['LinkedIn: Professional updates about your AI transformation journey', 'X/Twitter: Real-time insights and progress updates', 'Facebook: Community engagement and milestone celebrations', 'Posts must be authentic, substantive content about your experience'] },
-            { title: 'Team Structure', icon: '👥', content: ['Primary User: The registered team leader who manages the account', 'Additional Members: Up to 2 additional team members can be invited', 'Shared Access: All team members share the same Astra score', 'Team Collaboration: Coordinate across your team to maximize transformation'] },
-          ].map((accordion, idx) => (
-            <div key={idx} className="bg-gray-800/80 border border-white/10 rounded-2xl overflow-hidden">
-              <button
-                onClick={() => setExpandedAccordion(expandedAccordion === idx ? null : idx)}
-                className="w-full flex items-center justify-between p-6 text-left hover:bg-white/5 transition-all"
-              >
-                <div className="flex items-center gap-4">
-                  <span className="text-2xl">{accordion.icon}</span>
-                  <span className="text-lg font-bold text-white">{accordion.title}</span>
-                </div>
-                <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${expandedAccordion === idx ? 'rotate-180' : ''}`} />
-              </button>
-              {expandedAccordion === idx && (
-                <div className="px-6 pb-6">
-                  <ul className="space-y-3">
-                    {accordion.content.map((item, i) => (
-                      <li key={i} className="text-gray-400 border-b border-white/5 pb-3">{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -539,10 +539,10 @@ export const MoonshotChallengePage: React.FC = () => {
             { q: 'What are the prize values?', a: 'The top 10 teams win equity prizes: 1st ($2M), 2nd ($1M), 3rd ($600K), 4th ($400K), 5th ($300K), 6th ($225K), 7th ($175K), 8th ($125K), 9th ($100K), 10th ($75K). All 10 winners also receive Lifetime Ultra Plan subscriptions. Values based on planned company valuation target of $250M.' },
             { q: 'How does Astra Intelligence scoring work?', a: 'Astra automatically tracks how your team uses AI Rocket throughout the challenge, assigning weighted scores across Run, Build, and Grow dimensions. These scores remain hidden until the challenge ends and represent 50% of your final evaluation score.' },
             { q: 'What is the Impact Statement?', a: 'The Impact Statement is a required part of your Final Application where you answer: "What positive impact are you able to make in the world with your new AI-Powered business?" This demonstrates alignment with our core mission and constitutes 25% of your challenge score.' },
-            { q: 'How many team members can participate?', a: 'Each team can include up to 3 members: 1 primary user and up to 2 additional invited team members. All team members get full unlimited access during the challenge.' },
-            { q: 'What happens if I don\'t win a top 3 spot?', a: 'All teams that submit valid prize applications during the April 6-10 window receive a 1-year unlimited subscription to AI Rocket—regardless of final placement!' },
+            { q: 'How many team members can participate?', a: 'Each team has a primary user who manages the account. Additional team members can be invited once the team account is setup. All team members get full unlimited access during the challenge.' },
+            { q: 'What happens if I don\'t win a top 10 spot?', a: 'All teams that submit valid prize applications during the April 6-10 window receive a 1-year unlimited subscription to AI Rocket—regardless of final placement!' },
             { q: 'How does AI Rocket handle my data privacy and security?', a: 'AI Rocket syncs with your selected data only after you give authorization, and only with selected data directed by you. The data sync is fully encrypted to the highest industry standards. AI Rocket will not train on or use any user data without express written consent.' },
-            { q: 'When does registration open?', a: 'Registration opens December 18, 2025. Complete the registration form with your team details and receive your unique launch code. The Challenge officially launches January 15, 2026. Entry is limited to the first 300 teams who successfully launch their AI Rocket.' },
+            { q: 'When does registration open?', a: 'Registration opens January 5, 2026. Complete the registration form with your team details and receive your unique launch code. The Challenge officially launches January 15, 2026. Entry is limited to the first 300 teams who successfully launch their AI Rocket.' },
             { q: 'What happens after the Challenge ends?', a: 'AI Rocket fully launches to the public on April 16, 2026 with a 10-day unlimited trial, then upgrade required. Challenge participants get a 5-day countdown to continue their access before upgrade is required.' },
           ].map((faq, idx) => (
             <div key={idx} className="bg-gray-800/80 border border-white/10 rounded-2xl p-6 hover:border-orange-500 transition-all">
@@ -573,7 +573,7 @@ export const MoonshotChallengePage: React.FC = () => {
 
             <div>
               <h3 className="text-xl font-bold text-orange-500 mb-3">2. Challenge Period & Timeline</h3>
-              <p className="mb-2">Registration opens December 18, 2025. The Challenge begins January 15, 2026 and runs through April 15, 2026.</p>
+              <p className="mb-2">Registration opens January 5, 2026. The Challenge begins January 15, 2026 and runs through April 15, 2026.</p>
               <p className="mb-2">Prize applications must be submitted during April 6-10, 2026. Winners decided April 13, 2026.</p>
               <p>Winner announcements: April 13 (all metrics/non-winners), April 14 (3rd place), April 15 (2nd place), April 16 (1st place and full app launch).</p>
             </div>
@@ -597,7 +597,7 @@ export const MoonshotChallengePage: React.FC = () => {
             <div>
               <h3 className="text-xl font-bold text-orange-500 mb-3">5. Participant Conduct & Requirements</h3>
               <p className="mb-2">Participants must use AI Rocket in good faith for legitimate business purposes.</p>
-              <p className="mb-2"><strong className="text-white">Social Media Requirement:</strong> Minimum 5 unique social media posts tagging RocketHub.AI and AI Rocket required for prize eligibility. All posts must comply with FTC disclosure guidelines and applicable platform terms of service.</p>
+              <p className="mb-2"><strong className="text-white">Social Media Bonus Points:</strong> Bonus points will be awarded to the top 20 teams that mention AI Rocket in their social media posts. Posts on LinkedIn, X/Twitter, and Facebook tagging RocketHub.AI and AI Rocket are eligible for bonus consideration. All posts must comply with FTC disclosure guidelines and applicable platform terms of service.</p>
               <p>Fraudulent or manipulative activities, including artificial inflation of engagement metrics, false statements, or attempts to circumvent judging criteria, will result in immediate disqualification.</p>
             </div>
 
@@ -652,7 +652,7 @@ export const MoonshotChallengePage: React.FC = () => {
             </div>
 
             <div className="text-center pt-8 border-t border-white/10">
-              <p className="text-gray-500"><strong>Effective Date:</strong> December 18, 2025</p>
+              <p className="text-gray-500"><strong>Effective Date:</strong> January 5, 2026</p>
             </div>
           </div>
         </div>
