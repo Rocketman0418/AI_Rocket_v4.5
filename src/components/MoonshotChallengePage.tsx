@@ -143,7 +143,7 @@ export const MoonshotChallengePage: React.FC = () => {
           <p className="text-gray-500 mb-8 tracking-wider">AI Built for Entrepreneurs and Their Teams</p>
 
           <h2 className="text-4xl md:text-6xl lg:text-7xl font-black mb-4">
-            <span className="bg-gradient-to-r from-yellow-400 via-orange-400 to-orange-500 bg-clip-text text-transparent">$5M Moonshot Challenge</span>
+            <span className="bg-gradient-to-r from-yellow-400 via-orange-400 to-orange-500 bg-clip-text text-transparent">$5M AI Moonshot Challenge</span>
           </h2>
           <p className="text-xl md:text-2xl text-gray-400 mb-10 max-w-3xl mx-auto">
             Free & Unlimited AI Tools to Launch Your AI-Powered Team
@@ -154,7 +154,7 @@ export const MoonshotChallengePage: React.FC = () => {
               { value: '$5M', label: 'Total Prize Pool' },
               { value: '300', label: 'Team Slots' },
               { value: '90', label: 'Days Unlimited' },
-              { value: '3', label: 'Winners' },
+              { value: '10', label: 'Winners' },
             ].map(stat => (
               <div key={stat.label} className="text-center">
                 <div className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-orange-500 to-emerald-500 bg-clip-text text-transparent">{stat.value}</div>
@@ -273,27 +273,56 @@ export const MoonshotChallengePage: React.FC = () => {
           <h2 className="text-4xl md:text-5xl font-extrabold mb-4">
             <span className="bg-gradient-to-r from-orange-500 via-orange-400 to-emerald-500 bg-clip-text text-transparent">Prize Structure</span>
           </h2>
-          <p className="text-xl text-gray-400">Win equity in RocketHub.AI plus lifetime subscription access.</p>
+          <p className="text-xl text-gray-400">Win equity in RocketHub.AI plus lifetime Ultra Plan subscription.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-          {[
-            { place: 'First Place', amount: '$2.5M', medal: '🥇', color: '#FFD700' },
-            { place: 'Second Place', amount: '$1.5M', medal: '🥈', color: '#C0C0C0' },
-            { place: 'Third Place', amount: '$1M', medal: '🥉', color: '#CD7F32' },
-          ].map((prize, idx) => (
-            <div
-              key={idx}
-              className="bg-gray-800/80 border border-white/10 rounded-3xl p-8 text-center relative overflow-hidden hover:scale-105 hover:shadow-xl hover:shadow-orange-500/20 transition-all duration-300"
-            >
-              <div className="absolute top-0 left-0 right-0 h-1.5" style={{ background: prize.color }} />
-              <div className="text-6xl mb-4">{prize.medal}</div>
-              <div className="text-xl font-bold text-gray-400 mb-3">{prize.place}</div>
-              <div className="text-5xl font-black bg-gradient-to-r from-orange-500 to-emerald-500 bg-clip-text text-transparent mb-2">{prize.amount}</div>
-              <div className="text-gray-500 mb-4">Equity prize in RocketHub.AI</div>
-              <div className="text-emerald-400 font-semibold">Free Lifetime Subscription</div>
-            </div>
-          ))}
+        {/* Podium - Top 3 */}
+        <div className="mb-8">
+          <h3 className="text-2xl font-bold text-white text-center mb-6">The Podium</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { place: '1st Place', amount: '$2,000,000', medal: '🥇', color: '#FFD700' },
+              { place: '2nd Place', amount: '$1,000,000', medal: '🥈', color: '#C0C0C0' },
+              { place: '3rd Place', amount: '$600,000', medal: '🥉', color: '#CD7F32' },
+            ].map((prize, idx) => (
+              <div
+                key={idx}
+                className="bg-gray-800/80 border border-white/10 rounded-3xl p-8 text-center relative overflow-hidden hover:scale-105 hover:shadow-xl hover:shadow-orange-500/20 transition-all duration-300"
+              >
+                <div className="absolute top-0 left-0 right-0 h-1.5" style={{ background: prize.color }} />
+                <div className="text-6xl mb-4">{prize.medal}</div>
+                <div className="text-xl font-bold text-gray-400 mb-3">{prize.place}</div>
+                <div className="text-4xl font-black bg-gradient-to-r from-orange-500 to-emerald-500 bg-clip-text text-transparent mb-2">{prize.amount}</div>
+                <div className="text-gray-500 mb-4">Equity prize in RocketHub.AI</div>
+                <div className="text-emerald-400 font-semibold">Lifetime Ultra Plan</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top 10 Finishers - Places 4-10 */}
+        <div className="mb-8">
+          <h3 className="text-2xl font-bold text-white text-center mb-6">Top 10 Finishers</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+            {[
+              { place: '4th', amount: '$400,000' },
+              { place: '5th', amount: '$300,000' },
+              { place: '6th', amount: '$225,000' },
+              { place: '7th', amount: '$175,000' },
+              { place: '8th', amount: '$125,000' },
+              { place: '9th', amount: '$100,000' },
+              { place: '10th', amount: '$75,000' },
+            ].map((prize, idx) => (
+              <div
+                key={idx}
+                className="bg-gray-800/80 border border-white/10 rounded-2xl p-4 text-center hover:border-orange-500/50 transition-all"
+              >
+                <div className="text-lg font-bold text-gray-400 mb-2">{prize.place}</div>
+                <div className="text-xl font-bold bg-gradient-to-r from-orange-500 to-emerald-500 bg-clip-text text-transparent mb-2">{prize.amount}</div>
+                <div className="text-xs text-emerald-400">Lifetime Ultra Plan</div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Bonus Prize */}
@@ -389,7 +418,7 @@ export const MoonshotChallengePage: React.FC = () => {
             { date: 'Jan 15, 2026', title: '🚀 Challenge Begins', desc: 'The first 300 teams to setup and successfully launch their AI Rockets enter the Challenge with Free & Unlimited 90-Day Access.' },
             { date: 'Jan 15 - Apr 15', title: '💻 Challenge Period', desc: 'Use AI Rocket to transform your business. Astra Intelligence tracks your usage automatically. Complete social media requirements and share your transformation journey.' },
             { date: 'Apr 6-10', title: '📝 Prize Applications', desc: 'Submit your Prize Application with Impact Statement and RBG Matrix summaries (100 words each for Run, Build, Grow).' },
-            { date: 'Apr 13', title: '🏅 Winners Decided', desc: 'AI Rocket Advisory Committee reviews all applications and Astra scores. Top 3 teams selected for equity prizes and lifetime subscriptions.' },
+            { date: 'Apr 13', title: '🏅 Winners Decided', desc: 'AI Rocket Advisory Committee reviews all applications and Astra scores. Top 10 teams selected for equity prizes and Lifetime Ultra Plan subscriptions.' },
             { date: 'Apr 13-16', title: '🏆 Winner Announcements', desc: 'Apr 13: All metrics & non-winner announcements. Apr 14: 3rd place. Apr 15: 2nd place. Apr 16: 1st place winner & Full AI Rocket App Launch!' },
           ].map((item, idx) => (
             <div key={idx} className={`flex items-center mb-12 ${idx % 2 === 1 ? 'md:flex-row-reverse' : ''}`}>
@@ -423,7 +452,7 @@ export const MoonshotChallengePage: React.FC = () => {
             { num: 3, icon: '🚀', title: 'Use AI Rocket', desc: 'Get unlimited access for 90 days (Jan 15 - Apr 15). Transform your business with AI across Run, Build, and Grow dimensions.' },
             { num: 4, icon: '📱', title: 'Engage & Share', desc: 'Complete minimum 5 social media posts tagging RocketHub.AI and AI Rocket. Share your transformation journey.' },
             { num: 5, icon: '📝', title: 'Submit Application', desc: 'During Apr 6-10, submit your Prize Application with Impact Statement and RBG summaries (100 words each).' },
-            { num: 6, icon: '🏆', title: 'Win Prizes', desc: 'Winners announced Apr 13-16. Advisory Committee evaluates Impact Statement (25%), RBG answers (25%), and Astra scores (50%).' },
+            { num: 6, icon: '🏆', title: 'Win Prizes', desc: 'Winners announced Apr 13-16. Top 10 teams win equity prizes and Lifetime Ultra Plan subscriptions. Advisory Committee evaluates Impact Statement (25%), RBG answers (25%), and Astra scores (50%).' },
           ].map((step, idx) => (
             <div key={idx} className="bg-gray-800/80 border border-white/10 rounded-2xl p-8 text-center relative hover:border-orange-500 transition-all">
               <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-emerald-500 flex items-center justify-center text-white font-bold border-4 border-gray-900">
@@ -507,7 +536,7 @@ export const MoonshotChallengePage: React.FC = () => {
 
         <div className="space-y-4">
           {[
-            { q: 'What are the prize values?', a: 'First place receives $2.5M in equity, second place $1.5M, and third place $1M, based on planned Wefunder Community Raise campaign and company valuation target of $250M in April of 2026.' },
+            { q: 'What are the prize values?', a: 'The top 10 teams win equity prizes: 1st ($2M), 2nd ($1M), 3rd ($600K), 4th ($400K), 5th ($300K), 6th ($225K), 7th ($175K), 8th ($125K), 9th ($100K), 10th ($75K). All 10 winners also receive Lifetime Ultra Plan subscriptions. Values based on planned company valuation target of $250M.' },
             { q: 'How does Astra Intelligence scoring work?', a: 'Astra automatically tracks how your team uses AI Rocket throughout the challenge, assigning weighted scores across Run, Build, and Grow dimensions. These scores remain hidden until the challenge ends and represent 50% of your final evaluation score.' },
             { q: 'What is the Impact Statement?', a: 'The Impact Statement is a required part of your Final Application where you answer: "What positive impact are you able to make in the world with your new AI-Powered business?" This demonstrates alignment with our core mission and constitutes 25% of your challenge score.' },
             { q: 'How many team members can participate?', a: 'Each team can include up to 3 members: 1 primary user and up to 2 additional invited team members. All team members get full unlimited access during the challenge.' },
@@ -529,7 +558,7 @@ export const MoonshotChallengePage: React.FC = () => {
         <div className="bg-gray-800/80 border border-white/10 rounded-3xl p-8 md:p-12">
           <div className="text-center mb-12 pb-8 border-b border-white/10">
             <h2 className="text-3xl md:text-4xl font-extrabold mb-2">
-              <span className="bg-gradient-to-r from-orange-500 via-orange-400 to-emerald-500 bg-clip-text text-transparent">AI Rocket $5M Moonshot Challenge</span>
+              <span className="bg-gradient-to-r from-orange-500 via-orange-400 to-emerald-500 bg-clip-text text-transparent">$5M AI Moonshot Challenge</span>
             </h2>
             <p className="text-gray-500">Official Terms & Conditions</p>
           </div>
@@ -551,10 +580,10 @@ export const MoonshotChallengePage: React.FC = () => {
 
             <div>
               <h3 className="text-xl font-bold text-orange-500 mb-3">3. Prizes & Valuation</h3>
-              <p className="mb-2">Prizes consist of Phantom Equity Units in Health Rocket Ventures LLC: First Place (1.0%), Second Place (0.6%), Third Place (0.4%). At the Sponsor's target company valuation of $250M, these stakes would represent approximately $2.5M, $1.5M, and $1M respectively.</p>
+              <p className="mb-2">Prizes consist of Phantom Equity Units in Health Rocket Ventures LLC for the top 10 teams: 1st Place (0.80%), 2nd Place (0.40%), 3rd Place (0.24%), 4th Place (0.16%), 5th Place (0.12%), 6th Place (0.09%), 7th Place (0.07%), 8th Place (0.05%), 9th Place (0.04%), 10th Place (0.03%). At the Sponsor's target company valuation of $250M, these stakes would represent approximately $2M, $1M, $600K, $400K, $300K, $225K, $175K, $125K, $100K, and $75K respectively.</p>
               <p className="mb-2"><strong className="text-white">IMPORTANT - NATURE OF PHANTOM EQUITY:</strong> Phantom Equity Units are contractual rights to receive a cash payment upon a Qualifying Liquidity Event (defined as a sale, merger, acquisition, or IPO of Health Rocket Ventures LLC). Phantom Equity Units do NOT constitute actual ownership, membership interests, or securities in HRV or any related entity. Holders have no voting rights, no rights to distributions, no rights to inspect company records, and no other rights associated with actual equity ownership.</p>
               <p className="mb-2"><strong className="text-white">VALUATION DISCLAIMER:</strong> Dollar values stated herein are based on projected future company valuations and are provided for illustrative purposes only. Health Rocket Ventures LLC is a pre-revenue startup. The current fair market value of these Phantom Equity Units is undetermined and may be nominal. Actual payout value, if any, will depend entirely on whether a Qualifying Liquidity Event occurs and the company valuation at that time. There is no guarantee that a Qualifying Liquidity Event will ever occur.</p>
-              <p>All winners receive lifetime subscriptions to AI Rocket. All valid prize applicants who do not win receive 1-year unlimited subscriptions.</p>
+              <p>All 10 winners receive Lifetime Ultra Plan subscriptions to AI Rocket. All valid prize applicants who do not place in the top 10 receive 1-year unlimited subscriptions.</p>
             </div>
 
             <div>

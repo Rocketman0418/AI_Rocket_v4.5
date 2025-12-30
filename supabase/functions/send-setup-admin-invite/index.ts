@@ -10,6 +10,16 @@ const corsHeaders = {
 interface SetupAdminInviteRequest {
   email: string;
   teamName: string;
+  teamId?: string;
+}
+
+function generateInviteCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
 }
 
 Deno.serve(async (req: Request) => {
@@ -66,7 +76,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const user = result.data.user;
-    const { email, teamName }: SetupAdminInviteRequest = await req.json();
+    const { email, teamName, teamId }: SetupAdminInviteRequest = await req.json();
 
     if (!email || !teamName) {
       return new Response(
@@ -75,8 +85,54 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    let actualTeamId = teamId;
+    if (!actualTeamId) {
+      const { data: userData } = await supabaseAdmin
+        .from('users')
+        .select('team_id')
+        .eq('id', userId)
+        .maybeSingle();
+
+      actualTeamId = userData?.team_id;
+    }
+
+    if (!actualTeamId) {
+      return new Response(
+        JSON.stringify({ error: "Could not determine team for invitation" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const inviteCode = generateInviteCode();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    const { error: inviteCodeError } = await supabaseAdmin
+      .from('invite_codes')
+      .insert({
+        code: inviteCode,
+        team_id: actualTeamId,
+        created_by: userId,
+        max_uses: 1,
+        current_uses: 0,
+        is_active: true,
+        expires_at: expiresAt.toISOString(),
+        invited_email: email.trim().toLowerCase(),
+        assigned_role: 'admin',
+        view_financial: true,
+      });
+
+    if (inviteCodeError) {
+      console.error("Error creating invite code:", inviteCodeError);
+      return new Response(
+        JSON.stringify({ error: "Failed to create invite code" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const inviterName = user.user_metadata?.full_name || user.email;
     const appUrl = 'https://airocket.app';
+    const signupUrl = `${appUrl}?invite=${inviteCode}`;
 
     const emailSubject = `${inviterName} needs your help setting up ${teamName} on AI Rocket`;
 
@@ -269,14 +325,20 @@ Deno.serve(async (req: Request) => {
               </div>
 
               <div class="cta-container">
-                <a href="${appUrl}" class="cta-button">
+                <a href="${signupUrl}" class="cta-button">
                   Accept & Start Setup
                 </a>
               </div>
 
+              <div style="background: #1e3a5f; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; margin: 30px 0; text-align: center;">
+                <div style="font-size: 12px; color: #93c5fd; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Your Invite Code</div>
+                <div style="font-size: 28px; font-weight: bold; color: white; font-family: monospace; letter-spacing: 4px;">${inviteCode}</div>
+                <div style="font-size: 12px; color: #60a5fa; margin-top: 8px;">Use this code when signing up to join ${teamName}</div>
+              </div>
+
               <div class="info-box">
                 <div class="info-box-title">What happens next?</div>
-                <p>Once you create your account with this email (${email}), you'll automatically be connected to ${teamName} and can begin the setup process. ${inviterName} will be notified when you complete the setup.</p>
+                <p>Click the button above or go to <a href="${appUrl}" style="color: #60a5fa;">${appUrl}</a> and enter your invite code <strong>${inviteCode}</strong> when signing up. You'll automatically be connected to ${teamName} and can begin the setup process. ${inviterName} will be notified when you complete the setup.</p>
               </div>
 
               <div class="divider"></div>
@@ -286,7 +348,7 @@ Deno.serve(async (req: Request) => {
               </div>
 
               <div class="cta-container">
-                <a href="${appUrl}" class="cta-button">
+                <a href="${signupUrl}" class="cta-button">
                   Accept & Start Setup
                 </a>
               </div>
@@ -342,6 +404,7 @@ Deno.serve(async (req: Request) => {
         success: true,
         message: `Setup admin invite sent successfully to ${email}`,
         emailId: resendData.id,
+        inviteCode: inviteCode,
       }),
       {
         status: 200,

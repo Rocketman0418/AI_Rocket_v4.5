@@ -446,7 +446,7 @@ Deno.serve(async (req: Request) => {
                   <div class="rocket-icon">&#128640;</div>
                   <div class="brand-name">AI Rocket</div>
                   <div class="brand-tagline">AI Built for Entrepreneurs and Their Teams</div>
-                  <h1 class="challenge-title">$5M Moonshot Challenge</h1>
+                  <h1 class="challenge-title">$5M AI Moonshot Challenge</h1>
                   <div class="registered-badge">You're Registered!</div>
                 </div>
               </div>
@@ -525,7 +525,7 @@ Deno.serve(async (req: Request) => {
                         <div class="stat-label">Days Free</div>
                       </td>
                       <td class="stat-cell">
-                        <div class="stat-value">3</div>
+                        <div class="stat-value">10</div>
                         <div class="stat-label">Winners</div>
                       </td>
                     </tr>
@@ -548,7 +548,7 @@ Deno.serve(async (req: Request) => {
                   </div>
                   <div class="timeline-item">
                     <div class="timeline-date">April 16, 2026</div>
-                    <div class="timeline-desc">Winners announced! Top 3 teams win equity prizes totaling $5M</div>
+                    <div class="timeline-desc">Winners announced! Top 10 teams win equity prizes and Lifetime Ultra Plan subscriptions</div>
                   </div>
                 </div>
 

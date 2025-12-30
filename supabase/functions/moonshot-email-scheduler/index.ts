@@ -164,7 +164,7 @@ function getHeroHeader(): string {
         <div class="rocket-icon">&#128640;</div>
         <div class="brand-name">AI Rocket</div>
         <div class="brand-tagline">AI Built for Entrepreneurs and Their Teams</div>
-        <h1 class="challenge-title">$5M Moonshot Challenge</h1>
+        <h1 class="challenge-title">$5M AI Moonshot Challenge</h1>
       </div>
     </div>
   `;
@@ -218,7 +218,7 @@ function getStatsSection(): string {
             <div class="stat-label">Days Free</div>
           </td>
           <td class="stat-cell">
-            <div class="stat-value">3</div>
+            <div class="stat-value">10</div>
             <div class="stat-label">Winners</div>
           </td>
         </tr>

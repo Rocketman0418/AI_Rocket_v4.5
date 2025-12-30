@@ -357,7 +357,7 @@ export const MoonshotRegistrationPage: React.FC = () => {
             <p className="text-gray-500 mb-6 tracking-wider text-sm">AI Built for Entrepreneurs and Their Teams</p>
 
             <h2 className="text-3xl md:text-5xl font-black mb-4">
-              <span className="bg-gradient-to-r from-yellow-400 via-orange-400 to-orange-500 bg-clip-text text-transparent">$5M Moonshot Challenge</span>
+              <span className="bg-gradient-to-r from-yellow-400 via-orange-400 to-orange-500 bg-clip-text text-transparent">$5M AI Moonshot Challenge</span>
             </h2>
             <p className="text-base md:text-lg text-gray-400 mb-6 max-w-2xl mx-auto">
               Free & Unlimited AI Tools to Launch Your AI-Powered Team
@@ -368,7 +368,7 @@ export const MoonshotRegistrationPage: React.FC = () => {
                 { value: '$5M', label: 'Prize Pool' },
                 { value: '300', label: 'Team Slots' },
                 { value: '90', label: 'Days Free' },
-                { value: '3', label: 'Winners' }
+                { value: '10', label: 'Winners' }
               ].map(stat => (
                 <div key={stat.label} className="text-center">
                   <div className="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-orange-500 to-emerald-500 bg-clip-text text-transparent">{stat.value}</div>
