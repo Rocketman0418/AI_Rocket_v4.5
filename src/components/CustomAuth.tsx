@@ -609,7 +609,7 @@ export const CustomAuth: React.FC = () => {
                 </button>
               </div>
               <p className="mt-2 text-center text-sm text-gray-400">
-                Invite Code or Free Preview Signup
+                Enter your Invite Code
               </p>
             </div>
           </form>
@@ -866,24 +866,6 @@ export const CustomAuth: React.FC = () => {
                 </label>
               </div>
             </>
-          )}
-
-          {step === 'signup' && (
-            <button
-              type="button"
-              onClick={handlePreviewRequest}
-              disabled={previewLoading}
-              className="w-full py-3 mt-6 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-800 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors flex items-center justify-center space-x-2 border border-purple-500"
-            >
-              {previewLoading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Submitting...</span>
-                </>
-              ) : (
-                <span>No Invite Code? Request Free Preview Access Here</span>
-              )}
-            </button>
           )}
 
           <button
