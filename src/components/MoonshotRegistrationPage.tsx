@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Copy, CheckCircle, Mail, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Copy, CheckCircle, Mail, Loader2, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 type RegistrationStep = 'welcome' | 'basic_info' | 'q1' | 'q2' | 'q3' | 'q4' | 'q5' | 'success';
 
@@ -17,6 +18,15 @@ interface FormData {
   monthlyAiSpend: string;
   connectedData: string;
   painPoints: string[];
+}
+
+interface ExistingUserInfo {
+  teamId: string;
+  teamName: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  alreadyRegistered: boolean;
 }
 
 const INDUSTRIES = [
@@ -100,6 +110,7 @@ const CompactHeader: React.FC = () => (
 );
 
 export const MoonshotRegistrationPage: React.FC = () => {
+  const { user, loading: authLoading } = useAuth();
   const [currentStep, setCurrentStep] = useState<RegistrationStep>('welcome');
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -118,6 +129,72 @@ export const MoonshotRegistrationPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [existingUserInfo, setExistingUserInfo] = useState<ExistingUserInfo | null>(null);
+  const [loadingUserInfo, setLoadingUserInfo] = useState(false);
+  const [submittedAsExistingUser, setSubmittedAsExistingUser] = useState<ExistingUserInfo | null>(null);
+
+  useEffect(() => {
+    const fetchExistingUserInfo = async () => {
+      if (!user) {
+        setExistingUserInfo(null);
+        return;
+      }
+
+      setLoadingUserInfo(true);
+      try {
+        const teamId = user.user_metadata?.team_id;
+        if (!teamId) {
+          setExistingUserInfo(null);
+          return;
+        }
+
+        const { data: teamData } = await supabase
+          .from('teams')
+          .select('id, name')
+          .eq('id', teamId)
+          .maybeSingle();
+
+        if (!teamData) {
+          setExistingUserInfo(null);
+          return;
+        }
+
+        const { data: existingReg } = await supabase
+          .from('moonshot_registrations')
+          .select('id')
+          .eq('team_id', teamId)
+          .maybeSingle();
+
+        const userName = user.user_metadata?.full_name ||
+                        user.user_metadata?.name ||
+                        user.email?.split('@')[0] || '';
+
+        setExistingUserInfo({
+          teamId: teamData.id,
+          teamName: teamData.name,
+          userId: user.id,
+          userName,
+          userEmail: user.email || '',
+          alreadyRegistered: !!existingReg
+        });
+
+        setFormData(prev => ({
+          ...prev,
+          name: userName,
+          email: user.email || '',
+          teamName: teamData.name
+        }));
+      } catch (err) {
+        console.error('Error fetching user info:', err);
+      } finally {
+        setLoadingUserInfo(false);
+      }
+    };
+
+    if (!authLoading) {
+      fetchExistingUserInfo();
+    }
+  }, [user, authLoading]);
 
   const steps: RegistrationStep[] = ['welcome', 'basic_info', 'q1', 'q2', 'q3', 'q4', 'q5', 'success'];
 
@@ -147,26 +224,68 @@ export const MoonshotRegistrationPage: React.FC = () => {
     setError(null);
 
     try {
-      const code = generateInviteCode();
       const finalIndustry = formData.industry === 'Other' ? formData.customIndustry : formData.industry;
       const finalUseCases = formData.aiUseCases.includes('Other') && formData.customUseCase
         ? [...formData.aiUseCases.filter(u => u !== 'Other'), formData.customUseCase]
         : formData.aiUseCases;
 
-      const { data: regData, error: regError } = await supabase
+      let registrationId: string;
+      let code: string;
+
+      const { data: existingReg, error: regCheckError } = await supabase
         .from('moonshot_registrations')
-        .insert({
+        .select('id, team_name, user_id, team_id')
+        .eq('email', formData.email.toLowerCase())
+        .maybeSingle();
+
+      if (regCheckError) {
+        console.error('Error checking existing registration:', regCheckError);
+      }
+
+      if (existingReg) {
+        setSubmittedAsExistingUser({
+          teamId: existingReg.team_id || '',
+          teamName: existingReg.team_name,
+          userId: existingReg.user_id || '',
+          userName: formData.name,
+          userEmail: formData.email,
+          alreadyRegistered: true
+        });
+
+        registrationId = existingReg.id;
+        code = '';
+      } else {
+        code = generateInviteCode();
+
+        const registrationData = {
           name: formData.name,
           email: formData.email,
           team_name: formData.teamName,
-          industry: finalIndustry
-        })
-        .select('id')
-        .single();
+          industry: finalIndustry,
+          source: 'new'
+        };
 
-      if (regError) throw regError;
+        const { data: regData, error: regError } = await supabase
+          .from('moonshot_registrations')
+          .insert(registrationData)
+          .select('id')
+          .single();
 
-      const registrationId = regData.id;
+        if (regError) throw regError;
+
+        registrationId = regData.id;
+
+        const { error: codeError } = await supabase
+          .from('moonshot_invite_codes')
+          .insert({
+            registration_id: registrationId,
+            code: code,
+            valid_from: '2026-01-15T00:00:00+00:00',
+            expires_at: '2026-01-31T23:59:59+00:00'
+          });
+
+        if (codeError) throw codeError;
+      }
 
       const { error: surveyError } = await supabase
         .from('moonshot_survey_responses')
@@ -181,96 +300,87 @@ export const MoonshotRegistrationPage: React.FC = () => {
 
       if (surveyError) throw surveyError;
 
-      const { error: codeError } = await supabase
-        .from('moonshot_invite_codes')
-        .insert({
+      if (!existingReg) {
+        const LAUNCH_DATE = new Date('2026-01-15T09:00:00.000Z');
+        const DAY_MS = 24 * 60 * 60 * 1000;
+
+        const featureEmailTypes = [
+          'feature_connected_data',
+          'feature_visualizations',
+          'feature_collaboration',
+          'feature_reports',
+          'feature_agent_builder'
+        ];
+
+        const countdownEmails = [
+          { type: 'countdown_4_weeks', daysBeforeLaunch: 13 },
+          { type: 'countdown_3_weeks', daysBeforeLaunch: 10 },
+          { type: 'countdown_2_weeks', daysBeforeLaunch: 7 },
+          { type: 'countdown_1_week', daysBeforeLaunch: 4 },
+          { type: 'countdown_tomorrow', daysBeforeLaunch: 1 },
+          { type: 'launch_day', daysBeforeLaunch: 0 }
+        ];
+
+        const now = new Date();
+
+        const emailSequence: { registration_id: string; email_type: string; scheduled_for: string }[] = [];
+
+        emailSequence.push({
           registration_id: registrationId,
-          code: code,
-          valid_from: '2026-01-15T00:00:00+00:00',
-          expires_at: '2026-01-31T23:59:59+00:00'
+          email_type: 'confirmation',
+          scheduled_for: now.toISOString()
         });
 
-      if (codeError) throw codeError;
+        const featureEndDate = new Date(LAUNCH_DATE.getTime() - 14 * DAY_MS);
+        const featureStartDate = new Date(now.getTime() + DAY_MS);
+        const availableTimeMs = Math.max(0, featureEndDate.getTime() - featureStartDate.getTime());
+        const numFeatureEmails = featureEmailTypes.length;
+        const intervalMs = numFeatureEmails > 1 ? availableTimeMs / (numFeatureEmails - 1) : DAY_MS;
+        const minIntervalMs = 2 * DAY_MS;
 
-      const LAUNCH_DATE = new Date('2026-01-15T09:00:00.000Z');
-      const DAY_MS = 24 * 60 * 60 * 1000;
-
-      const featureEmailTypes = [
-        'feature_connected_data',
-        'feature_visualizations',
-        'feature_collaboration',
-        'feature_reports',
-        'feature_agent_builder'
-      ];
-
-      const countdownEmails = [
-        { type: 'countdown_4_weeks', daysBeforeLaunch: 13 },
-        { type: 'countdown_3_weeks', daysBeforeLaunch: 10 },
-        { type: 'countdown_2_weeks', daysBeforeLaunch: 7 },
-        { type: 'countdown_1_week', daysBeforeLaunch: 4 },
-        { type: 'countdown_tomorrow', daysBeforeLaunch: 1 },
-        { type: 'launch_day', daysBeforeLaunch: 0 }
-      ];
-
-      const now = new Date();
-
-      const emailSequence: { registration_id: string; email_type: string; scheduled_for: string }[] = [];
-
-      emailSequence.push({
-        registration_id: registrationId,
-        email_type: 'confirmation',
-        scheduled_for: now.toISOString()
-      });
-
-      const featureEndDate = new Date(LAUNCH_DATE.getTime() - 14 * DAY_MS);
-      const featureStartDate = new Date(now.getTime() + DAY_MS);
-      const availableTimeMs = Math.max(0, featureEndDate.getTime() - featureStartDate.getTime());
-      const numFeatureEmails = featureEmailTypes.length;
-      const intervalMs = numFeatureEmails > 1 ? availableTimeMs / (numFeatureEmails - 1) : DAY_MS;
-      const minIntervalMs = 2 * DAY_MS;
-
-      for (let i = 0; i < featureEmailTypes.length; i++) {
-        let scheduledDate: Date;
-        if (availableTimeMs > 0 && intervalMs >= minIntervalMs) {
-          scheduledDate = new Date(featureStartDate.getTime() + i * intervalMs);
-        } else {
-          scheduledDate = new Date(featureStartDate.getTime() + i * minIntervalMs);
-        }
-        if (scheduledDate < LAUNCH_DATE) {
-          emailSequence.push({
-            registration_id: registrationId,
-            email_type: featureEmailTypes[i],
-            scheduled_for: scheduledDate.toISOString()
-          });
-        }
-      }
-
-      for (const { type, daysBeforeLaunch } of countdownEmails) {
-        const scheduledDate = new Date(LAUNCH_DATE.getTime() - daysBeforeLaunch * DAY_MS);
-        if (scheduledDate >= now) {
-          emailSequence.push({
-            registration_id: registrationId,
-            email_type: type,
-            scheduled_for: scheduledDate.toISOString()
-          });
-        }
-      }
-
-      await supabase
-        .from('moonshot_email_sequence')
-        .insert(emailSequence);
-
-      try {
-        await supabase.functions.invoke('moonshot-send-confirmation', {
-          body: {
-            registrationId,
-            email: formData.email,
-            name: formData.name,
-            inviteCode: code
+        for (let i = 0; i < featureEmailTypes.length; i++) {
+          let scheduledDate: Date;
+          if (availableTimeMs > 0 && intervalMs >= minIntervalMs) {
+            scheduledDate = new Date(featureStartDate.getTime() + i * intervalMs);
+          } else {
+            scheduledDate = new Date(featureStartDate.getTime() + i * minIntervalMs);
           }
-        });
-      } catch {
-        console.warn('Could not send confirmation email, but registration succeeded');
+          if (scheduledDate < LAUNCH_DATE) {
+            emailSequence.push({
+              registration_id: registrationId,
+              email_type: featureEmailTypes[i],
+              scheduled_for: scheduledDate.toISOString()
+            });
+          }
+        }
+
+        for (const { type, daysBeforeLaunch } of countdownEmails) {
+          const scheduledDate = new Date(LAUNCH_DATE.getTime() - daysBeforeLaunch * DAY_MS);
+          if (scheduledDate >= now) {
+            emailSequence.push({
+              registration_id: registrationId,
+              email_type: type,
+              scheduled_for: scheduledDate.toISOString()
+            });
+          }
+        }
+
+        await supabase
+          .from('moonshot_email_sequence')
+          .insert(emailSequence);
+
+        try {
+          await supabase.functions.invoke('moonshot-send-confirmation', {
+            body: {
+              registrationId,
+              email: formData.email,
+              name: formData.name,
+              inviteCode: code
+            }
+          });
+        } catch {
+          console.warn('Could not send confirmation email, but registration succeeded');
+        }
       }
 
       setInviteCode(code);
@@ -345,7 +455,7 @@ export const MoonshotRegistrationPage: React.FC = () => {
         return (
           <div className="text-center flex flex-col justify-center min-h-[70vh]">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-emerald-500 px-5 py-2 rounded-full text-sm font-semibold uppercase tracking-wider mb-6 mx-auto">
-              Registration Opens Dec 17 | Challenge Starts Jan 15
+              Registration Opens Jan 5 | Challenge Starts Jan 15
             </div>
 
             <div className="flex items-center justify-center gap-4 mb-2">
@@ -359,9 +469,32 @@ export const MoonshotRegistrationPage: React.FC = () => {
             <h2 className="text-3xl md:text-5xl font-black mb-4">
               <span className="bg-gradient-to-r from-yellow-400 via-orange-400 to-orange-500 bg-clip-text text-transparent">$5M AI Moonshot Challenge</span>
             </h2>
-            <p className="text-base md:text-lg text-gray-400 mb-6 max-w-2xl mx-auto">
-              Free & Unlimited AI Tools to Launch Your AI-Powered Team
-            </p>
+            <div className="mb-6 max-w-2xl mx-auto">
+              <p className="text-base md:text-lg text-gray-300">
+                Transform your Team to AI-Powered
+              </p>
+              <p className="text-base md:text-lg text-gray-300">
+                Free & Unlimited Access to the Most Powerful AI-Suite for Work
+              </p>
+            </div>
+
+            {existingUserInfo && (
+              <div className="max-w-md mx-auto mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+                <div className="flex items-center gap-3 justify-center mb-2">
+                  <Users className="w-5 h-5 text-emerald-400" />
+                  <span className="font-semibold text-emerald-400">Welcome back, {existingUserInfo.userName}!</span>
+                </div>
+                {existingUserInfo.alreadyRegistered ? (
+                  <p className="text-sm text-gray-300">
+                    Your team <span className="font-semibold text-white">{existingUserInfo.teamName}</span> is already entered in the Moonshot Challenge! Complete this survey to share your feedback.
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-300">
+                    Your team <span className="font-semibold text-white">{existingUserInfo.teamName}</span> will automatically be entered in the Moonshot Challenge.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-4 gap-3 max-w-xl mx-auto mb-6">
               {[
@@ -378,7 +511,9 @@ export const MoonshotRegistrationPage: React.FC = () => {
             </div>
 
             <p className="text-xs text-gray-500">
-              Complete this quick survey to receive your unique launch code
+              {existingUserInfo
+                ? 'Complete this quick survey to share your feedback and help us improve'
+                : 'Complete this quick survey to receive your unique launch code'}
             </p>
           </div>
         );
@@ -389,6 +524,15 @@ export const MoonshotRegistrationPage: React.FC = () => {
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 text-center">Tell Us About You</h2>
             <p className="text-gray-400 mb-6 text-center text-base">Basic information to set up your registration</p>
 
+            {existingUserInfo && (
+              <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+                <div className="flex items-center gap-2 text-blue-400 text-sm">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Your information has been pre-filled from your account</span>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Your Name</label>
@@ -397,7 +541,9 @@ export const MoonshotRegistrationPage: React.FC = () => {
                   value={formData.name}
                   onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="John Smith"
-                  className="w-full px-4 py-3.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors text-base"
+                  className={`w-full px-4 py-3.5 bg-gray-800 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors text-base ${
+                    existingUserInfo ? 'border-blue-500/30' : 'border-gray-700'
+                  }`}
                 />
               </div>
               <div>
@@ -407,7 +553,10 @@ export const MoonshotRegistrationPage: React.FC = () => {
                   value={formData.email}
                   onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   placeholder="john@company.com"
-                  className="w-full px-4 py-3.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors text-base"
+                  className={`w-full px-4 py-3.5 bg-gray-800 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors text-base ${
+                    existingUserInfo ? 'border-blue-500/30' : 'border-gray-700'
+                  }`}
+                  readOnly={!!existingUserInfo}
                 />
               </div>
               <div>
@@ -417,8 +566,14 @@ export const MoonshotRegistrationPage: React.FC = () => {
                   value={formData.teamName}
                   onChange={e => setFormData(prev => ({ ...prev, teamName: e.target.value }))}
                   placeholder="Acme Inc"
-                  className="w-full px-4 py-3.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors text-base"
+                  className={`w-full px-4 py-3.5 bg-gray-800 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors text-base ${
+                    existingUserInfo ? 'border-blue-500/30 bg-gray-800/50' : 'border-gray-700'
+                  }`}
+                  readOnly={!!existingUserInfo}
                 />
+                {existingUserInfo && (
+                  <p className="mt-1 text-xs text-gray-500">This is your existing team name and cannot be changed here</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Industry</label>
@@ -643,6 +798,83 @@ export const MoonshotRegistrationPage: React.FC = () => {
         );
 
       case 'success':
+        const effectiveExistingUser = existingUserInfo || submittedAsExistingUser;
+        if (effectiveExistingUser) {
+          return (
+            <div className="text-center max-w-lg mx-auto">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/20 mb-4">
+                <CheckCircle className="w-8 h-8 text-emerald-400" />
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-2">You're Already Registered!</h2>
+              <p className="text-gray-400 mb-6">Your feedback has been recorded</p>
+
+              <div className="bg-emerald-500/10 border-2 border-emerald-500/30 rounded-xl p-6 mb-6">
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <Users className="w-6 h-6 text-emerald-400" />
+                  <span className="text-xl font-bold text-white">{effectiveExistingUser.teamName}</span>
+                </div>
+                <p className="text-emerald-400 font-medium">
+                  Your team is entered in the Moonshot Challenge!
+                </p>
+                <p className="text-sm text-gray-400 mt-2">
+                  The challenge begins January 15, 2026
+                </p>
+              </div>
+
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-6">
+                <p className="text-blue-400 font-medium text-sm">
+                  You already have an AI Rocket account - no invite code needed!
+                </p>
+                <p className="text-gray-400 text-sm mt-1">
+                  Simply log in with your existing credentials to continue.
+                </p>
+              </div>
+
+              <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6 mb-8 text-left">
+                <h3 className="font-bold text-white mb-4 flex items-center gap-3 text-xl">
+                  <Mail className="w-6 h-6 text-orange-400" />
+                  What happens next?
+                </h3>
+                <ul className="space-y-3 text-gray-200 text-base">
+                  <li className="flex items-start gap-3">
+                    <span className="text-emerald-400 font-semibold text-lg">1.</span>
+                    Log in to AI Rocket with your existing account
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-emerald-400 font-semibold text-lg">2.</span>
+                    We'll send challenge updates to your email
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-emerald-400 font-semibold text-lg">3.</span>
+                    On January 15, the 90-day challenge officially begins
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-emerald-400 font-semibold text-lg">4.</span>
+                    Compete for the $5M prize pool!
+                  </li>
+                </ul>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <Link
+                  to="/"
+                  className="px-6 py-3 bg-gradient-to-r from-orange-500 to-emerald-500 hover:from-orange-600 hover:to-emerald-600 text-white rounded-xl font-medium transition-all hover:scale-105 inline-flex items-center justify-center gap-2 text-base"
+                >
+                  Log In to AI Rocket
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+                <Link
+                  to="/moonshot"
+                  className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-medium transition-colors inline-flex items-center justify-center gap-2 text-base"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  Challenge Details
+                </Link>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div className="text-center max-w-lg mx-auto">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/20 mb-4">
