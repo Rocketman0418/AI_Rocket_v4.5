@@ -254,6 +254,19 @@ export const MoonshotRegistrationPage: React.FC = () => {
 
         registrationId = existingReg.id;
         code = '';
+
+        const { error: updateError } = await supabase
+          .from('moonshot_registrations')
+          .update({
+            name: formData.name,
+            industry: finalIndustry,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', registrationId);
+
+        if (updateError) {
+          console.error('Error updating registration:', updateError);
+        }
       } else {
         code = generateInviteCode();
 
@@ -291,6 +304,8 @@ export const MoonshotRegistrationPage: React.FC = () => {
         .from('moonshot_survey_responses')
         .insert({
           registration_id: registrationId,
+          email: formData.email.toLowerCase(),
+          industry: finalIndustry,
           current_ai_usage: formData.currentAiUsage,
           ai_use_cases: finalUseCases,
           monthly_ai_spend: formData.monthlyAiSpend,
