@@ -260,6 +260,8 @@ export const MoonshotRegistrationPage: React.FC = () => {
           .update({
             name: formData.name,
             industry: finalIndustry,
+            source: 'registration',
+            converted_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
           .eq('id', registrationId);
@@ -383,19 +385,20 @@ export const MoonshotRegistrationPage: React.FC = () => {
         await supabase
           .from('moonshot_email_sequence')
           .insert(emailSequence);
+      }
 
-        try {
-          await supabase.functions.invoke('moonshot-send-confirmation', {
-            body: {
-              registrationId,
-              email: formData.email,
-              name: formData.name,
-              inviteCode: code
-            }
-          });
-        } catch {
-          console.warn('Could not send confirmation email, but registration succeeded');
-        }
+      try {
+        await supabase.functions.invoke('moonshot-send-confirmation', {
+          body: {
+            registrationId,
+            email: formData.email,
+            name: formData.name,
+            inviteCode: code,
+            isExistingUser: !!existingReg
+          }
+        });
+      } catch {
+        console.warn('Could not send confirmation email, but registration succeeded');
       }
 
       setInviteCode(code);
