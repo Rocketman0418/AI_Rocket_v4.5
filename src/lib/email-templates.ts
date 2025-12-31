@@ -226,6 +226,7 @@ export const MOONSHOT_EMAIL_TEMPLATE: EmailTemplate = {
     <div class="container">
       <div class="header">
         <div class="brand-section">
+          <div style="font-size: 12px; color: #9ca3af; letter-spacing: 1px; margin-bottom: 16px; text-transform: uppercase;">From the creators of Health Rocket</div>
           <div class="rocket-icon">&#128640;</div>
           <div class="brand-name">AI Rocket</div>
           <div class="brand-tagline">AI Built for Entrepreneurs and Their Teams</div>
