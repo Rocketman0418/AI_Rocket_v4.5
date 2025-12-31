@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Mail, Lock, Key, ArrowRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { PasswordResetModal } from './PasswordResetModal';
@@ -132,13 +133,13 @@ export const CustomAuth: React.FC = () => {
 
         if (validationError) {
           console.error('Error validating moonshot code:', validationError);
-          setError('Failed to validate invite code');
+          setError('Failed to validate launch code');
           return { valid: false };
         }
 
         const result = validation?.[0];
         if (!result?.is_valid) {
-          setError(result?.error_message || 'Invalid invite code');
+          setError(result?.error_message || 'Invalid launch code');
           return { valid: false };
         }
 
@@ -168,22 +169,22 @@ export const CustomAuth: React.FC = () => {
       }
 
       if (!data) {
-        setError('Invalid invite code');
+        setError('Invalid launch code');
         return { valid: false };
       }
 
       if (data.invited_email && data.invited_email.toLowerCase() !== email.toLowerCase()) {
-        setError('This invite code is for a different email address');
+        setError('This launch code is for a different email address');
         return { valid: false };
       }
 
       if (data.current_uses >= data.max_uses) {
-        setError('This invite code has reached its maximum uses');
+        setError('This launch code has reached its maximum uses');
         return { valid: false };
       }
 
       if (data.expires_at && new Date(data.expires_at) < new Date()) {
-        setError('This invite code has expired');
+        setError('This launch code has expired');
         return { valid: false };
       }
 
@@ -192,7 +193,7 @@ export const CustomAuth: React.FC = () => {
       return { valid: true, inviteData: data };
     } catch (err) {
       console.error('Error validating invite code:', err);
-      setError('Failed to validate invite code');
+      setError('Failed to validate launch code');
       return { valid: false };
     }
   };
@@ -276,8 +277,8 @@ export const CustomAuth: React.FC = () => {
         return;
       }
 
-      if (password.length < 6) {
-        setError('Password must be at least 6 characters');
+      if (password.length < 8) {
+        setError('Password must be at least 8 characters');
         setLoading(false);
         return;
       }
@@ -562,16 +563,18 @@ export const CustomAuth: React.FC = () => {
   if (step === 'email') {
     return (
       <div className="w-full">
-        <div className="text-center mb-6">
-          <h1 className="text-3xl md:text-5xl font-bold flex items-center justify-center gap-4 flex-wrap">
-            <div className="flex items-center justify-center w-20 h-20 rounded-full bg-blue-400 shadow-lg flex-shrink-0">
-              <span className="text-5xl">🚀</span>
+        <div className="text-center mb-6 px-4">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold flex flex-col lg:flex-row items-center justify-center gap-2 lg:gap-4">
+            <div className="flex items-center gap-2 lg:gap-3 whitespace-nowrap">
+              <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full bg-blue-400 shadow-lg flex-shrink-0">
+                <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl">🚀</span>
+              </div>
+              <span className="text-blue-400 whitespace-nowrap">AI Rocket</span>
+              <span className="text-white font-normal">+</span>
             </div>
-            <span className="text-blue-400">AI Rocket</span>
-            <span className="text-white font-normal">+</span>
-            <span className="text-emerald-400">Astra Intelligence</span>
+            <span className="text-emerald-400 whitespace-nowrap">Astra Intelligence</span>
           </h1>
-          <p className="text-base md:text-lg text-gray-400 mt-4 whitespace-nowrap">
+          <p className="text-base md:text-lg text-gray-400 mt-4">
             AI for Entrepreneurs and their Teams
           </p>
         </div>
@@ -609,7 +612,7 @@ export const CustomAuth: React.FC = () => {
                 </button>
               </div>
               <p className="mt-2 text-center text-sm text-gray-400">
-                Enter your Invite Code
+                Login or Create Free Account
               </p>
             </div>
           </form>
@@ -651,6 +654,27 @@ export const CustomAuth: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Moonshot Challenge Promotional Box */}
+        <Link
+          to="/moonshot"
+          className="mt-4 block relative overflow-hidden rounded-2xl p-6 transition-all duration-300 cursor-pointer group hover:scale-[1.02]"
+          style={{ background: 'linear-gradient(135deg, rgba(251, 146, 60, 0.15) 0%, rgba(245, 158, 11, 0.1) 50%, rgba(16, 185, 129, 0.1) 100%)' }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="relative z-10 flex flex-col items-center text-center gap-3">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-emerald-500 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider text-white">
+              Registration Open Now | Challenge Starts Jan 15
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-black">
+              <span className="bg-gradient-to-r from-yellow-400 via-orange-400 to-orange-500 bg-clip-text text-transparent">$5M AI Moonshot Challenge</span>
+            </h3>
+            <div className="flex flex-col items-center">
+              <span className="text-gray-300 text-sm">Transform your Team to AI-Powered</span>
+              <span className="text-gray-400 text-xs">Free & Unlimited Access to the Most Powerful AI-Suite for Work</span>
+            </div>
+          </div>
+        </Link>
       </div>
     );
   }
@@ -761,7 +785,7 @@ export const CustomAuth: React.FC = () => {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={step === 'signup' ? 'Choose a password (min 6 characters)' : 'Your password'}
+                placeholder={step === 'signup' ? 'Choose a password (min 8 characters)' : 'Your password'}
                 disabled={loading}
                 className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                 required
@@ -799,14 +823,14 @@ export const CustomAuth: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-sm text-gray-400 mb-1 block">Invite Code</label>
+                <label className="text-sm text-gray-400 mb-1 block">Launch Code</label>
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="text"
                     value={inviteCode}
                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                    placeholder="Enter your invite code"
+                    placeholder="Enter your launch code"
                     disabled={loading}
                     className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed uppercase"
                     required
@@ -885,15 +909,18 @@ export const CustomAuth: React.FC = () => {
         </form>
 
         {step === 'signup' && (
-          <div className="mt-6 bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-            <p className="text-blue-400 text-sm font-medium mb-2">Welcome to AI Rocket + Astra Intelligence!</p>
+          <Link
+            to="/moonshot"
+            className="mt-6 block relative overflow-hidden rounded-lg p-4 transition-all duration-300 hover:scale-[1.02]"
+            style={{ background: 'linear-gradient(135deg, rgba(251, 146, 60, 0.1) 0%, rgba(245, 158, 11, 0.08) 50%, rgba(16, 185, 129, 0.08) 100%)' }}
+          >
+            <p className="text-orange-400 text-sm font-medium mb-2">No Launch Code? Early Access available through the $5M AI Moonshot Challenge</p>
             <ul className="text-gray-400 text-xs space-y-1">
-              <li>• Create your account instantly with a valid invite code</li>
-              <li>• No email confirmation required - get started immediately</li>
-              <li>• Access AI-powered insights for your business</li>
-              <li>• Connect your data sources and collaborate with your team</li>
+              <li>• Registration now open for the first 300 teams</li>
+              <li>• Transform your Team to AI-Powered</li>
+              <li>• Free & Unlimited Access to the Most Powerful AI-Suite for Work</li>
             </ul>
-          </div>
+          </Link>
         )}
       </div>
     </div>
