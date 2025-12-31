@@ -28,6 +28,7 @@ import { TermsOfServicePage } from './components/TermsOfServicePage';
 import { MoonshotChallengePage } from './components/MoonshotChallengePage';
 import { MoonshotRegistrationPage } from './components/MoonshotRegistrationPage';
 import { UpdatesPage } from './components/UpdatesPage';
+import { DemoPage } from './pages/DemoPage';
 import { useFeedbackPrompt } from './hooks/useFeedbackPrompt';
 import { useActivityTracking } from './hooks/useActivityTracking';
 import { useLaunchPreparation } from './hooks/useLaunchPreparation';
@@ -321,6 +322,9 @@ const AppContent: React.FC = () => {
 
       {/* Updates Page - Public Route */}
       <Route path="/updates" element={<UpdatesPage />} />
+
+      {/* Demo Page - Public Route */}
+      <Route path="/demo" element={<DemoPage />} />
 
       {/* Main App Routes */}
       <Route
