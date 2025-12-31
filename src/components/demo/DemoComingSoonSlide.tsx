@@ -22,21 +22,21 @@ const colorVariants = [
 
 export const DemoComingSoonSlide: React.FC<DemoComingSoonSlideProps> = () => {
   return (
-    <div className="p-6 space-y-6">
-      <div className="text-center mb-6">
-        <span className="inline-block px-2 py-1 text-xs bg-pink-500/20 text-pink-400 rounded-full mb-2 flex items-center gap-1 mx-auto w-fit">
+    <div className="p-5 lg:p-6 flex flex-col h-full">
+      <div className="text-center mb-4">
+        <span className="inline-block px-3 py-1 text-xs bg-pink-500/20 text-pink-400 rounded-full mb-2 flex items-center gap-1 mx-auto w-fit">
           <Sparkles className="w-3 h-3" />
           Roadmap
         </span>
-        <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+        <h2 className="text-2xl lg:text-3xl font-bold text-white mb-2">
           Coming Soon
         </h2>
-        <p className="text-gray-400">
-          Exciting features on our roadmap to make AI Rocket even more powerful
+        <p className="text-sm text-gray-400">
+          Exciting features on our roadmap
         </p>
       </div>
 
-      <div className="max-w-3xl mx-auto grid md:grid-cols-2 gap-4">
+      <div className="max-w-5xl mx-auto grid grid-cols-2 gap-4 flex-1">
         {DEMO_COMING_SOON.map((feature, index) => {
           const Icon = iconMap[feature.icon];
           const colors = colorVariants[index % colorVariants.length];
@@ -44,7 +44,7 @@ export const DemoComingSoonSlide: React.FC<DemoComingSoonSlideProps> = () => {
           return (
             <div
               key={feature.title}
-              className={`${colors.bg} border ${colors.border} rounded-2xl p-5 relative overflow-hidden group hover:scale-[1.02] transition-transform`}
+              className={`${colors.bg} border ${colors.border} rounded-2xl p-5 relative overflow-hidden`}
             >
               <div className="absolute top-3 right-3">
                 <div className="flex items-center gap-1 px-2 py-1 bg-gray-900/50 rounded-full text-xs text-gray-400">
@@ -57,20 +57,18 @@ export const DemoComingSoonSlide: React.FC<DemoComingSoonSlideProps> = () => {
                 <Icon className={`w-6 h-6 ${colors.icon}`} />
               </div>
 
-              <h3 className="text-lg font-semibold text-white mb-2">
+              <h3 className="text-base font-semibold text-white mb-2">
                 {feature.title}
               </h3>
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-gray-400 leading-relaxed">
                 {feature.description}
               </p>
-
-              <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-gradient-to-br from-white/5 to-transparent rounded-full blur-2xl group-hover:scale-150 transition-transform" />
             </div>
           );
         })}
       </div>
 
-      <div className="text-center">
+      <div className="text-center mt-4">
         <p className="text-sm text-gray-500">
           Have a feature request? Let us know after you sign up!
         </p>

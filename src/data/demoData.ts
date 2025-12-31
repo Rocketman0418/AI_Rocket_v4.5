@@ -49,7 +49,6 @@ export const DEMO_GUIDED_PROMPTS = [
     category: 'Financial Analysis',
     prompts: [
       'Analyze our monthly expenses and identify cost-saving opportunities',
-      'Compare this quarter\'s revenue to last year\'s same period',
       'Which products have the highest profit margins?',
     ],
   },
@@ -58,14 +57,12 @@ export const DEMO_GUIDED_PROMPTS = [
     prompts: [
       'Summarize recent team activity and project progress',
       'What are our current project deadlines and status?',
-      'Generate a weekly team performance summary',
     ],
   },
   {
     category: 'Strategic Planning',
     prompts: [
       'Based on our data, what growth opportunities should we focus on?',
-      'Analyze market trends affecting our business',
       'What are our top customer segments by revenue?',
     ],
   },
