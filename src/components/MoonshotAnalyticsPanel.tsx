@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Rocket, Users, Mail, BarChart3, Download, Search,
+  Rocket, Users, BarChart3, Download, Search,
   ChevronDown, ChevronUp, CheckCircle, Clock, XCircle,
-  TrendingUp, Calendar
+  TrendingUp, Calendar, ArrowRight, UserPlus, Target, PieChart as PieChartIcon
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
@@ -14,29 +14,149 @@ interface Registration {
   team_name: string;
   industry: string;
   created_at: string;
+  source: string | null;
+  team_id: string | null;
+  user_id: string | null;
+  onboarding_started: boolean;
+  onboarding_completed: boolean;
+  challenge_started_at: string | null;
+  converted_at: string | null;
+  updated_at: string | null;
   survey_response?: {
     current_ai_usage: string;
     ai_use_cases: string[];
     monthly_ai_spend: string;
     connected_data: string;
     biggest_pain_points: string;
+    industry: string | null;
+    email: string | null;
   };
   invite_code?: {
     code: string;
     is_redeemed: boolean;
     redeemed_at?: string;
+    valid_from?: string;
+    expires_at?: string;
   };
+  email_sequence?: Array<{
+    email_type: string;
+    scheduled_for: string;
+    sent_at: string | null;
+  }>;
 }
 
 interface MoonshotStats {
   totalRegistrations: number;
-  uniqueEmails: number;
+  newEntries: number;
   redeemedCodes: number;
+  existingUserRegistrations: number;
+  convertedToTeam: number;
+  onboardingStarted: number;
+  onboardingCompleted: number;
+  pendingInviteCodes: number;
+  expiredInviteCodes: number;
   registrationsByIndustry: Record<string, number>;
   registrationsByAiUsage: Record<string, number>;
   registrationsBySpend: Record<string, number>;
+  registrationsByConnectedData: Record<string, number>;
   registrationsByDay: Array<{ date: string; count: number }>;
+  registrationsBySource: Record<string, number>;
+  surveyResponseCount: number;
 }
+
+const PIE_COLORS = [
+  '#f97316', '#3b82f6', '#22c55e', '#eab308', '#ec4899',
+  '#8b5cf6', '#06b6d4', '#ef4444', '#84cc16', '#f59e0b'
+];
+
+interface PieChartProps {
+  data: Record<string, number>;
+  labels?: Record<string, string>;
+  size?: number;
+}
+
+const SimplePieChart: React.FC<PieChartProps> = ({ data, labels = {}, size = 160 }) => {
+  const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
+  const total = entries.reduce((sum, [, count]) => sum + count, 0);
+
+  if (total === 0) {
+    return (
+      <div className="flex items-center justify-center" style={{ width: size, height: size }}>
+        <span className="text-gray-500 text-sm">No data</span>
+      </div>
+    );
+  }
+
+  let cumulativePercent = 0;
+  const slices = entries.map(([key, count], index) => {
+    const percent = (count / total) * 100;
+    const startAngle = cumulativePercent * 3.6;
+    cumulativePercent += percent;
+    const endAngle = cumulativePercent * 3.6;
+    const largeArc = percent > 50 ? 1 : 0;
+
+    const startRad = ((startAngle - 90) * Math.PI) / 180;
+    const endRad = ((endAngle - 90) * Math.PI) / 180;
+    const radius = size / 2 - 4;
+    const cx = size / 2;
+    const cy = size / 2;
+
+    const x1 = cx + radius * Math.cos(startRad);
+    const y1 = cy + radius * Math.sin(startRad);
+    const x2 = cx + radius * Math.cos(endRad);
+    const y2 = cy + radius * Math.sin(endRad);
+
+    const pathData = percent === 100
+      ? `M ${cx} ${cy - radius} A ${radius} ${radius} 0 1 1 ${cx - 0.001} ${cy - radius} Z`
+      : `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+
+    return {
+      key,
+      count,
+      percent,
+      color: PIE_COLORS[index % PIE_COLORS.length],
+      path: pathData
+    };
+  });
+
+  return (
+    <div className="flex flex-col items-center">
+      <svg width={size} height={size} className="transform -rotate-0">
+        {slices.map((slice) => (
+          <path
+            key={slice.key}
+            d={slice.path}
+            fill={slice.color}
+            stroke="#1f2937"
+            strokeWidth="1"
+            className="hover:opacity-80 transition-opacity cursor-pointer"
+          >
+            <title>{`${labels[slice.key] || slice.key}: ${slice.count} (${slice.percent.toFixed(1)}%)`}</title>
+          </path>
+        ))}
+        <circle cx={size / 2} cy={size / 2} r={size / 4} fill="#1f2937" />
+        <text x={size / 2} y={size / 2 - 8} textAnchor="middle" className="fill-white text-lg font-bold">
+          {total}
+        </text>
+        <text x={size / 2} y={size / 2 + 12} textAnchor="middle" className="fill-gray-400 text-xs">
+          responses
+        </text>
+      </svg>
+      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs max-h-32 overflow-y-auto w-full">
+        {slices.slice(0, 8).map((slice) => (
+          <div key={slice.key} className="flex items-center gap-1.5 truncate">
+            <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: slice.color }} />
+            <span className="text-gray-400 truncate">{labels[slice.key] || slice.key}</span>
+            <span className="text-white font-medium ml-auto">{slice.count}</span>
+          </div>
+        ))}
+        {slices.length > 8 && (
+          <div className="text-gray-500 col-span-2 text-center">+{slices.length - 8} more</div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const MoonshotAnalyticsPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -63,23 +183,41 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
           team_name,
           industry,
           created_at,
+          source,
+          team_id,
+          user_id,
+          onboarding_started,
+          onboarding_completed,
+          challenge_started_at,
+          converted_at,
+          updated_at,
           moonshot_survey_responses (
             current_ai_usage,
             ai_use_cases,
             monthly_ai_spend,
             connected_data,
-            biggest_pain_points
+            biggest_pain_points,
+            industry,
+            email
           ),
           moonshot_invite_codes (
             code,
             is_redeemed,
-            redeemed_at
+            redeemed_at,
+            valid_from,
+            expires_at
+          ),
+          moonshot_email_sequence (
+            email_type,
+            scheduled_for,
+            sent_at
           )
         `)
         .order('created_at', { ascending: false });
 
       if (regsError) throw regsError;
 
+      const now = new Date();
       const registrationsData: Registration[] = (regs || []).map(r => ({
         id: r.id,
         name: r.name,
@@ -87,28 +225,72 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
         team_name: r.team_name,
         industry: r.industry,
         created_at: r.created_at,
+        source: r.source,
+        team_id: r.team_id,
+        user_id: r.user_id,
+        onboarding_started: r.onboarding_started || false,
+        onboarding_completed: r.onboarding_completed || false,
+        challenge_started_at: r.challenge_started_at,
+        converted_at: r.converted_at,
+        updated_at: r.updated_at,
         survey_response: r.moonshot_survey_responses?.[0] || undefined,
-        invite_code: r.moonshot_invite_codes?.[0] || undefined
+        invite_code: r.moonshot_invite_codes?.[0] || undefined,
+        email_sequence: r.moonshot_email_sequence || []
       }));
 
       setRegistrations(registrationsData);
 
-      const uniqueEmails = new Set(registrationsData.map(r => r.email.toLowerCase())).size;
+      const newEntries = registrationsData.filter(r => r.source === 'new').length;
       const redeemedCodes = registrationsData.filter(r => r.invite_code?.is_redeemed).length;
+      const existingUserRegistrations = registrationsData.filter(r => r.source === 'existing').length;
+      const convertedToTeam = registrationsData.filter(r => r.team_id !== null).length;
+      const onboardingStarted = registrationsData.filter(r => r.onboarding_started).length;
+      const onboardingCompleted = registrationsData.filter(r => r.onboarding_completed).length;
+
+      const pendingInviteCodes = registrationsData.filter(r =>
+        r.invite_code &&
+        !r.invite_code.is_redeemed &&
+        r.invite_code.expires_at &&
+        new Date(r.invite_code.expires_at) > now
+      ).length;
+
+      const expiredInviteCodes = registrationsData.filter(r =>
+        r.invite_code &&
+        !r.invite_code.is_redeemed &&
+        r.invite_code.expires_at &&
+        new Date(r.invite_code.expires_at) <= now
+      ).length;
 
       const industryCount: Record<string, number> = {};
       const aiUsageCount: Record<string, number> = {};
       const spendCount: Record<string, number> = {};
+      const connectedDataCount: Record<string, number> = {};
       const dayCount: Record<string, number> = {};
+      const sourceCount: Record<string, number> = {};
+      let surveyResponseCount = 0;
 
       registrationsData.forEach(r => {
-        industryCount[r.industry] = (industryCount[r.industry] || 0) + 1;
+        const sourceLabel = r.source || 'unknown';
+        sourceCount[sourceLabel] = (sourceCount[sourceLabel] || 0) + 1;
 
         if (r.survey_response) {
-          aiUsageCount[r.survey_response.current_ai_usage] =
-            (aiUsageCount[r.survey_response.current_ai_usage] || 0) + 1;
-          spendCount[r.survey_response.monthly_ai_spend] =
-            (spendCount[r.survey_response.monthly_ai_spend] || 0) + 1;
+          surveyResponseCount++;
+          if (r.survey_response.industry) {
+            industryCount[r.survey_response.industry] = (industryCount[r.survey_response.industry] || 0) + 1;
+          }
+
+          if (r.survey_response.current_ai_usage) {
+            aiUsageCount[r.survey_response.current_ai_usage] =
+              (aiUsageCount[r.survey_response.current_ai_usage] || 0) + 1;
+          }
+          if (r.survey_response.monthly_ai_spend) {
+            spendCount[r.survey_response.monthly_ai_spend] =
+              (spendCount[r.survey_response.monthly_ai_spend] || 0) + 1;
+          }
+          if (r.survey_response.connected_data) {
+            connectedDataCount[r.survey_response.connected_data] =
+              (connectedDataCount[r.survey_response.connected_data] || 0) + 1;
+          }
         }
 
         const day = format(new Date(r.created_at), 'yyyy-MM-dd');
@@ -121,12 +303,21 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
 
       setStats({
         totalRegistrations: registrationsData.length,
-        uniqueEmails,
+        newEntries,
         redeemedCodes,
+        existingUserRegistrations,
+        convertedToTeam,
+        onboardingStarted,
+        onboardingCompleted,
+        pendingInviteCodes,
+        expiredInviteCodes,
         registrationsByIndustry: industryCount,
         registrationsByAiUsage: aiUsageCount,
         registrationsBySpend: spendCount,
-        registrationsByDay
+        registrationsByConnectedData: connectedDataCount,
+        registrationsByDay,
+        registrationsBySource: sourceCount,
+        surveyResponseCount
       });
     } catch (err) {
       console.error('Error fetching moonshot data:', err);
@@ -144,6 +335,8 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
     }
   };
 
+  const getIndustry = (r: Registration) => r.survey_response?.industry || '';
+
   const filteredRegistrations = registrations
     .filter(r => {
       if (!searchQuery) return true;
@@ -152,7 +345,7 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
         r.name.toLowerCase().includes(q) ||
         r.email.toLowerCase().includes(q) ||
         r.team_name.toLowerCase().includes(q) ||
-        r.industry.toLowerCase().includes(q)
+        getIndustry(r).toLowerCase().includes(q)
       );
     })
     .sort((a, b) => {
@@ -160,7 +353,7 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
       switch (sortField) {
         case 'name': aVal = a.name; bVal = b.name; break;
         case 'email': aVal = a.email; bVal = b.email; break;
-        case 'industry': aVal = a.industry; bVal = b.industry; break;
+        case 'industry': aVal = getIndustry(a); bVal = getIndustry(b); break;
         default: aVal = a.created_at; bVal = b.created_at;
       }
       const cmp = aVal.localeCompare(bVal);
@@ -168,15 +361,26 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
     });
 
   const exportToCSV = () => {
-    const headers = ['Name', 'Email', 'Team', 'Industry', 'Registered', 'Invite Code', 'Redeemed', 'AI Usage', 'Monthly Spend', 'Pain Points'];
+    const headers = [
+      'Name', 'Email', 'Team', 'Industry', 'Source', 'Registered',
+      'Invite Code', 'Code Redeemed', 'Team Converted', 'Onboarding Started',
+      'Onboarding Completed', 'Challenge Started', 'Converted At',
+      'AI Usage', 'Monthly Spend', 'Pain Points'
+    ];
     const rows = registrations.map(r => [
       r.name,
       r.email,
       r.team_name,
-      r.industry,
+      getIndustry(r),
+      r.source || '',
       format(new Date(r.created_at), 'yyyy-MM-dd HH:mm'),
       r.invite_code?.code || '',
       r.invite_code?.is_redeemed ? 'Yes' : 'No',
+      r.team_id ? 'Yes' : 'No',
+      r.onboarding_started ? 'Yes' : 'No',
+      r.onboarding_completed ? 'Yes' : 'No',
+      r.challenge_started_at ? format(new Date(r.challenge_started_at), 'yyyy-MM-dd') : '',
+      r.converted_at ? format(new Date(r.converted_at), 'yyyy-MM-dd') : '',
       r.survey_response?.current_ai_usage || '',
       r.survey_response?.monthly_ai_spend || '',
       r.survey_response?.biggest_pain_points?.replace(/"/g, '""') || ''
@@ -206,6 +410,16 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
     '100-500': '$100-500',
     '500-1000': '$500-1000',
     '1000+': '$1000+'
+  };
+
+  const CONNECTED_DATA_LABELS: Record<string, string> = {
+    none: 'None',
+    google_drive: 'Google Drive',
+    dropbox: 'Dropbox',
+    sharepoint: 'SharePoint',
+    notion: 'Notion',
+    slack: 'Slack',
+    other: 'Other'
   };
 
   if (loading) {
@@ -250,17 +464,17 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
         </div>
         <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
           <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
-            <Mail className="w-4 h-4" />
-            Unique Emails
+            <UserPlus className="w-4 h-4" />
+            New Entries
           </div>
-          <div className="text-3xl font-bold text-white">{stats?.uniqueEmails || 0}</div>
+          <div className="text-3xl font-bold text-blue-400">{stats?.newEntries || 0}</div>
         </div>
         <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
           <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
-            <CheckCircle className="w-4 h-4" />
-            Codes Redeemed
+            <Users className="w-4 h-4" />
+            Existing Users
           </div>
-          <div className="text-3xl font-bold text-emerald-400">{stats?.redeemedCodes || 0}</div>
+          <div className="text-3xl font-bold text-cyan-400">{stats?.existingUserRegistrations || 0}</div>
         </div>
         <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
           <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
@@ -268,19 +482,134 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
             Conversion Rate
           </div>
           <div className="text-3xl font-bold text-orange-400">
-            {stats && stats.uniqueEmails > 0
-              ? `${Math.round((stats.redeemedCodes / stats.uniqueEmails) * 100)}%`
+            {stats && stats.totalRegistrations > 0
+              ? `${Math.round((stats.convertedToTeam / stats.totalRegistrations) * 100)}%`
               : '0%'
             }
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+        <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
+          <Target className="w-4 h-4" />
+          Conversion Funnel
+        </h3>
+        <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2">
+          <div className="flex-1 min-w-[100px] text-center">
+            <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-3">
+              <div className="text-2xl font-bold text-blue-400">{stats?.totalRegistrations || 0}</div>
+              <div className="text-xs text-gray-400 mt-1">Registered</div>
+            </div>
+          </div>
+          <ArrowRight className="w-5 h-5 text-gray-500 flex-shrink-0" />
+          <div className="flex-1 min-w-[100px] text-center">
+            <div className="bg-cyan-500/20 border border-cyan-500/30 rounded-lg p-3">
+              <div className="text-2xl font-bold text-cyan-400">{stats?.convertedToTeam || 0}</div>
+              <div className="text-xs text-gray-400 mt-1">Converted to Team</div>
+            </div>
+          </div>
+          <ArrowRight className="w-5 h-5 text-gray-500 flex-shrink-0" />
+          <div className="flex-1 min-w-[100px] text-center">
+            <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-3">
+              <div className="text-2xl font-bold text-yellow-400">{stats?.onboardingStarted || 0}</div>
+              <div className="text-xs text-gray-400 mt-1">Started Onboarding</div>
+            </div>
+          </div>
+          <ArrowRight className="w-5 h-5 text-gray-500 flex-shrink-0" />
+          <div className="flex-1 min-w-[100px] text-center">
+            <div className="bg-emerald-500/20 border border-emerald-500/30 rounded-lg p-3">
+              <div className="text-2xl font-bold text-emerald-400">{stats?.onboardingCompleted || 0}</div>
+              <div className="text-xs text-gray-400 mt-1">Launched</div>
+            </div>
+          </div>
+        </div>
+        {stats && stats.totalRegistrations > 0 && (
+          <div className="mt-3 pt-3 border-t border-gray-600 grid grid-cols-3 gap-4 text-center text-xs">
+            <div>
+              <span className="text-gray-500">Conv. Rate</span>
+              <span className="block text-cyan-400 font-medium">
+                {Math.round((stats.convertedToTeam / stats.totalRegistrations) * 100)}%
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-500">Onboard Rate</span>
+              <span className="block text-yellow-400 font-medium">
+                {stats.convertedToTeam > 0 ? Math.round((stats.onboardingStarted / stats.convertedToTeam) * 100) : 0}%
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-500">Launch Rate</span>
+              <span className="block text-emerald-400 font-medium">
+                {stats.onboardingStarted > 0 ? Math.round((stats.onboardingCompleted / stats.onboardingStarted) * 100) : 0}%
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+          <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
+            <CheckCircle className="w-4 h-4" />
+            Codes Redeemed
+          </div>
+          <div className="text-2xl font-bold text-emerald-400">{stats?.redeemedCodes || 0}</div>
+          <div className="text-xs text-gray-500 mt-1">Successfully activated</div>
+        </div>
+        <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+          <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
+            <Clock className="w-4 h-4" />
+            Pending Codes
+          </div>
+          <div className="text-2xl font-bold text-yellow-400">{stats?.pendingInviteCodes || 0}</div>
+          <div className="text-xs text-gray-500 mt-1">Not yet redeemed</div>
+        </div>
+        <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+          <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
+            <XCircle className="w-4 h-4" />
+            Expired Codes
+          </div>
+          <div className="text-2xl font-bold text-red-400">{stats?.expiredInviteCodes || 0}</div>
+          <div className="text-xs text-gray-500 mt-1">Codes expired</div>
+        </div>
+      </div>
+
+      <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
+            <PieChartIcon className="w-4 h-4" />
+            Survey Response Breakdown
+          </h3>
+          <span className="text-sm text-gray-400">
+            {stats?.surveyResponseCount || 0} of {stats?.totalRegistrations || 0} completed survey
+          </span>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="flex flex-col items-center">
+            <h4 className="text-xs font-medium text-gray-400 mb-2">By Industry</h4>
+            <SimplePieChart data={stats?.registrationsByIndustry || {}} size={140} />
+          </div>
+          <div className="flex flex-col items-center">
+            <h4 className="text-xs font-medium text-gray-400 mb-2">AI Usage Level</h4>
+            <SimplePieChart data={stats?.registrationsByAiUsage || {}} labels={AI_USAGE_LABELS} size={140} />
+          </div>
+          <div className="flex flex-col items-center">
+            <h4 className="text-xs font-medium text-gray-400 mb-2">Monthly Spend</h4>
+            <SimplePieChart data={stats?.registrationsBySpend || {}} labels={SPEND_LABELS} size={140} />
+          </div>
+          <div className="flex flex-col items-center">
+            <h4 className="text-xs font-medium text-gray-400 mb-2">Connected Data</h4>
+            <SimplePieChart data={stats?.registrationsByConnectedData || {}} labels={CONNECTED_DATA_LABELS} size={140} />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
           <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
-            By Industry
+            Industry List
           </h3>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {Object.entries(stats?.registrationsByIndustry || {})
@@ -291,13 +620,16 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
                   <span className="text-white font-medium ml-2">{count}</span>
                 </div>
               ))}
+            {Object.keys(stats?.registrationsByIndustry || {}).length === 0 && (
+              <div className="text-gray-500 text-sm">No data</div>
+            )}
           </div>
         </div>
 
         <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
           <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
-            By AI Usage Level
+            AI Usage List
           </h3>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {Object.entries(stats?.registrationsByAiUsage || {})
@@ -308,13 +640,16 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
                   <span className="text-white font-medium ml-2">{count}</span>
                 </div>
               ))}
+            {Object.keys(stats?.registrationsByAiUsage || {}).length === 0 && (
+              <div className="text-gray-500 text-sm">No data</div>
+            )}
           </div>
         </div>
 
         <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
           <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
-            By Monthly Spend
+            Monthly Spend List
           </h3>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {Object.entries(stats?.registrationsBySpend || {})
@@ -325,6 +660,29 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
                   <span className="text-white font-medium ml-2">{count}</span>
                 </div>
               ))}
+            {Object.keys(stats?.registrationsBySpend || {}).length === 0 && (
+              <div className="text-gray-500 text-sm">No data</div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+          <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Connected Data List
+          </h3>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {Object.entries(stats?.registrationsByConnectedData || {})
+              .sort((a, b) => b[1] - a[1])
+              .map(([data, count]) => (
+                <div key={data} className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400 truncate">{CONNECTED_DATA_LABELS[data] || data}</span>
+                  <span className="text-white font-medium ml-2">{count}</span>
+                </div>
+              ))}
+            {Object.keys(stats?.registrationsByConnectedData || {}).length === 0 && (
+              <div className="text-gray-500 text-sm">No data</div>
+            )}
           </div>
         </div>
       </div>
@@ -394,8 +752,9 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
                 >
                   Industry
                 </th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Code</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Source</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Status</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Onboarding</th>
                 <th
                   className="text-left py-3 px-4 text-sm font-semibold text-gray-400 cursor-pointer hover:text-white"
                   onClick={() => handleSort('created_at')}
@@ -415,11 +774,30 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
                     <td className="py-3 px-4 text-sm text-white">{reg.name}</td>
                     <td className="py-3 px-4 text-sm text-gray-300">{reg.email}</td>
                     <td className="py-3 px-4 text-sm text-gray-300">{reg.team_name}</td>
-                    <td className="py-3 px-4 text-sm text-gray-300">{reg.industry}</td>
-                    <td className="py-3 px-4 text-sm font-mono text-orange-400">{reg.invite_code?.code || '-'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-300">{getIndustry(reg) || <span className="text-gray-500">-</span>}</td>
                     <td className="py-3 px-4">
-                      {reg.invite_code?.is_redeemed ? (
+                      {reg.source === 'landing_page' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs">
+                          <UserPlus className="w-3 h-3" />
+                          New
+                        </span>
+                      ) : reg.source === 'existing_team' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded text-xs">
+                          <Users className="w-3 h-3" />
+                          Existing
+                        </span>
+                      ) : (
+                        <span className="text-gray-500 text-xs">-</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      {reg.team_id ? (
                         <span className="inline-flex items-center gap-1 text-emerald-400 text-sm">
+                          <CheckCircle className="w-4 h-4" />
+                          Active
+                        </span>
+                      ) : reg.invite_code?.is_redeemed ? (
+                        <span className="inline-flex items-center gap-1 text-cyan-400 text-sm">
                           <CheckCircle className="w-4 h-4" />
                           Redeemed
                         </span>
@@ -428,6 +806,19 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
                           <Clock className="w-4 h-4" />
                           Pending
                         </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      {reg.onboarding_completed ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded text-xs">
+                          Complete
+                        </span>
+                      ) : reg.onboarding_started ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-xs">
+                          In Progress
+                        </span>
+                      ) : (
+                        <span className="text-gray-500 text-xs">Not Started</span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-400">
@@ -441,37 +832,89 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
                       )}
                     </td>
                   </tr>
-                  {expandedRow === reg.id && reg.survey_response && (
+                  {expandedRow === reg.id && (
                     <tr className="bg-gray-800/50">
-                      <td colSpan={8} className="p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                      <td colSpan={9} className="p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                           <div>
-                            <div className="text-gray-500 mb-1">AI Usage Level</div>
-                            <div className="text-white">{AI_USAGE_LABELS[reg.survey_response.current_ai_usage] || reg.survey_response.current_ai_usage}</div>
+                            <div className="text-gray-500 mb-1">Invite Code</div>
+                            <div className="text-orange-400 font-mono">{reg.invite_code?.code || 'No code'}</div>
                           </div>
                           <div>
-                            <div className="text-gray-500 mb-1">Monthly Spend</div>
-                            <div className="text-white">{SPEND_LABELS[reg.survey_response.monthly_ai_spend] || reg.survey_response.monthly_ai_spend}</div>
-                          </div>
-                          <div>
-                            <div className="text-gray-500 mb-1">Connected Data</div>
-                            <div className="text-white capitalize">{reg.survey_response.connected_data}</div>
-                          </div>
-                          <div className="md:col-span-2 lg:col-span-3">
-                            <div className="text-gray-500 mb-1">AI Use Cases</div>
-                            <div className="flex flex-wrap gap-2">
-                              {reg.survey_response.ai_use_cases?.map((uc, idx) => (
-                                <span key={idx} className="px-2 py-1 bg-gray-700 text-gray-300 rounded text-xs">
-                                  {uc}
-                                </span>
-                              ))}
+                            <div className="text-gray-500 mb-1">Code Status</div>
+                            <div className="text-white">
+                              {reg.invite_code?.is_redeemed
+                                ? `Redeemed ${reg.invite_code.redeemed_at ? format(new Date(reg.invite_code.redeemed_at), 'MMM d') : ''}`
+                                : reg.invite_code?.expires_at && new Date(reg.invite_code.expires_at) <= new Date()
+                                  ? 'Expired'
+                                  : 'Pending'}
                             </div>
                           </div>
-                          {reg.survey_response.biggest_pain_points && (
-                            <div className="md:col-span-2 lg:col-span-3">
-                              <div className="text-gray-500 mb-1">Pain Points</div>
-                              <div className="text-gray-300 bg-gray-700/50 p-3 rounded-lg">
-                                {reg.survey_response.biggest_pain_points}
+                          <div>
+                            <div className="text-gray-500 mb-1">Challenge Started</div>
+                            <div className="text-white">
+                              {reg.challenge_started_at ? format(new Date(reg.challenge_started_at), 'MMM d, yyyy') : 'Not started'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500 mb-1">Converted At</div>
+                            <div className="text-white">
+                              {reg.converted_at ? format(new Date(reg.converted_at), 'MMM d, yyyy') : '-'}
+                            </div>
+                          </div>
+                          {reg.survey_response && (
+                            <>
+                              <div>
+                                <div className="text-gray-500 mb-1">AI Usage Level</div>
+                                <div className="text-white">{AI_USAGE_LABELS[reg.survey_response.current_ai_usage] || reg.survey_response.current_ai_usage}</div>
+                              </div>
+                              <div>
+                                <div className="text-gray-500 mb-1">Monthly Spend</div>
+                                <div className="text-white">{SPEND_LABELS[reg.survey_response.monthly_ai_spend] || reg.survey_response.monthly_ai_spend}</div>
+                              </div>
+                              <div>
+                                <div className="text-gray-500 mb-1">Connected Data</div>
+                                <div className="text-white capitalize">{reg.survey_response.connected_data}</div>
+                              </div>
+                              <div>
+                                <div className="text-gray-500 mb-1">AI Use Cases</div>
+                                <div className="flex flex-wrap gap-1">
+                                  {reg.survey_response.ai_use_cases?.slice(0, 3).map((uc, idx) => (
+                                    <span key={idx} className="px-2 py-0.5 bg-gray-700 text-gray-300 rounded text-xs">
+                                      {uc}
+                                    </span>
+                                  ))}
+                                  {(reg.survey_response.ai_use_cases?.length || 0) > 3 && (
+                                    <span className="text-gray-500 text-xs">+{reg.survey_response.ai_use_cases!.length - 3} more</span>
+                                  )}
+                                </div>
+                              </div>
+                              {reg.survey_response.biggest_pain_points && (
+                                <div className="md:col-span-2 lg:col-span-4">
+                                  <div className="text-gray-500 mb-1">Pain Points</div>
+                                  <div className="text-gray-300 bg-gray-700/50 p-3 rounded-lg">
+                                    {reg.survey_response.biggest_pain_points}
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
+                          {reg.email_sequence && reg.email_sequence.length > 0 && (
+                            <div className="md:col-span-2 lg:col-span-4">
+                              <div className="text-gray-500 mb-2">Email Sequence</div>
+                              <div className="flex flex-wrap gap-2">
+                                {reg.email_sequence.map((email, idx) => (
+                                  <span
+                                    key={idx}
+                                    className={`px-2 py-1 rounded text-xs ${
+                                      email.sent_at
+                                        ? 'bg-emerald-500/20 text-emerald-400'
+                                        : 'bg-gray-700 text-gray-400'
+                                    }`}
+                                  >
+                                    {email.email_type} {email.sent_at ? '(Sent)' : `(${format(new Date(email.scheduled_for), 'MMM d')})`}
+                                  </span>
+                                ))}
                               </div>
                             </div>
                           )}
@@ -483,7 +926,7 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
               ))}
               {filteredRegistrations.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-gray-400">
+                  <td colSpan={9} className="py-8 text-center text-gray-400">
                     {searchQuery ? 'No registrations match your search' : 'No registrations yet'}
                   </td>
                 </tr>

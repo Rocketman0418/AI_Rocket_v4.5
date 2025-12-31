@@ -63,6 +63,30 @@ Deno.serve(async (req: Request) => {
       try {
         console.log(`Processing recurring email: ${template.id} - ${template.subject}`);
 
+        const nextRunAt = calculateNextRunAt(
+          template.frequency,
+          template.custom_interval_days,
+          template.send_hour
+        );
+
+        const { data: lockResult, error: lockError } = await supabaseAdmin
+          .from('marketing_emails')
+          .update({
+            next_run_at: nextRunAt,
+            last_run_at: new Date().toISOString()
+          })
+          .eq('id', template.id)
+          .eq('next_run_at', template.next_run_at)
+          .select()
+          .single();
+
+        if (lockError || !lockResult) {
+          console.log(`Skipping email ${template.id} - already being processed by another instance`);
+          continue;
+        }
+
+        console.log(`Locked email ${template.id}, next run scheduled for ${nextRunAt}`);
+
         const generatedHtml = await generateEmailContent(
           geminiApiKey,
           template.subject,
@@ -102,17 +126,9 @@ Deno.serve(async (req: Request) => {
           template.recipient_filter
         );
 
-        const nextRunAt = calculateNextRunAt(
-          template.frequency,
-          template.custom_interval_days,
-          template.send_hour
-        );
-
         await supabaseAdmin
           .from('marketing_emails')
           .update({
-            last_run_at: new Date().toISOString(),
-            next_run_at: nextRunAt,
             run_count: (template.run_count || 0) + 1
           })
           .eq('id', template.id);
@@ -210,7 +226,7 @@ async function generateEmailContent(
   contextType: string
 ): Promise<string> {
   const genAI = new GoogleGenerativeAI(geminiApiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
   const emailTemplateStyles = `
     body {
