@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, Eye, Code, Send, Clock, Mail, Users, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { X, Sparkles, Eye, Code, Send, Clock, Mail, Users, ChevronLeft, ChevronRight, RefreshCw, Rocket } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { getFeatureContext } from '../lib/marketing-context';
+import type { EmailTemplate } from '../lib/email-templates';
 
 interface MarketingEmailComposerProps {
   emailId: string | null;
+  template?: EmailTemplate | null;
   onClose: () => void;
 }
 
@@ -53,10 +55,20 @@ const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => ({
   label: i === 0 ? '12:00 AM ET' : i < 12 ? `${i}:00 AM ET` : i === 12 ? '12:00 PM ET' : `${i - 12}:00 PM ET`
 }));
 
-export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailComposerProps) {
+export function MarketingEmailComposer({ emailId, template, onClose }: MarketingEmailComposerProps) {
   const { user } = useAuth();
-  const [step, setStep] = useState(1);
-  const [emailData, setEmailData] = useState<EmailData>(INITIAL_DATA);
+  const [step, setStep] = useState(() => template ? 2 : 1);
+  const [emailData, setEmailData] = useState<EmailData>(() => {
+    if (template) {
+      return {
+        ...INITIAL_DATA,
+        subject: template.subject,
+        content_description: template.description,
+        html_content: template.htmlContent,
+      };
+    }
+    return INITIAL_DATA;
+  });
   const [regenerationComments, setRegenerationComments] = useState('');
   const [showHtmlEditor, setShowHtmlEditor] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -68,6 +80,7 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
   const [draftId, setDraftId] = useState<string | null>(emailId);
   const [previewRequestCount, setPreviewRequestCount] = useState(0);
   const [marketingContactsCount, setMarketingContactsCount] = useState(0);
+  const [activeTemplate, setActiveTemplate] = useState<EmailTemplate | null>(template || null);
 
   useEffect(() => {
     if (emailId) {
@@ -490,9 +503,17 @@ export function MarketingEmailComposer({ emailId, onClose }: MarketingEmailCompo
       <div className="bg-slate-900 rounded-xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-6 border-b border-slate-700">
           <div>
-            <h2 className="text-2xl font-bold text-white">
-              {emailId ? 'Edit Marketing Email' : 'Create Marketing Email'}
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-2xl font-bold text-white">
+                {emailId ? 'Edit Marketing Email' : activeTemplate ? 'Send Template Email' : 'Create Marketing Email'}
+              </h2>
+              {activeTemplate && (
+                <span className="flex items-center gap-1.5 px-3 py-1 bg-orange-500/20 border border-orange-500/50 rounded-full text-sm text-orange-400">
+                  <Rocket className="w-4 h-4" />
+                  {activeTemplate.name}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2 mt-2">
               {[1, 2, 3, 4].map((s) => (
                 <div

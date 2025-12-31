@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Send, Clock, CheckCircle, Eye, Edit, Copy, Trash2, RefreshCw, Pause, Play, History } from 'lucide-react';
+import { Plus, Send, Clock, CheckCircle, Eye, Edit, Copy, Trash2, RefreshCw, Pause, Play, History, Rocket, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { MarketingEmailComposer } from './MarketingEmailComposer';
+import { MOONSHOT_EMAIL_TEMPLATE } from '../lib/email-templates';
 
 interface MarketingEmail {
   id: string;
@@ -32,6 +33,7 @@ export function MarketingEmailsPanel() {
     return sessionStorage.getItem('marketingEmailEditingId');
   });
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [selectedTemplate, setSelectedTemplate] = useState<typeof MOONSHOT_EMAIL_TEMPLATE | null>(null);
 
   useEffect(() => {
     loadEmails();
@@ -228,6 +230,7 @@ export function MarketingEmailsPanel() {
         <button
           onClick={() => {
             setEditingEmail(null);
+            setSelectedTemplate(null);
             setShowComposer(true);
           }}
           className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all"
@@ -235,6 +238,44 @@ export function MarketingEmailsPanel() {
           <Plus className="w-5 h-5" />
           Create New Email
         </button>
+      </div>
+
+      {/* Email Templates Section */}
+      <div className="bg-gradient-to-r from-orange-900/30 to-amber-900/30 border border-orange-700/50 rounded-xl p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <FileText className="w-6 h-6 text-orange-400" />
+          <div>
+            <h3 className="text-lg font-semibold text-white">Email Templates</h3>
+            <p className="text-sm text-gray-400">Pre-built emails ready to send</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <button
+            onClick={() => {
+              setEditingEmail(null);
+              setSelectedTemplate(MOONSHOT_EMAIL_TEMPLATE);
+              setShowComposer(true);
+            }}
+            className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 hover:border-orange-500 hover:bg-slate-800 transition-all text-left group"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Rocket className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <div className="font-semibold text-white">$5M Moonshot Challenge</div>
+                <div className="text-xs text-gray-400">Registration announcement</div>
+              </div>
+            </div>
+            <p className="text-sm text-gray-400">
+              Announce the AI Moonshot Challenge with $5M in prizes, key stats, features, and registration CTA.
+            </p>
+            <div className="mt-3 flex items-center gap-2 text-xs text-orange-400">
+              <Send className="w-3.5 h-3.5" />
+              <span>Ready to send</span>
+            </div>
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 bg-slate-800 rounded-lg p-1">
@@ -400,9 +441,11 @@ export function MarketingEmailsPanel() {
       {showComposer && (
         <MarketingEmailComposer
           emailId={editingEmail}
+          template={selectedTemplate}
           onClose={() => {
             setShowComposer(false);
             setEditingEmail(null);
+            setSelectedTemplate(null);
             loadEmails();
           }}
         />

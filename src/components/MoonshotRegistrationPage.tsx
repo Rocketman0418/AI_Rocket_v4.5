@@ -326,7 +326,7 @@ export const MoonshotRegistrationPage: React.FC = () => {
           'feature_visualizations',
           'feature_collaboration',
           'feature_reports',
-          'feature_agent_builder'
+          'feature_guided_prompts'
         ];
 
         const countdownEmails = [

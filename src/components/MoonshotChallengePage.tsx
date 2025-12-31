@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  RefreshCw, BarChart3, Brain, Users, FileText, Bot, LayoutDashboard, UserCircle,
-  Zap, Wrench, TrendingUp, ChevronDown
+  RefreshCw, BarChart3, Users, FileText, Bot, LayoutDashboard, UserCircle,
+  Zap, Wrench, TrendingUp, ChevronDown, Play
 } from 'lucide-react';
+import { AppDemoModal } from './AppDemoModal';
 
 type TabId = 'home' | 'features' | 'prizes' | 'rbg' | 'timeline' | 'how' | 'eligibility' | 'faq' | 'terms';
 
@@ -11,6 +12,7 @@ export const MoonshotChallengePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [countdown, setCountdown] = useState({ days: '--', hours: '--', minutes: '--', seconds: '--' });
   const [expandedAccordion, setExpandedAccordion] = useState<number | null>(null);
+  const [showDemoModal, setShowDemoModal] = useState(false);
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -75,7 +77,6 @@ export const MoonshotChallengePage: React.FC = () => {
   const features = [
     { icon: RefreshCw, title: 'All Your Data Connected', description: 'Connect Documents, Financials, and more. AI analyzes all your data for comprehensive insights.', color: 'orange' },
     { icon: BarChart3, title: 'Smart Visualizations', description: 'Turn conversations into actionable insights with AI-generated charts, graphs, and visual reports.', color: 'blue' },
-    { icon: Brain, title: 'Private AI Assistant', description: 'Have confidential conversations with AI that understands your business context and provides personalized insights.', color: 'blue' },
     { icon: Users, title: 'Team Collaboration', description: 'Work together with your team and AI in shared conversations. @mention team members and AI for instant insights.', color: 'emerald' },
     { icon: FileText, title: 'Automated Reports', description: 'Schedule automated reports delivered to your inbox. Stay informed with daily, weekly, or monthly insights.', color: 'yellow' },
     { icon: Bot, title: 'Agent Builder', description: 'Design and deploy custom AI Agents to complete tasks autonomously.', color: 'pink' },
@@ -215,6 +216,20 @@ export const MoonshotChallengePage: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          {/* App Demo - Interactive Preview (First Box) */}
+          <button
+            onClick={() => setShowDemoModal(true)}
+            className="bg-gradient-to-br from-blue-600/20 to-emerald-600/20 backdrop-blur-sm border-2 border-blue-500/30 rounded-xl p-6 hover:border-blue-400/60 hover:from-blue-600/30 hover:to-emerald-600/30 transition-all duration-300 text-left group"
+          >
+            <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <Play className="w-7 h-7 text-white" />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">App Demo</h3>
+            <p className="text-gray-400 text-sm">
+              Explore how AI Rocket + Astra Intelligence can Launch your team to AI-Powered
+            </p>
+          </button>
+
           {features.map((feature, idx) => {
             const colors = colorClasses[feature.color];
             return (
@@ -719,6 +734,11 @@ export const MoonshotChallengePage: React.FC = () => {
       >
         ↑
       </button>
+
+      <AppDemoModal
+        isOpen={showDemoModal}
+        onClose={() => setShowDemoModal(false)}
+      />
     </div>
   );
 };

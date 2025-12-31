@@ -67,17 +67,17 @@ const featureContent = {
       '<strong>Audit-Ready Traceability:</strong> Reports cite all source documents, giving you a full, transparent path to the information.'
     ]
   },
-  ai_specialists: {
-    title: 'AI Specialists',
-    tagline: 'Hire an AI executive for any role in your company.',
-    icon: '🤖',
-    summary: 'Quickly create highly specialized, autonomous AI roles (Agents) like a Financial Analyst or Marketing Director by giving them a simple conversational job description, instantly automating high-value business workflows.',
+  guided_prompts: {
+    title: 'Guided Prompts & Reports',
+    tagline: 'AI that asks the right questions for your business.',
+    icon: '💡',
+    summary: 'Astra intelligently guides you with context-aware prompts and pre-built report templates based on your team\'s connected data, eliminating guesswork and delivering actionable insights from the moment you start.',
     benefits: [
-      '<strong>Custom Roles in Minutes:</strong> Build a new AI Specialist like an EOS Business Coach with just a conversation.',
-      '<strong>Leverage Proprietary Data:</strong> Empower AI Specialists with detailed instructions and all your synced company data.',
-      '<strong>Automate Complex Tasks:</strong> Have an AI Marketing Director generate and send custom email campaigns from a simple prompt.',
-      '<strong>Workflow Management:</strong> AI Specialists utilize advanced agent workflows to perform tasks on schedule or when triggered.',
-      '<strong>Cost-Effective Expertise:</strong> Access specialized AI capabilities that would cost $30K-$100K from development firms - included free.'
+      '<strong>Data-Driven Suggestions:</strong> Astra analyzes your synced documents, meetings, and financials to suggest the most relevant questions and reports for your business.',
+      '<strong>Pre-Built Report Templates:</strong> Access a library of proven report formats (L10 analysis, financial summaries, team performance) that automatically pull from your data.',
+      '<strong>Personalized for Your Team:</strong> Guided prompts adapt to your industry, company size, and connected data sources - no generic templates.',
+      '<strong>Instant Context:</strong> Skip the setup - Astra already knows your core values, goals, and team structure to deliver relevant insights immediately.',
+      '<strong>Learn as You Go:</strong> Guided prompts teach best practices for AI-powered business analysis while delivering real results for your team.'
     ]
   }
 };
@@ -274,9 +274,9 @@ const emailTemplates: EmailTemplates = {
     subject: 'Moonshot Challenge: Automated Reports - Intelligence on Your Schedule',
     getHtml: (name: string, inviteCode: string) => generateFeatureEmail(name, inviteCode, featureContent.reports)
   },
-  feature_agent_builder: {
-    subject: 'Moonshot Challenge: AI Specialists - Hire an AI Executive',
-    getHtml: (name: string, inviteCode: string) => generateFeatureEmail(name, inviteCode, featureContent.ai_specialists)
+  feature_guided_prompts: {
+    subject: 'Moonshot Challenge: Guided Prompts & Reports - AI That Knows Your Business',
+    getHtml: (name: string, inviteCode: string) => generateFeatureEmail(name, inviteCode, featureContent.guided_prompts)
   },
   countdown_4_weeks: {
     subject: 'Moonshot Challenge: 4 Weeks Until Launch!',
@@ -415,7 +415,7 @@ function generateFeatureCatchupEmail(name: string, inviteCode: string): string {
     featureContent.visualizations,
     featureContent.collaboration,
     featureContent.reports,
-    featureContent.ai_specialists
+    featureContent.guided_prompts
   ];
 
   return `
