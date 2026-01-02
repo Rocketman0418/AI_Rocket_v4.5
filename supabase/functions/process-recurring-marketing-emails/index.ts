@@ -87,18 +87,38 @@ Deno.serve(async (req: Request) => {
 
         console.log(`Locked email ${template.id}, next run scheduled for ${nextRunAt}`);
 
-        const generatedHtml = await generateEmailContent(
-          geminiApiKey,
-          template.subject,
-          template.content_description,
-          template.special_notes,
-          template.context_type
-        );
+        const isDynamicSubject = template.subject_mode === 'dynamic';
+        const subjectHints = isDynamicSubject ? template.subject : null;
+
+        let finalSubject = template.subject;
+        let generatedHtml: string;
+
+        if (isDynamicSubject) {
+          const generated = await generateEmailWithDynamicSubject(
+            geminiApiKey,
+            template.content_description,
+            template.special_notes,
+            template.context_type,
+            subjectHints
+          );
+          finalSubject = generated.subject;
+          generatedHtml = generated.html;
+          console.log(`Generated dynamic subject: ${finalSubject}`);
+        } else {
+          generatedHtml = await generateEmailContent(
+            geminiApiKey,
+            template.subject,
+            template.content_description,
+            template.special_notes,
+            template.context_type
+          );
+        }
 
         const { data: childEmail, error: childError } = await supabaseAdmin
           .from('marketing_emails')
           .insert({
-            subject: template.subject,
+            subject: finalSubject,
+            subject_mode: template.subject_mode || 'static',
             content_description: template.content_description,
             special_notes: template.special_notes,
             html_content: generatedHtml,
@@ -453,6 +473,78 @@ Return ONLY the complete HTML code. No markdown formatting or code blocks.`;
   htmlContent = htmlContent.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
 
   return htmlContent;
+}
+
+async function generateEmailWithDynamicSubject(
+  geminiApiKey: string,
+  contentDescription: string,
+  specialNotes: string,
+  contextType: string,
+  subjectHints: string | null
+): Promise<{ subject: string; html: string }> {
+  const genAI = new GoogleGenerativeAI(geminiApiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+  const subjectStyles = [
+    { style: "question", desc: "Ask a thought-provoking question", examples: ["What if your data could talk back?", "Ready to work smarter, not harder?", "Is your team missing this?"] },
+    { style: "curiosity_gap", desc: "Create intrigue without revealing everything", examples: ["The one thing top teams do differently", "We noticed something about your workflow...", "This changes everything"] },
+    { style: "benefit_focused", desc: "Lead with a clear benefit", examples: ["Save 10 hours this week", "Never miss an insight again", "Your meetings just got productive"] },
+    { style: "number_list", desc: "Use specific numbers", examples: ["3 ways AI transforms your week", "5 minutes to smarter decisions", "The 2-step workflow upgrade"] },
+    { style: "personal_direct", desc: "Speak directly to the reader", examples: ["You asked, we delivered", "Built for teams like yours", "Your AI assistant is ready"] },
+    { style: "news_announcement", desc: "Frame as news or update", examples: ["Introducing: Smarter reports", "New: AI that learns your style", "Just launched: Team insights"] },
+    { style: "challenge", desc: "Challenge assumptions", examples: ["Forget everything about spreadsheets", "Your old tools can't do this", "Think AI is complicated? Think again"] },
+    { style: "story_hook", desc: "Start a story or scenario", examples: ["Picture this: Monday morning clarity", "Remember when reports took hours?", "Last week, a team discovered..."] },
+    { style: "fomo_urgency", desc: "Create gentle urgency", examples: ["Don't let insights slip away", "Your competitors are already doing this", "The future of work is here"] },
+    { style: "playful", desc: "Light, fun, conversational", examples: ["AI magic, zero tech headaches", "Less chaos, more coffee breaks", "Work smarter, impress everyone"] },
+    { style: "minimalist", desc: "Short and punchy", examples: ["Smarter. Faster. Done.", "AI that just works", "Finally."] },
+    { style: "metaphor", desc: "Use creative comparisons", examples: ["Your data's new best friend", "Like GPS for your business", "The engine behind great teams"] }
+  ];
+
+  const randomStyle = subjectStyles[Math.floor(Math.random() * subjectStyles.length)];
+  const randomSeed = Math.floor(Math.random() * 10000);
+
+  const subjectPrompt = `You are an email marketing expert for AI Rocket / Astra Intelligence.
+
+Generate a UNIQUE, compelling email subject line for this marketing email.
+
+CONTENT DESCRIPTION: ${contentDescription}
+${specialNotes ? `SPECIAL NOTES: ${specialNotes}` : ''}
+${subjectHints ? `SUBJECT HINTS/KEYWORDS: ${subjectHints}` : ''}
+
+CRITICAL: Use THIS specific style for this email:
+STYLE: "${randomStyle.style}" - ${randomStyle.desc}
+EXAMPLES of this style: ${randomStyle.examples.join(" | ")}
+
+REQUIREMENTS:
+- 4-8 words max (shorter is better)
+- Match the "${randomStyle.style}" style above
+- Be CREATIVE and DIFFERENT - avoid cliches
+- Optional: include ONE emoji if it fits naturally (not required)
+- DO NOT start with "AI" or "Unlock" or "Power-Up" or "Transform"
+- DO NOT use patterns like "X + Y" or "X: Y"
+- Make it sound human, not corporate
+- Random seed for uniqueness: ${randomSeed}
+
+BAD EXAMPLES (DO NOT USE patterns like these):
+- "AI Team Power-Up: X + Y"
+- "AI-Powered Teams: Something Something"
+- "Unlock AI Superpowers"
+- "Transform Your Team with AI"
+
+Return ONLY the subject line, nothing else. No quotes, no explanation.`;
+
+  const subjectResult = await model.generateContent(subjectPrompt);
+  const generatedSubject = subjectResult.response.text().trim().replace(/^["']|["']$/g, '');
+
+  const html = await generateEmailContent(
+    geminiApiKey,
+    generatedSubject,
+    contentDescription,
+    specialNotes,
+    contextType
+  );
+
+  return { subject: generatedSubject, html };
 }
 
 async function sendCampaign(

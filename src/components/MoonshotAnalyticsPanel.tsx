@@ -59,6 +59,9 @@ interface MoonshotStats {
   registrationsByAiUsage: Record<string, number>;
   registrationsBySpend: Record<string, number>;
   registrationsByConnectedData: Record<string, number>;
+  registrationsByUseCases: Record<string, number>;
+  painPointsBreakdown: Record<string, number>;
+  painPointsList: Array<{ email: string; text: string }>;
   registrationsByDay: Array<{ date: string; count: number }>;
   registrationsBySource: Record<string, number>;
   surveyResponseCount: number;
@@ -265,6 +268,9 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
       const aiUsageCount: Record<string, number> = {};
       const spendCount: Record<string, number> = {};
       const connectedDataCount: Record<string, number> = {};
+      const useCasesCount: Record<string, number> = {};
+      const painPointsBreakdown: Record<string, number> = {};
+      const painPointsList: Array<{ email: string; text: string }> = [];
       const dayCount: Record<string, number> = {};
       const sourceCount: Record<string, number> = {};
       let surveyResponseCount = 0;
@@ -291,6 +297,24 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
             connectedDataCount[r.survey_response.connected_data] =
               (connectedDataCount[r.survey_response.connected_data] || 0) + 1;
           }
+          if (r.survey_response.ai_use_cases && Array.isArray(r.survey_response.ai_use_cases)) {
+            r.survey_response.ai_use_cases.forEach(useCase => {
+              useCasesCount[useCase] = (useCasesCount[useCase] || 0) + 1;
+            });
+          }
+          if (r.survey_response.biggest_pain_points && r.survey_response.biggest_pain_points.trim()) {
+            painPointsList.push({
+              email: r.email,
+              text: r.survey_response.biggest_pain_points
+            });
+            const individualPainPoints = r.survey_response.biggest_pain_points
+              .split(';')
+              .map(p => p.trim())
+              .filter(p => p.length > 0);
+            individualPainPoints.forEach(painPoint => {
+              painPointsBreakdown[painPoint] = (painPointsBreakdown[painPoint] || 0) + 1;
+            });
+          }
         }
 
         const day = format(new Date(r.created_at), 'yyyy-MM-dd');
@@ -315,6 +339,9 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
         registrationsByAiUsage: aiUsageCount,
         registrationsBySpend: spendCount,
         registrationsByConnectedData: connectedDataCount,
+        registrationsByUseCases: useCasesCount,
+        painPointsBreakdown,
+        painPointsList,
         registrationsByDay,
         registrationsBySource: sourceCount,
         surveyResponseCount
@@ -419,6 +446,27 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
     sharepoint: 'SharePoint',
     notion: 'Notion',
     slack: 'Slack',
+    other: 'Other'
+  };
+
+  const USE_CASE_LABELS: Record<string, string> = {
+    documents: 'Documents',
+    meetings: 'Meetings',
+    crm_meetings: 'CRM/Meetings',
+    manual: 'Manual Entry',
+    multiple: 'Multiple Sources',
+    financial: 'Financial',
+    email: 'Email',
+    research: 'Research',
+    writing: 'Writing',
+    coding: 'Coding',
+    analysis: 'Analysis',
+    customer_support: 'Customer Support',
+    marketing: 'Marketing',
+    sales: 'Sales',
+    operations: 'Operations',
+    hr: 'HR',
+    legal: 'Legal',
     other: 'Other'
   };
 
@@ -585,31 +633,39 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
             {stats?.surveyResponseCount || 0} of {stats?.totalRegistrations || 0} completed survey
           </span>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
           <div className="flex flex-col items-center">
-            <h4 className="text-xs font-medium text-gray-400 mb-2">By Industry</h4>
+            <h4 className="text-xs font-medium text-gray-400 mb-2">1. Industry</h4>
             <SimplePieChart data={stats?.registrationsByIndustry || {}} size={140} />
           </div>
           <div className="flex flex-col items-center">
-            <h4 className="text-xs font-medium text-gray-400 mb-2">AI Usage Level</h4>
+            <h4 className="text-xs font-medium text-gray-400 mb-2">2. AI Usage Level</h4>
             <SimplePieChart data={stats?.registrationsByAiUsage || {}} labels={AI_USAGE_LABELS} size={140} />
           </div>
           <div className="flex flex-col items-center">
-            <h4 className="text-xs font-medium text-gray-400 mb-2">Monthly Spend</h4>
+            <h4 className="text-xs font-medium text-gray-400 mb-2">3. Monthly Spend</h4>
             <SimplePieChart data={stats?.registrationsBySpend || {}} labels={SPEND_LABELS} size={140} />
           </div>
           <div className="flex flex-col items-center">
-            <h4 className="text-xs font-medium text-gray-400 mb-2">Connected Data</h4>
+            <h4 className="text-xs font-medium text-gray-400 mb-2">4. Connected Data</h4>
             <SimplePieChart data={stats?.registrationsByConnectedData || {}} labels={CONNECTED_DATA_LABELS} size={140} />
+          </div>
+          <div className="flex flex-col items-center">
+            <h4 className="text-xs font-medium text-gray-400 mb-2">5. AI Use Cases</h4>
+            <SimplePieChart data={stats?.registrationsByUseCases || {}} labels={USE_CASE_LABELS} size={140} />
+          </div>
+          <div className="flex flex-col items-center">
+            <h4 className="text-xs font-medium text-gray-400 mb-2">6. Pain Points</h4>
+            <SimplePieChart data={stats?.painPointsBreakdown || {}} size={140} />
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
           <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
-            Industry List
+            Industry Breakdown
           </h3>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {Object.entries(stats?.registrationsByIndustry || {})
@@ -629,7 +685,7 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
         <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
           <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
-            AI Usage List
+            AI Usage Breakdown
           </h3>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {Object.entries(stats?.registrationsByAiUsage || {})
@@ -649,7 +705,7 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
         <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
           <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
-            Monthly Spend List
+            Monthly Spend Breakdown
           </h3>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {Object.entries(stats?.registrationsBySpend || {})
@@ -669,7 +725,7 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
         <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
           <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
-            Connected Data List
+            Connected Data Breakdown
           </h3>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {Object.entries(stats?.registrationsByConnectedData || {})
@@ -685,7 +741,79 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
             )}
           </div>
         </div>
+
+        <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+          <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            AI Use Cases Breakdown
+          </h3>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {Object.entries(stats?.registrationsByUseCases || {})
+              .sort((a, b) => b[1] - a[1])
+              .map(([useCase, count]) => (
+                <div key={useCase} className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400 truncate">{USE_CASE_LABELS[useCase] || useCase}</span>
+                  <span className="text-white font-medium ml-2">{count}</span>
+                </div>
+              ))}
+            {Object.keys(stats?.registrationsByUseCases || {}).length === 0 && (
+              <div className="text-gray-500 text-sm">No data</div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+          <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Top Pain Points
+          </h3>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {Object.entries(stats?.painPointsBreakdown || {})
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 5)
+              .map(([painPoint, count]) => (
+                <div key={painPoint} className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400 truncate" title={painPoint}>{painPoint}</span>
+                  <span className="text-white font-medium ml-2">{count}</span>
+                </div>
+              ))}
+            {Object.keys(stats?.painPointsBreakdown || {}).length === 0 && (
+              <div className="text-gray-500 text-sm">No data</div>
+            )}
+          </div>
+        </div>
       </div>
+
+      {stats?.painPointsBreakdown && Object.keys(stats.painPointsBreakdown).length > 0 && (
+        <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+          <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Pain Points Breakdown ({Object.keys(stats.painPointsBreakdown).length} unique challenges)
+          </h3>
+          <div className="space-y-2">
+            {Object.entries(stats.painPointsBreakdown)
+              .sort((a, b) => b[1] - a[1])
+              .map(([painPoint, count]) => {
+                const maxCount = Math.max(...Object.values(stats.painPointsBreakdown));
+                const percentage = (count / maxCount) * 100;
+                return (
+                  <div key={painPoint} className="group">
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-gray-300 truncate flex-1 mr-2" title={painPoint}>{painPoint}</span>
+                      <span className="text-white font-medium flex-shrink-0">{count}</span>
+                    </div>
+                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full transition-all"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
 
       <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
         <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">

@@ -13,6 +13,7 @@ interface MarketingEmailComposerProps {
 
 interface EmailData {
   subject: string;
+  subject_mode: 'static' | 'dynamic';
   content_description: string;
   special_notes: string;
   html_content: string;
@@ -30,6 +31,7 @@ interface EmailData {
 
 const INITIAL_DATA: EmailData = {
   subject: '',
+  subject_mode: 'static',
   content_description: '',
   special_notes: '',
   html_content: '',
@@ -121,6 +123,7 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
         }
         setEmailData({
           subject: data.subject,
+          subject_mode: data.subject_mode || 'static',
           content_description: data.content_description,
           special_notes: data.special_notes,
           html_content: data.html_content,
@@ -232,6 +235,7 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
     try {
       const payload = {
         subject: emailData.subject,
+        subject_mode: emailData.subject_mode,
         content_description: emailData.content_description,
         special_notes: emailData.special_notes,
         html_content: emailData.html_content,
@@ -326,6 +330,7 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
 
       const payload = {
         subject: emailData.subject,
+        subject_mode: emailData.subject_mode,
         content_description: emailData.content_description,
         special_notes: emailData.special_notes,
         html_content: '',
@@ -533,7 +538,7 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
     return count;
   };
 
-  const canProceedFromStep1 = emailData.subject && emailData.content_description;
+  const canProceedFromStep1 = (emailData.subject_mode === 'dynamic' || emailData.subject) && emailData.content_description;
   const canProceedFromStep2 = emailData.html_content;
 
   return (
@@ -579,50 +584,107 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Subject Line * <span className="text-xs text-gray-500">(Emojis supported: 🚀✨💡)</span>
+                      Subject Line
                     </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={emailData.subject}
-                        onChange={(e) => setEmailData(prev => ({ ...prev, subject: e.target.value }))}
-                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-                        placeholder="e.g., 🚀 Exciting New Features Now Available!"
-                        maxLength={150}
-                        spellCheck={true}
-                        autoComplete="off"
-                        style={{ unicodeBidi: 'plaintext' }}
-                      />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setEmailData(prev => ({ ...prev, subject: prev.subject + '🚀' }))}
-                          className="text-xl hover:scale-110 transition-transform"
-                          title="Add rocket emoji"
-                        >
-                          🚀
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEmailData(prev => ({ ...prev, subject: prev.subject + '✨' }))}
-                          className="text-xl hover:scale-110 transition-transform"
-                          title="Add sparkles emoji"
-                        >
-                          ✨
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEmailData(prev => ({ ...prev, subject: prev.subject + '💡' }))}
-                          className="text-xl hover:scale-110 transition-transform"
-                          title="Add lightbulb emoji"
-                        >
-                          💡
-                        </button>
-                      </div>
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        type="button"
+                        onClick={() => setEmailData(prev => ({ ...prev, subject_mode: 'static' }))}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
+                          emailData.subject_mode === 'static'
+                            ? 'bg-blue-600/30 border-blue-500 text-white'
+                            : 'bg-slate-800 border-slate-700 text-gray-400 hover:bg-slate-700'
+                        }`}
+                      >
+                        <Mail className="w-4 h-4" />
+                        <span className="font-medium">Entry</span>
+                        <span className="text-xs opacity-70">(You set the subject)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEmailData(prev => ({ ...prev, subject_mode: 'dynamic' }))}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
+                          emailData.subject_mode === 'dynamic'
+                            ? 'bg-gradient-to-r from-blue-600/30 to-cyan-600/30 border-cyan-500 text-white'
+                            : 'bg-slate-800 border-slate-700 text-gray-400 hover:bg-slate-700'
+                        }`}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        <span className="font-medium">Dynamic</span>
+                        <span className="text-xs opacity-70">(AI generates fresh subjects)</span>
+                      </button>
                     </div>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Tip: You can paste emojis directly or use the buttons above
-                    </p>
+                    {emailData.subject_mode === 'static' ? (
+                      <>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={emailData.subject}
+                            onChange={(e) => setEmailData(prev => ({ ...prev, subject: e.target.value }))}
+                            className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                            placeholder="e.g., 🚀 Exciting New Features Now Available!"
+                            maxLength={150}
+                            spellCheck={true}
+                            autoComplete="off"
+                            style={{ unicodeBidi: 'plaintext' }}
+                          />
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setEmailData(prev => ({ ...prev, subject: prev.subject + '🚀' }))}
+                              className="text-xl hover:scale-110 transition-transform"
+                              title="Add rocket emoji"
+                            >
+                              🚀
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEmailData(prev => ({ ...prev, subject: prev.subject + '✨' }))}
+                              className="text-xl hover:scale-110 transition-transform"
+                              title="Add sparkles emoji"
+                            >
+                              ✨
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEmailData(prev => ({ ...prev, subject: prev.subject + '💡' }))}
+                              className="text-xl hover:scale-110 transition-transform"
+                              title="Add lightbulb emoji"
+                            >
+                              💡
+                            </button>
+                          </div>
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Tip: You can paste emojis directly or use the buttons above
+                        </p>
+                      </>
+                    ) : (
+                      <div className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 border border-cyan-700/50 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <Sparkles className="w-5 h-5 text-cyan-400 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm text-cyan-200 font-medium">AI-Generated Subject</p>
+                            <p className="text-sm text-gray-400 mt-1">
+                              A fresh, engaging subject line will be generated each time based on your content description.
+                              Great for recurring emails to keep subjects fresh and engaging.
+                            </p>
+                            <div className="mt-3">
+                              <label className="block text-xs font-medium text-gray-400 mb-1">
+                                Optional: Subject hints or keywords
+                              </label>
+                              <input
+                                type="text"
+                                value={emailData.subject}
+                                onChange={(e) => setEmailData(prev => ({ ...prev, subject: e.target.value }))}
+                                className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded text-white text-sm placeholder-gray-500 focus:outline-none focus:border-cyan-500"
+                                placeholder="e.g., focus on urgency, mention AI features, include discount..."
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -1026,7 +1088,15 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-400">Subject:</span>
-                    <span className="text-white font-medium">{emailData.subject}</span>
+                    <span className="text-white font-medium">
+                      {emailData.subject_mode === 'dynamic' ? (
+                        <span className="flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                          AI-Generated
+                          {emailData.subject && <span className="text-gray-500 text-xs ml-1">(hints: {emailData.subject})</span>}
+                        </span>
+                      ) : emailData.subject}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-400">Recipients:</span>

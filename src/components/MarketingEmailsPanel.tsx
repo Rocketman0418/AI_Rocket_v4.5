@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Send, Clock, CheckCircle, Eye, Edit, Copy, Trash2, RefreshCw, Pause, Play, History, Rocket, FileText, AlertCircle } from 'lucide-react';
+import { Plus, Send, Clock, CheckCircle, Eye, Edit, Copy, Trash2, RefreshCw, Pause, Play, History, Rocket, FileText, AlertCircle, Sparkles, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { MarketingEmailComposer } from './MarketingEmailComposer';
 import { MOONSHOT_EMAIL_TEMPLATE } from '../lib/email-templates';
@@ -7,6 +7,7 @@ import { MOONSHOT_EMAIL_TEMPLATE } from '../lib/email-templates';
 interface MarketingEmail {
   id: string;
   subject: string;
+  subject_mode: 'static' | 'dynamic';
   status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'recurring';
   scheduled_for: string | null;
   sent_at: string | null;
@@ -21,6 +22,7 @@ interface MarketingEmail {
   run_count: number;
   parent_recurring_id: string | null;
   pending_count?: number;
+  content_description?: string;
 }
 
 export function MarketingEmailsPanel() {
@@ -296,6 +298,100 @@ export function MarketingEmailsPanel() {
           Create New Email
         </button>
       </div>
+
+      {/* Active Recurring Emails Section */}
+      {emails.filter(e => e.status === 'recurring' && e.is_recurring).length > 0 && (
+        <div className="bg-gradient-to-r from-cyan-900/30 to-blue-900/30 border border-cyan-700/50 rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <RefreshCw className="w-6 h-6 text-cyan-400" />
+            <div>
+              <h3 className="text-lg font-semibold text-white">Active Recurring Emails</h3>
+              <p className="text-sm text-gray-400">Automated emails running on schedule</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {emails.filter(e => e.status === 'recurring' && e.is_recurring).map((email) => (
+              <div
+                key={email.id}
+                className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 hover:border-cyan-500 transition-all"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
+                      {email.subject_mode === 'dynamic' ? (
+                        <Sparkles className="w-5 h-5 text-white" />
+                      ) : (
+                        <RefreshCw className="w-5 h-5 text-white" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-white truncate" title={email.subject}>
+                        {email.subject_mode === 'dynamic' ? 'Dynamic Subject' : email.subject}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs px-2 py-0.5 bg-cyan-900/50 text-cyan-300 rounded-full capitalize">
+                          {email.frequency}
+                        </span>
+                        {email.subject_mode === 'dynamic' && (
+                          <span className="text-xs px-2 py-0.5 bg-blue-900/50 text-blue-300 rounded-full flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" />
+                            AI Subject
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {email.content_description && (
+                  <p className="text-sm text-gray-400 mb-3 line-clamp-2">
+                    {email.content_description}
+                  </p>
+                )}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs">
+                    <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+                    <div>
+                      <span className="text-gray-500">Next run: </span>
+                      <span className="text-cyan-300">
+                        {email.next_run_at ? new Date(email.next_run_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : 'Not scheduled'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setEditingEmail(email.id);
+                        setShowComposer(true);
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-cyan-400 transition-colors rounded"
+                      title="Edit"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handlePauseRecurring(email.id)}
+                      className="p-1.5 text-gray-400 hover:text-yellow-400 transition-colors rounded"
+                      title="Pause"
+                    >
+                      <Pause className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                {email.run_count > 0 && (
+                  <div className="mt-2 pt-2 border-t border-slate-700 text-xs text-gray-500">
+                    {email.run_count} email{email.run_count !== 1 ? 's' : ''} sent so far
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Email Templates Section */}
       <div className="bg-gradient-to-r from-orange-900/30 to-amber-900/30 border border-orange-700/50 rounded-xl p-6">
