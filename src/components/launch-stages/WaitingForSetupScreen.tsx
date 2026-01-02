@@ -4,7 +4,6 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface SetupDelegation {
-  id: string;
   team_id: string;
   delegating_user_id: string;
   delegated_to_email: string;
@@ -147,8 +146,12 @@ export const WaitingForSetupScreen: React.FC<WaitingForSetupScreenProps> = ({
     try {
       const { error: updateError } = await supabase
         .from('setup_delegation')
-        .update({ status: 'cancelled' })
-        .eq('id', delegation.id);
+        .update({
+          status: 'cancelled',
+          cancelled_at: new Date().toISOString(),
+          cancellation_reason: 'User chose to complete setup themselves'
+        })
+        .eq('team_id', delegation.team_id);
 
       if (updateError) throw updateError;
 

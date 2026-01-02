@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronLeft, Rocket, MessageSquare, BarChart3, Calendar, FileText, Users, Sparkles, Mail, Building2, Zap, Settings, BookOpen, TrendingUp, Globe, Bell, Brain, RefreshCw, Lock, Bot, UserCircle, UserPlus, Loader, AlertCircle, CheckCircle, LayoutDashboard } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Rocket, MessageSquare, BarChart3, Calendar, FileText, Users, Sparkles, Mail, Building2, Zap, Settings, BookOpen, TrendingUp, Globe, Bell, Brain, RefreshCw, Lock, Bot, UserCircle, UserPlus, Loader, AlertCircle, CheckCircle, LayoutDashboard, Trophy, Target, Gift } from 'lucide-react';
 import { LaunchPreparationHeader } from './LaunchPreparationHeader';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -186,6 +186,77 @@ const onboardingScreens = [
           <p className="text-gray-300 text-sm">
             Create specialized AI team members like Business Coach, Finance Director, Marketing Manager and more.
           </p>
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 'moonshot-challenge',
+    title: '$5M Moonshot Challenge',
+    subtitle: 'You\'re Automatically Entered!',
+    icon: Trophy,
+    content: (
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/30 rounded-xl p-6">
+          <div className="flex items-center justify-center space-x-4 mb-6">
+            <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center">
+              <Rocket className="w-8 h-8 text-orange-400" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-white">$5M Prize Pool</h3>
+              <p className="text-orange-300">90 Days to Transform Your Business</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-3 mb-6">
+            {[
+              { value: '$5M', label: 'Prize Pool' },
+              { value: '300', label: 'Teams' },
+              { value: '90', label: 'Days' },
+              { value: '10', label: 'Winners' },
+            ].map(stat => (
+              <div key={stat.label} className="bg-gray-800/50 rounded-lg p-3 text-center">
+                <div className="text-lg font-bold bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">{stat.value}</div>
+                <div className="text-xs text-gray-400">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-3 mb-6">
+            <div className="flex items-start space-x-3">
+              <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Target className="w-4 h-4 text-orange-400" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-white text-sm">How It Works</h4>
+                <p className="text-gray-400 text-xs">Simply use AI Rocket during the challenge. Your activity is automatically tracked by Astra Intelligence.</p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-3">
+              <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Trophy className="w-4 h-4 text-amber-400" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-white text-sm">Top Prizes</h4>
+                <p className="text-gray-400 text-xs">1st: $2M, 2nd: $1M, 3rd: $600K + 7 more equity prizes for top 10 teams.</p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-3">
+              <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Gift className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-white text-sm">Everyone Wins</h4>
+                <p className="text-gray-400 text-xs">All valid applicants receive a free 1-year unlimited subscription.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3 text-center">
+            <p className="text-sm text-orange-300">
+              No extra signup needed - you're already in! View full details in Mission Control.
+            </p>
+          </div>
         </div>
       </div>
     )

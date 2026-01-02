@@ -24,7 +24,8 @@ import {
   Database,
   Folder,
   HelpCircle,
-  Sparkles
+  Sparkles,
+  ArrowRight
 } from 'lucide-react';
 import { useLaunchPreparation } from '../hooks/useLaunchPreparation';
 import { useFuelLevel } from '../hooks/useFuelLevel';
@@ -36,6 +37,7 @@ import ComingSoonModal from './ComingSoonModal';
 import FeatureInfoModal from './FeatureInfoModal';
 import { DocumentsListModal } from './launch-stages/DocumentsListModal';
 import { CategoriesDetailModal } from './launch-stages/CategoriesDetailModal';
+import { MoonshotChallengeModal } from './launch-stages/MoonshotChallengeModal';
 import { TeamMembersPanel } from './TeamMembersPanel';
 import { calculateStageProgress } from '../lib/launch-preparation-utils';
 import { incrementalSyncAllFolders } from '../lib/manual-folder-sync';
@@ -113,6 +115,7 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
   const [loadingPointsLog, setLoadingPointsLog] = useState(false);
   const [showSyncInfoModal, setShowSyncInfoModal] = useState(false);
   const [showTeamMembersPanel, setShowTeamMembersPanel] = useState(false);
+  const [showMoonshotModal, setShowMoonshotModal] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -313,7 +316,27 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
       color: 'purple'
     }
   ];
-  const featureTabs = [...coreFeatureTabs, ...TAB_CONFIGS.filter(t => !t.isCore)];
+
+  const moonshotFeature: TabConfig = {
+    id: 'moonshot-challenge',
+    label: 'Moonshot Challenge',
+    shortLabel: 'Moonshot',
+    icon: 'Rocket',
+    isCore: false,
+    isComingSoon: false,
+    order: 4.5,
+    description: '$5M prize pool - All AI Rocket users are automatically entered!',
+    color: 'orange'
+  };
+
+  const nonCoreFeatures = TAB_CONFIGS.filter(t => !t.isCore);
+  const visualizationsIndex = nonCoreFeatures.findIndex(t => t.id === 'visualizations');
+  const featureTabs = [
+    ...coreFeatureTabs,
+    ...nonCoreFeatures.slice(0, visualizationsIndex + 1),
+    moonshotFeature,
+    ...nonCoreFeatures.slice(visualizationsIndex + 1)
+  ];
 
   return (
     <div className="flex flex-col h-full bg-slate-900" data-tour="mission-control-page">
@@ -345,6 +368,41 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
                   {featureTabs.map(feature => {
                     const IconComponent = featureIconMap[feature.icon];
                     const colors = colorClasses[feature.color] || colorClasses.emerald;
+                    const isMoonshot = feature.id === 'moonshot-challenge';
+
+                    if (isMoonshot) {
+                      return (
+                        <button
+                          key={feature.id}
+                          onClick={() => setShowMoonshotModal(true)}
+                          className="group relative p-4 rounded-xl border transition-all text-left bg-gradient-to-br from-orange-500/20 to-amber-500/20 border-orange-500/40 hover:border-orange-400 hover:scale-[1.02]"
+                        >
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setInfoFeature(feature);
+                            }}
+                            className="absolute top-2 right-2 p-1 opacity-50 hover:opacity-100 hover:bg-slate-700/50 rounded-lg transition-all"
+                          >
+                            <Info className="w-3.5 h-3.5 text-slate-400" />
+                          </button>
+
+                          <div className="flex flex-col items-center text-center">
+                            <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-2 bg-orange-500/20">
+                              <Rocket className="w-5 h-5 text-orange-400" />
+                            </div>
+                            <span className="text-xs font-medium leading-tight text-orange-400">
+                              <span className="hidden md:inline">{feature.label}</span>
+                              <span className="md:hidden">{feature.shortLabel}</span>
+                            </span>
+                            <span className="flex items-center gap-0.5 text-[10px] text-orange-300/80 mt-1">
+                              <Star className="w-2.5 h-2.5" />
+                              Active
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    }
 
                     return (
                       <button
@@ -827,6 +885,11 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
           </div>
         </div>
       )}
+
+      <MoonshotChallengeModal
+        isOpen={showMoonshotModal}
+        onClose={() => setShowMoonshotModal(false)}
+      />
     </div>
   );
 }

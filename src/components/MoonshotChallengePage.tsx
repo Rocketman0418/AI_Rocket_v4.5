@@ -177,10 +177,10 @@ export const MoonshotChallengePage: React.FC = () => {
               Register Now
             </Link>
             <button
-              onClick={() => scrollToSection('terms')}
+              onClick={() => scrollToSection('faq')}
               className="px-6 py-3 rounded-full text-base font-bold bg-gray-800 text-white border border-white/10 hover:border-orange-500 transition-all"
             >
-              View Terms
+              FAQ
             </button>
           </div>
 
@@ -556,6 +556,9 @@ export const MoonshotChallengePage: React.FC = () => {
 
         <div className="space-y-4">
           {[
+            { q: 'What is AI Rocket + Astra Intelligence?', a: 'AI Rocket is the most powerful AI suite built specifically for entrepreneurs and their teams. It combines the best AI models (Claude, Gemini, OpenAI) with your connected business data to deliver personalized insights. Astra Intelligence is AI Rocket\'s built-in analytics system that tracks how your team uses AI across Run, Build, and Grow dimensions, providing automated scoring and insights throughout the Challenge.' },
+            { q: 'What is required to get Free & Unlimited AI usage for me and my team?', a: 'Simply register for the Challenge and use AI Rocket during the 90-day challenge period (Jan 15 - Apr 15). Your activity will automatically be tracked by Astra Intelligence to generate your team\'s score. To be considered for prizes, you must submit the Prize Application form during April 6-10. All registered teams get free unlimited access regardless of whether they submit for prize consideration.' },
+            { q: 'What if I don\'t want to be in the Challenge but I do want the Free Unlimited AI?', a: 'You can absolutely use AI Rocket with free unlimited access during the challenge period without competing for prizes. Simply register, set up your team, and use the platform as much as you want. If you decide not to submit the Prize Application form during April 6-10, you won\'t be evaluated for prizes but you\'ll still have enjoyed 90 days of free unlimited AI access for your team.' },
             { q: 'What are the prize values?', a: 'The top 10 teams win equity prizes: 1st ($2M), 2nd ($1M), 3rd ($600K), 4th ($400K), 5th ($300K), 6th ($225K), 7th ($175K), 8th ($125K), 9th ($100K), 10th ($75K). All 10 winners also receive Lifetime Ultra Plan subscriptions. Values based on planned company valuation target of $250M.' },
             { q: 'How does Astra Intelligence scoring work?', a: 'Astra automatically tracks how your team uses AI Rocket throughout the challenge, assigning weighted scores across Run, Build, and Grow dimensions. These scores remain hidden until the challenge ends and represent 50% of your final evaluation score.' },
             { q: 'What is the Impact Statement?', a: 'The Impact Statement is a required part of your Final Application where you answer: "What positive impact are you able to make in the world with your new AI-Powered business?" This demonstrates alignment with our core mission and constitutes 25% of your challenge score.' },
