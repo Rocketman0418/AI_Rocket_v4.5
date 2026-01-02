@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 interface DocumentChunksHealth {
   total_rows: number;
   active_rows: number;
+  unique_documents: number;
   total_size: string;
   index_size: string;
   rows_per_team: Record<string, number>;
@@ -277,7 +278,7 @@ export function DatabaseMetricsPanel() {
             <HardDrive className="w-5 h-5 text-blue-400" />
           </div>
           <div className="text-3xl font-bold text-white mb-1">
-            {metrics.total_rows.toLocaleString()}
+            {(metrics.unique_documents || 0).toLocaleString()}
           </div>
           <div className="text-sm text-gray-400">Total Documents</div>
         </div>
@@ -287,9 +288,9 @@ export function DatabaseMetricsPanel() {
             <Activity className="w-5 h-5 text-green-400" />
           </div>
           <div className="text-3xl font-bold text-white mb-1">
-            {metrics.active_rows.toLocaleString()}
+            {metrics.total_rows.toLocaleString()}
           </div>
-          <div className="text-sm text-gray-400">Active Documents</div>
+          <div className="text-sm text-gray-400">Total Records</div>
         </div>
 
         <div className="bg-gray-700/50 rounded-lg p-5 border border-gray-600">

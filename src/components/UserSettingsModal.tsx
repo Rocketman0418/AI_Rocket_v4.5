@@ -6,6 +6,8 @@ import { supabase } from '../lib/supabase';
 import { AdminInviteCodesPanel } from './AdminInviteCodesPanel';
 import { TeamMembersPanel } from './TeamMembersPanel';
 import { TeamSettingsModal } from './TeamSettingsModal';
+import { AccountDeletionSection } from './AccountDeletionSection';
+import { DataExportSection } from './DataExportSection';
 import { FEATURES } from '../config/features';
 import { HelpCenterTab } from './HelpCenter';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
@@ -947,6 +949,10 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ isOpen, on
               </a>
             </div>
           </div>
+
+          <DataExportSection />
+
+          <AccountDeletionSection onClose={onClose} />
         </div>
       </div>
 
