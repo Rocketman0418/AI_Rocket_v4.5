@@ -937,7 +937,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ isOpen, on
                 <span>Privacy Policy</span>
               </a>
               <a
-                href="/terms-of-service"
+                href="/terms"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors min-h-[44px]"

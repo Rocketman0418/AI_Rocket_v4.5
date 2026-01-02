@@ -7,6 +7,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+const BATCH_SIZE = 50;
+const DELAY_BETWEEN_EMAILS_MS = 500;
+const MAX_EXECUTION_TIME_MS = 45000;
+
 interface CampaignRequest {
   marketingEmailId: string;
   recipientFilter?: {
@@ -18,11 +22,10 @@ interface CampaignRequest {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    });
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
+
+  const startTime = Date.now();
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -30,7 +33,6 @@ Deno.serve(async (req: Request) => {
     const resendApiKey = Deno.env.get("RESEND_API_KEY")!;
 
     if (!resendApiKey) {
-      console.error("RESEND_API_KEY not configured");
       return new Response(
         JSON.stringify({ error: "Email service not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -46,7 +48,6 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
     const { marketingEmailId, recipientFilter }: CampaignRequest = await req.json();
 
     const { data: emailData, error: emailError } = await supabaseAdmin
@@ -88,7 +89,6 @@ Deno.serve(async (req: Request) => {
         .select('id, email, name');
 
       if (error) {
-        console.error("Error fetching all users:", error);
         return new Response(
           JSON.stringify({ error: "Failed to fetch users" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -106,39 +106,27 @@ Deno.serve(async (req: Request) => {
       const { data: previewRequests, error } = await supabaseAdmin
         .rpc('get_preview_requests_with_onboarding');
 
-      if (error) {
-        console.error("Error fetching preview requests:", error);
-        return new Response(
-          JSON.stringify({ error: "Failed to fetch preview requests" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (!error && previewRequests) {
+        const notYetSignedUp = previewRequests.filter((req: any) => !req.user_onboarded);
+        notYetSignedUp.forEach((req: any) => addRecipient({
+          id: null,
+          email: req.email,
+          firstName: 'there'
+        }));
       }
-
-      const notYetSignedUp = previewRequests.filter((req: any) => !req.user_onboarded);
-      notYetSignedUp.forEach((req: any) => addRecipient({
-        id: null,
-        email: req.email,
-        firstName: 'there'
-      }));
     }
 
     if (types.includes('marketing_contacts')) {
       const { data: contacts, error } = await supabaseAdmin
         .rpc('get_marketing_contacts_for_campaign');
 
-      if (error) {
-        console.error("Error fetching marketing contacts:", error);
-        return new Response(
-          JSON.stringify({ error: "Failed to fetch marketing contacts" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (!error && contacts) {
+        contacts.forEach((c: any) => addRecipient({
+          id: null,
+          email: c.email,
+          firstName: c.first_name || 'there'
+        }));
       }
-
-      contacts.forEach((c: any) => addRecipient({
-        id: null,
-        email: c.email,
-        firstName: c.first_name || 'there'
-      }));
     }
 
     if (types.includes('specific') && recipientFilter?.emails && recipientFilter.emails.length > 0) {
@@ -147,19 +135,13 @@ Deno.serve(async (req: Request) => {
         .select('id, email, name')
         .in('email', recipientFilter.emails);
 
-      if (error) {
-        console.error("Error fetching specific users:", error);
-        return new Response(
-          JSON.stringify({ error: "Failed to fetch users" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (!error && users) {
+        users.forEach(u => addRecipient({
+          id: u.id,
+          email: u.email,
+          firstName: u.name?.split(' ')[0] || 'there'
+        }));
       }
-
-      users.forEach(u => addRecipient({
-        id: u.id,
-        email: u.email,
-        firstName: u.name?.split(' ')[0] || 'there'
-      }));
     }
 
     await supabaseAdmin
@@ -184,17 +166,19 @@ Deno.serve(async (req: Request) => {
     }
 
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
     let successCount = 0;
     let failCount = 0;
+    let processedCount = 0;
+    let timedOut = false;
 
-    for (let i = 0; i < recipients.length; i++) {
-      const recipient = recipients[i];
-
-      if (i > 0 && i % 2 === 0) {
-        await delay(1000);
+    for (let i = 0; i < recipients.length && i < BATCH_SIZE; i++) {
+      if (Date.now() - startTime > MAX_EXECUTION_TIME_MS) {
+        console.log("Approaching timeout, saving progress and exiting");
+        timedOut = true;
+        break;
       }
 
+      const recipient = recipients[i];
       let emailHtml = emailData.html_content;
       emailHtml = emailHtml.replace(/\{\{firstName\}\}/g, recipient.firstName);
 
@@ -215,14 +199,11 @@ Deno.serve(async (req: Request) => {
 
         if (!resendResponse.ok) {
           const errorText = await resendResponse.text();
-          console.error(`Failed to send to ${recipient.email}:`, resendResponse.status, errorText);
+          console.error(`Failed to send to ${recipient.email}:`, errorText);
 
           await supabaseAdmin
             .from('marketing_email_recipients')
-            .update({
-              status: 'failed',
-              error_message: errorText
-            })
+            .update({ status: 'failed', error_message: errorText })
             .eq('marketing_email_id', marketingEmailId)
             .eq('email', recipient.email);
 
@@ -241,29 +222,35 @@ Deno.serve(async (req: Request) => {
             .eq('email', recipient.email);
 
           successCount++;
-          console.log(`Email sent successfully to ${recipient.email}`);
+          console.log(`Email sent to ${recipient.email}`);
         }
       } catch (error) {
         console.error(`Error sending to ${recipient.email}:`, error);
 
         await supabaseAdmin
           .from('marketing_email_recipients')
-          .update({
-            status: 'failed',
-            error_message: error.message
-          })
+          .update({ status: 'failed', error_message: error.message })
           .eq('marketing_email_id', marketingEmailId)
           .eq('email', recipient.email);
 
         failCount++;
       }
+
+      processedCount++;
+
+      if (i < Math.min(recipients.length, BATCH_SIZE) - 1) {
+        await delay(DELAY_BETWEEN_EMAILS_MS);
+      }
     }
+
+    const remainingCount = recipients.length - processedCount;
+    const isComplete = remainingCount === 0 && !timedOut;
 
     await supabaseAdmin
       .from('marketing_emails')
       .update({
-        status: 'sent',
-        sent_at: new Date().toISOString(),
+        status: isComplete ? 'sent' : 'sending',
+        sent_at: isComplete ? new Date().toISOString() : null,
         successful_sends: successCount,
         failed_sends: failCount
       })
@@ -272,18 +259,21 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Campaign completed`,
+        message: isComplete 
+          ? "Campaign completed successfully!" 
+          : `First batch sent. ${remainingCount} recipients remaining. Call resume-marketing-campaign to continue.`,
         total_recipients: recipients.length,
+        processed_this_batch: processedCount,
         successful_sends: successCount,
-        failed_sends: failCount
+        failed_sends: failCount,
+        remaining: remainingCount,
+        is_complete: isComplete,
+        requires_resume: !isComplete
       }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error in send-marketing-email-campaign function:", error);
+    console.error("Error in send-marketing-email-campaign:", error);
     return new Response(
       JSON.stringify({ error: error.message || "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

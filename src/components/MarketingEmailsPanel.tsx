@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Send, Clock, CheckCircle, Eye, Edit, Copy, Trash2, RefreshCw, Pause, Play, History, Rocket, FileText } from 'lucide-react';
+import { Plus, Send, Clock, CheckCircle, Eye, Edit, Copy, Trash2, RefreshCw, Pause, Play, History, Rocket, FileText, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { MarketingEmailComposer } from './MarketingEmailComposer';
 import { MOONSHOT_EMAIL_TEMPLATE } from '../lib/email-templates';
@@ -20,11 +20,13 @@ interface MarketingEmail {
   last_run_at: string | null;
   run_count: number;
   parent_recurring_id: string | null;
+  pending_count?: number;
 }
 
 export function MarketingEmailsPanel() {
   const [emails, setEmails] = useState<MarketingEmail[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resumingId, setResumingId] = useState<string | null>(null);
   const [showComposer, setShowComposer] = useState(() => {
     const saved = sessionStorage.getItem('marketingEmailComposerOpen');
     return saved === 'true';
@@ -56,7 +58,20 @@ export function MarketingEmailsPanel() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setEmails(data || []);
+
+      const emailsWithPending = await Promise.all((data || []).map(async (email) => {
+        if (email.total_recipients > 0) {
+          const { count } = await supabase
+            .from('marketing_email_recipients')
+            .select('*', { count: 'exact', head: true })
+            .eq('marketing_email_id', email.id)
+            .eq('status', 'pending');
+          return { ...email, pending_count: count || 0 };
+        }
+        return { ...email, pending_count: 0 };
+      }));
+
+      setEmails(emailsWithPending);
     } catch (error) {
       console.error('Error loading marketing emails:', error);
     } finally {
@@ -188,6 +203,48 @@ export function MarketingEmailsPanel() {
       await loadEmails();
     } catch (error) {
       console.error('Error resuming recurring email:', error);
+    }
+  };
+
+  const handleResumeCampaign = async (emailId: string) => {
+    if (!confirm('Resume sending to remaining recipients?')) return;
+
+    setResumingId(emailId);
+    try {
+      let remaining = 1;
+      let totalSent = 0;
+      let totalFailed = 0;
+
+      while (remaining > 0) {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/resume-marketing-campaign`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ marketingEmailId: emailId }),
+          }
+        );
+
+        if (!response.ok) throw new Error('Failed to resume');
+
+        const result = await response.json();
+        remaining = result.remaining || 0;
+        totalSent = result.total_sent || 0;
+        totalFailed = result.total_failed || 0;
+
+        await loadEmails();
+      }
+
+      alert(`Campaign complete! ${totalSent} sent, ${totalFailed} failed.`);
+    } catch (error) {
+      console.error('Error resuming campaign:', error);
+      alert('Failed to resume campaign');
+    } finally {
+      setResumingId(null);
+      await loadEmails();
     }
   };
 
@@ -360,9 +417,14 @@ export function MarketingEmailsPanel() {
                       ) : (
                         <>
                           {getSuccessRate(email)}
-                          {email.status === 'sent' && email.failed_sends > 0 && (
+                          {email.failed_sends > 0 && (
                             <span className="text-red-400 text-sm ml-2">
                               ({email.failed_sends} failed)
+                            </span>
+                          )}
+                          {(email.pending_count || 0) > 0 && (
+                            <span className="text-amber-400 text-sm ml-2">
+                              ({email.pending_count} pending)
                             </span>
                           )}
                         </>
@@ -385,6 +447,26 @@ export function MarketingEmailsPanel() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
+                      {(email.pending_count || 0) > 0 && (
+                        <button
+                          onClick={() => handleResumeCampaign(email.id)}
+                          disabled={resumingId === email.id}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          title={`Resume sending to ${email.pending_count} pending recipients`}
+                        >
+                          {resumingId === email.id ? (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-3.5 h-3.5" />
+                              Resume ({email.pending_count})
+                            </>
+                          )}
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           setEditingEmail(email.id);

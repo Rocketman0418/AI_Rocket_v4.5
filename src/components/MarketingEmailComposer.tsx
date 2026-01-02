@@ -399,6 +399,28 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
     }
   };
 
+  const resumeCampaign = async (campaignId: string): Promise<{ totalSent: number; totalFailed: number; remaining: number }> => {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/resume-marketing-campaign`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ marketingEmailId: campaignId }),
+      }
+    );
+
+    if (!response.ok) throw new Error('Failed to resume campaign');
+    const result = await response.json();
+    return {
+      totalSent: result.total_sent || 0,
+      totalFailed: result.total_failed || 0,
+      remaining: result.remaining || 0
+    };
+  };
+
   const sendEmail = async () => {
     if (!confirm(`Send this email to ${getRecipientCount()} recipients?`)) {
       return;
@@ -406,9 +428,9 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
 
     setSending(true);
     try {
-      let finalEmailId = emailId;
+      let finalEmailId = emailId || draftId;
 
-      if (!emailId) {
+      if (!finalEmailId) {
         const { data, error } = await supabase
           .from('marketing_emails')
           .insert({
@@ -436,7 +458,7 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
             status: scheduleType === 'scheduled' ? 'scheduled' : 'sending',
             scheduled_for: emailData.scheduled_for
           })
-          .eq('id', emailId);
+          .eq('id', finalEmailId);
 
         if (error) throw error;
       }
@@ -464,14 +486,30 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
 
       if (!response.ok) throw new Error('Failed to send email');
 
-      const result = await response.json();
-      alert(`Email campaign sent! ${result.successful_sends} successful, ${result.failed_sends} failed.`);
+      let result = await response.json();
+      let totalSent = result.successful_sends || 0;
+      let totalFailed = result.failed_sends || 0;
+
+      setSendProgress({ sent: totalSent, total: result.total_recipients || 0 });
+
+      while (result.requires_resume && result.remaining > 0) {
+        const resumeResult = await resumeCampaign(finalEmailId!);
+        totalSent = resumeResult.totalSent;
+        totalFailed = resumeResult.totalFailed;
+        setSendProgress({ sent: totalSent, total: result.total_recipients || 0 });
+
+        if (resumeResult.remaining === 0) break;
+        result = { ...result, remaining: resumeResult.remaining, requires_resume: resumeResult.remaining > 0 };
+      }
+
+      alert(`Email campaign complete! ${totalSent} successful, ${totalFailed} failed.`);
       onClose();
     } catch (error) {
       console.error('Error sending email:', error);
-      alert('Failed to send email campaign');
+      alert('Failed to send email campaign. You can resume from the email list.');
     } finally {
       setSending(false);
+      setSendProgress({ sent: 0, total: 0 });
     }
   };
 

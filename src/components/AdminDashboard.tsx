@@ -194,6 +194,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen = true, o
   }>>([]);
   const [setupProgressData, setSetupProgressData] = useState<any[]>([]);
   const [loadingSetupProgress, setLoadingSetupProgress] = useState(false);
+  const [moonshotRegistrationCount, setMoonshotRegistrationCount] = useState<number>(0);
 
   const superAdminEmails = ['clay@rockethub.ai', 'derek@rockethub.ai', 'marshall@rockethub.ai'];
   const isSuperAdmin = user?.email && superAdminEmails.includes(user.email);
@@ -206,6 +207,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen = true, o
         loadAllMetrics();
         loadPreviewRequests();
         loadSetupProgress();
+        loadMoonshotCount();
         sessionStorage.setItem('adminDashboardTimeFilter', timeFilter);
       } else {
         setLoading(false);
@@ -273,6 +275,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen = true, o
       await loadAllMetrics();
       await loadPreviewRequests();
       await loadSetupProgress();
+      await loadMoonshotCount();
     } finally {
       setRefreshing(false);
     }
@@ -763,6 +766,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen = true, o
       console.error('Error loading setup progress:', error);
     } finally {
       setLoadingSetupProgress(false);
+    }
+  };
+
+  const loadMoonshotCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('moonshot_registrations')
+        .select('*', { count: 'exact', head: true });
+
+      if (error) throw error;
+      setMoonshotRegistrationCount(count || 0);
+    } catch (error) {
+      console.error('Error loading moonshot count:', error);
     }
   };
 
@@ -1670,11 +1686,11 @@ Sign up here: https://airocket.app`;
                   <ChevronRight className="w-5 h-5 text-gray-400" />
                 </div>
                 <div className="text-3xl font-bold text-white mb-1">
-                  <Rocket className="w-8 h-8 inline" />
+                  {moonshotRegistrationCount.toLocaleString()}
                 </div>
                 <div className="text-sm text-gray-400">Moonshot Challenge</div>
                 <div className="mt-2 text-xs text-gray-500">
-                  Registrations & analytics
+                  Total registrations
                 </div>
               </button>
 
