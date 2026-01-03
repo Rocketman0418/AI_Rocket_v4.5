@@ -69,29 +69,36 @@ CORE FEATURES:
    - Earn Launch Points by completing tasks in each stage
    - Launch Points never expire and are earned permanently
 
-   FUEL STAGE:
+   LAUNCH POINTS - $5M AI MOONSHOT CHALLENGE:
+   - Launch Points are part of the $5M AI Moonshot Challenge scoring criteria
+   - They measure how your team uses AI to Run, Build, and Grow your business
+   - Three categories of points:
+     * Launch Prep: Graduated points per level (10/20/30/40/50) up to 450 total across all stages
+     * Activity: Daily Active (+5/day) for messages/reports, 5-Day Streak (+50, repeatable every 5 days)
+     * Milestones: Messages (100/500/1000), Visualizations (5/25/100 saved), Scheduled Reports (3/10 created)
+
+   FUEL STAGE (10/20/30/40/50 points by level):
    - Add data to power your AI
    - Connect Google Drive OR upload files directly from your computer
    - Add documents to Strategy, Meetings, Financial, and Projects folders
    - Upload local files: drag-and-drop PDFs, Word, Excel, PowerPoint, text files
    - 5 levels: Level 1 (1 document) to Level 5 (10 strategy, 10 projects, 100 meetings, 10 financial)
-   - Points: 10-50 per level
 
-   BOOSTERS STAGE:
+   BOOSTERS STAGE (10/20/30/40/50 points by level):
    - Learn and use Astra's AI features
-   - Level 1: Use Guided Chat or send 5 prompts (10 points)
-   - Level 2: Create 1 visualization (20 points)
-   - Level 3: Generate 1 manual report (30 points)
-   - Level 4: Schedule 1 recurring report (40 points)
-   - Level 5: Build AI agent (50 points - coming soon)
+   - Level 1: Use Guided Chat or send 5 prompts (+10 pts)
+   - Level 2: Create 1 visualization (+20 pts)
+   - Level 3: Generate 1 manual report (+30 pts)
+   - Level 4: Schedule 1 recurring report (+40 pts)
+   - Level 5: Build AI agent (coming soon) (+50 pts)
 
-   GUIDANCE STAGE:
+   GUIDANCE STAGE (10/20/30/40/50 points by level):
    - Configure team settings and growth
-   - Level 1: Configure team settings (10 points)
-   - Level 2: Enable news preferences (20 points)
-   - Level 3: Invite 1+ team member (30 points)
-   - Level 4: Create AI job (40 points - coming soon)
-   - Level 5: Create guidance document (50 points - coming soon)
+   - Level 1: Configure team settings (+10 pts)
+   - Level 2: Enable news preferences (+20 pts)
+   - Level 3: Invite 1+ team member (+30 pts)
+   - Level 4: Create AI job (coming soon) (+40 pts)
+   - Level 5: Create guidance document (coming soon) (+50 pts)
 
    GUIDED CHAT:
    - Feature in Boosters Stage that analyzes your data

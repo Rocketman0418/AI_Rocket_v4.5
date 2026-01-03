@@ -110,6 +110,8 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showPointsModal, setShowPointsModal] = useState(false);
+  const [pointsModalTab, setPointsModalTab] = useState<'activity' | 'how-to-earn'>('activity');
+  const [showPointsInfoModal, setShowPointsInfoModal] = useState(false);
   const [pointsLog, setPointsLog] = useState<PointsLogEntry[]>([]);
   const [leaderboard, setLeaderboard] = useState<TeamMemberLeaderboard[]>([]);
   const [loadingPointsLog, setLoadingPointsLog] = useState(false);
@@ -228,48 +230,38 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
         return acc;
       }, {} as Record<string, string | null>);
 
-      const { data: progressData, error } = await supabase
-        .from('launch_preparation_progress')
-        .select('id, user_id, stage, level, points_earned, achievements, updated_at')
-        .in('user_id', userIds)
-        .order('updated_at', { ascending: false });
+      const [progressResult, ledgerResult] = await Promise.all([
+        supabase
+          .from('launch_preparation_progress')
+          .select('user_id, points_earned')
+          .in('user_id', userIds),
+        supabase
+          .from('launch_points_ledger')
+          .select('id, user_id, points, reason, reason_display, stage, created_at')
+          .in('user_id', userIds)
+          .order('created_at', { ascending: false })
+          .limit(100)
+      ]);
 
-      if (error) throw error;
+      if (progressResult.error) throw progressResult.error;
+      if (ledgerResult.error) throw ledgerResult.error;
 
       const userTotalPoints: Record<string, number> = {};
-      const activityLog: PointsLogEntry[] = [];
-
-      (progressData || []).forEach(entry => {
+      (progressResult.data || []).forEach(entry => {
         if (!userTotalPoints[entry.user_id]) {
           userTotalPoints[entry.user_id] = 0;
         }
         userTotalPoints[entry.user_id] += entry.points_earned;
-
-        if (entry.points_earned > 0) {
-          const achievements = entry.achievements as string[] || [];
-          if (achievements.length > 0) {
-            achievements.forEach(achievement => {
-              activityLog.push({
-                id: `${entry.id}-${achievement}`,
-                user_id: entry.user_id,
-                user_email: userEmails[entry.user_id] || 'Unknown',
-                points_earned: Math.round(entry.points_earned / achievements.length),
-                achievement_type: achievement,
-                created_at: entry.updated_at
-              });
-            });
-          } else {
-            activityLog.push({
-              id: entry.id,
-              user_id: entry.user_id,
-              user_email: userEmails[entry.user_id] || 'Unknown',
-              points_earned: entry.points_earned,
-              achievement_type: `${entry.stage}_level_${entry.level}`,
-              created_at: entry.updated_at
-            });
-          }
-        }
       });
+
+      const activityLog: PointsLogEntry[] = (ledgerResult.data || []).map(entry => ({
+        id: entry.id,
+        user_id: entry.user_id,
+        user_email: userEmails[entry.user_id] || 'Unknown',
+        points_earned: entry.points,
+        achievement_type: entry.reason_display || entry.reason,
+        created_at: entry.created_at
+      }));
 
       const leaderboardData: TeamMemberLeaderboard[] = teamUsers.map(u => ({
         user_id: u.id,
@@ -279,7 +271,6 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
       })).sort((a, b) => b.total_points - a.total_points);
 
       setLeaderboard(leaderboardData);
-      activityLog.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setPointsLog(activityLog.slice(0, 50));
     } catch (err) {
       console.error('Error fetching points log:', err);
@@ -453,7 +444,16 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
                     <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
                       <Trophy className="w-5 h-5 text-white" />
                     </div>
-                    <h2 className="text-base font-bold text-white">Team Launch Points</h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-bold text-white">Team Launch Points</h2>
+                      <button
+                        onClick={() => setShowPointsInfoModal(true)}
+                        className="p-1 hover:bg-slate-700 rounded-full transition-colors"
+                        title="Learn about Launch Points"
+                      >
+                        <Info className="w-4 h-4 text-slate-500 hover:text-slate-300" />
+                      </button>
+                    </div>
                   </div>
                   <button
                     onClick={handleOpenPointsModal}
@@ -461,7 +461,6 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
                   >
                     <Star className="w-4 h-4 text-amber-400" />
                     <span className="text-xl font-bold text-white">{teamPoints.toLocaleString()}</span>
-                    <span className="text-sm text-amber-300">pts</span>
                     <ChevronRight className="w-4 h-4 text-amber-400" />
                   </button>
                 </div>
@@ -729,59 +728,169 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
                 )}
               </div>
 
-              <div className="p-4 border-b border-slate-700">
-                <h3 className="text-sm font-medium text-white mb-2">How to Earn Points</h3>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div className="flex items-center gap-2 bg-slate-700/50 rounded-lg p-2">
-                    <Fuel className="w-3.5 h-3.5 text-orange-400" />
-                    <span className="text-slate-300">Fuel: +10-50</span>
-                  </div>
-                  <div className="flex items-center gap-2 bg-slate-700/50 rounded-lg p-2">
-                    <Zap className="w-3.5 h-3.5 text-cyan-400" />
-                    <span className="text-slate-300">Boosters: +10-50</span>
-                  </div>
-                  <div className="flex items-center gap-2 bg-slate-700/50 rounded-lg p-2">
-                    <Compass className="w-3.5 h-3.5 text-green-400" />
-                    <span className="text-slate-300">Guidance: +10-50</span>
-                  </div>
+              <div className="border-b border-slate-700">
+                <div className="flex">
+                  <button
+                    onClick={() => setPointsModalTab('activity')}
+                    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                      pointsModalTab === 'activity'
+                        ? 'text-amber-400 border-b-2 border-amber-400 bg-amber-500/5'
+                        : 'text-slate-400 hover:text-slate-300'
+                    }`}
+                  >
+                    Points Activity
+                  </button>
+                  <button
+                    onClick={() => setPointsModalTab('how-to-earn')}
+                    className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                      pointsModalTab === 'how-to-earn'
+                        ? 'text-amber-400 border-b-2 border-amber-400 bg-amber-500/5'
+                        : 'text-slate-400 hover:text-slate-300'
+                    }`}
+                  >
+                    How to Earn Points
+                  </button>
                 </div>
               </div>
 
-              <div className="p-4">
-                <h3 className="text-sm font-medium text-white mb-3">Recent Activity</h3>
-                {loadingPointsLog ? (
-                  <div className="flex items-center justify-center py-8">
-                    <RefreshCw className="w-5 h-5 text-slate-400 animate-spin" />
-                  </div>
-                ) : pointsLog.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Star className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                    <p className="text-sm text-slate-400">No points earned yet</p>
-                    <p className="text-xs text-slate-500 mt-1">Complete tasks to earn Launch Points</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {pointsLog.map(entry => (
-                      <div key={entry.id} className="flex items-center justify-between bg-slate-700/30 rounded-lg p-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-white truncate">
-                              {formatAchievementType(entry.achievement_type)}
+              {pointsModalTab === 'activity' ? (
+                <div className="p-4">
+                  {loadingPointsLog ? (
+                    <div className="flex items-center justify-center py-8">
+                      <RefreshCw className="w-5 h-5 text-slate-400 animate-spin" />
+                    </div>
+                  ) : pointsLog.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Star className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                      <p className="text-sm text-slate-400">No points earned yet</p>
+                      <p className="text-xs text-slate-500 mt-1">Complete tasks to earn Launch Points</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-80 overflow-y-auto">
+                      {pointsLog.map(entry => (
+                        <div key={entry.id} className="flex items-center justify-between bg-slate-700/30 rounded-lg p-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-white truncate">
+                                {formatAchievementType(entry.achievement_type)}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-400 truncate">{entry.user_email}</p>
+                          </div>
+                          <div className="flex items-center gap-2 ml-3">
+                            <span className="text-sm font-bold text-amber-400">+{entry.points_earned}</span>
+                            <span className="text-xs text-slate-500">
+                              {new Date(entry.created_at).toLocaleDateString()}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-400 truncate">{entry.user_email}</p>
                         </div>
-                        <div className="flex items-center gap-2 ml-3">
-                          <span className="text-sm font-bold text-amber-400">+{entry.points_earned}</span>
-                          <span className="text-xs text-slate-500">
-                            {new Date(entry.created_at).toLocaleDateString()}
-                          </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 space-y-4">
+                  <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <Trophy className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-amber-300">$5M AI Moonshot Challenge</p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Launch Points are part of the scoring criteria that measure how your team uses AI to <span className="text-white font-medium">Run</span>, <span className="text-white font-medium">Build</span>, and <span className="text-white font-medium">Grow</span> your business.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="bg-slate-700/30 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Rocket className="w-5 h-5 text-orange-400" />
+                        <span className="text-base font-semibold text-white">Launch Prep</span>
+                        <span className="text-xs text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded-full">Active</span>
+                      </div>
+                      <p className="text-sm text-slate-400 mb-3">Complete setup stages to earn points and prepare your team for AI-powered success.</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="bg-slate-800/50 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Fuel className="w-4 h-4 text-orange-400" />
+                            <span className="text-sm font-medium text-white">Fuel</span>
+                          </div>
+                          <p className="text-xs text-slate-400">Add data to power AI</p>
+                          <p className="text-sm font-bold text-orange-400 mt-2">Up to 50 pts</p>
+                        </div>
+                        <div className="bg-slate-800/50 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Zap className="w-4 h-4 text-cyan-400" />
+                            <span className="text-sm font-medium text-white">Boosters</span>
+                          </div>
+                          <p className="text-xs text-slate-400">Use AI features</p>
+                          <p className="text-sm font-bold text-cyan-400 mt-2">Up to 50 pts</p>
+                        </div>
+                        <div className="bg-slate-800/50 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Compass className="w-4 h-4 text-green-400" />
+                            <span className="text-sm font-medium text-white">Guidance</span>
+                          </div>
+                          <p className="text-xs text-slate-400">Configure team</p>
+                          <p className="text-sm font-bold text-green-400 mt-2">Up to 50 pts</p>
                         </div>
                       </div>
-                    ))}
+                      <p className="text-xs text-slate-500 mt-3 text-center">5 levels per stage = up to 150 pts each</p>
+                    </div>
+
+                    <div className="bg-slate-700/30 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Sparkles className="w-5 h-5 text-blue-400" />
+                        <span className="text-base font-semibold text-white">Activity</span>
+                      </div>
+                      <p className="text-sm text-slate-400 mb-3">Earn points for daily engagement with Astra.</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="bg-slate-800/50 rounded-lg p-3">
+                          <p className="text-sm font-medium text-white">Daily Active</p>
+                          <p className="text-xs text-slate-400 mt-1">Send a message or run a report</p>
+                          <p className="text-sm font-bold text-blue-400 mt-2">+5 pts/day</p>
+                        </div>
+                        <div className="bg-slate-800/50 rounded-lg p-3">
+                          <p className="text-sm font-medium text-white">5-Day Streak</p>
+                          <p className="text-xs text-slate-400 mt-1">Be active 5 days in a row</p>
+                          <p className="text-sm font-bold text-blue-400 mt-2">+50 pts</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-700/30 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Star className="w-5 h-5 text-amber-400" />
+                        <span className="text-base font-semibold text-white">Milestones</span>
+                      </div>
+                      <p className="text-sm text-slate-400 mb-3">Unlock bonus points for reaching usage milestones.</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="bg-slate-800/50 rounded-lg p-3">
+                          <p className="text-sm font-medium text-white">Daily Power User</p>
+                          <p className="text-xs text-slate-400 mt-1">Send 10 messages in a day</p>
+                          <p className="text-sm font-bold text-amber-400 mt-2">+25 pts</p>
+                        </div>
+                        <div className="bg-slate-800/50 rounded-lg p-3">
+                          <p className="text-sm font-medium text-white">Message Milestones</p>
+                          <p className="text-xs text-slate-400 mt-1">100 / 500 / 1000 total messages</p>
+                          <p className="text-sm font-bold text-amber-400 mt-2">+100 / +150 / +200 pts</p>
+                        </div>
+                        <div className="bg-slate-800/50 rounded-lg p-3">
+                          <p className="text-sm font-medium text-white">Visualization Milestones</p>
+                          <p className="text-xs text-slate-400 mt-1">5 / 25 / 100 saved visualizations</p>
+                          <p className="text-sm font-bold text-amber-400 mt-2">+150 / +200 / +250 pts</p>
+                        </div>
+                        <div className="bg-slate-800/50 rounded-lg p-3">
+                          <p className="text-sm font-medium text-white">Report Milestones</p>
+                          <p className="text-xs text-slate-400 mt-1">3 / 10 scheduled reports</p>
+                          <p className="text-sm font-bold text-amber-400 mt-2">+200 / +250 pts</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -890,6 +999,96 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
         isOpen={showMoonshotModal}
         onClose={() => setShowMoonshotModal(false)}
       />
+
+      {showPointsInfoModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-lg max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
+                  <Trophy className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-lg font-bold text-white">About Launch Points</h2>
+              </div>
+              <button
+                onClick={() => setShowPointsInfoModal(false)}
+                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Trophy className="w-6 h-6 text-amber-400 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-lg font-semibold text-amber-300">$5M AI Moonshot Challenge</p>
+                    <p className="text-sm text-slate-300 mt-2 leading-relaxed">
+                      Launch Points are an important part of the scoring criteria that measure how your team uses AI to:
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      <span className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-sm font-medium">Run</span>
+                      <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 rounded-full text-sm font-medium">Build</span>
+                      <span className="px-3 py-1 bg-amber-500/20 text-amber-300 rounded-full text-sm font-medium">Grow</span>
+                    </div>
+                    <p className="text-sm text-slate-400 mt-3">
+                      Your team's Launch Points demonstrate your commitment to leveraging AI for business success.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-white mb-3">Three Ways to Earn Points</h3>
+                <div className="space-y-3">
+                  <div className="bg-slate-700/30 rounded-lg p-3 flex items-start gap-3">
+                    <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Rocket className="w-4 h-4 text-orange-400" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-white">Launch Prep</span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">Complete Fuel, Boosters, and Guidance stages. Earn 50 points per level (up to 750 total).</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-700/30 rounded-lg p-3 flex items-start gap-3">
+                    <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="w-4 h-4 text-blue-400" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-white">Activity</span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">Earn points daily for AI conversations, reports, visualizations, and team collaboration.</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-700/30 rounded-lg p-3 flex items-start gap-3">
+                    <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Star className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-white">Milestones</span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">Unlock bonus points for team achievements like consecutive days active, team growth, and data milestones.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-700/30 rounded-lg p-3">
+                <p className="text-xs text-slate-400 text-center">
+                  Click on your team's Launch Points total to see the leaderboard and detailed earning opportunities.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -8,19 +8,28 @@ Built for Entrepreneurs and their Teams
 
 ## Core Features (Current)
 
-### 1. Launch Preparation System (NEW)
-Guided 3-stage onboarding ensures proper setup before launching. Earn Launch Points as you progress through Fuel, Boosters, and Guidance stages.
+### 1. Launch Points System (UPDATED)
+Launch Points are part of the $5M AI Moonshot Challenge scoring criteria that measure how teams use AI to Run, Build, and Grow their business. Points are earned through three categories:
+- **Launch Prep**: 50 points per level in Fuel, Boosters, and Guidance stages (up to 750 total)
+- **Activity**: Points for daily AI usage, creating reports, and team collaboration (coming soon)
+- **Milestones**: Bonus points for achieving team goals and business milestones (coming soon)
+- **Icon**: Trophy
+- **Color**: Amber-Orange Gradient
+- **Status**: Active (v1.3)
+
+### 2. Launch Preparation System
+Guided 3-stage onboarding ensures proper setup before launching. Earn Launch Points as you progress through Fuel (add data), Boosters (use AI features), and Guidance (configure team) stages.
 - **Icon**: Rocket
 - **Color**: Orange-Blue Gradient
 - **Status**: Active (v1.1)
 
-### 2. Mission Control Dashboard (NEW)
+### 3. Mission Control Dashboard
 Track your progress, achievements, and Launch Points after launching. View personal and team stats, stage progress, and next milestones.
 - **Icon**: Gauge
 - **Color**: Cyan
 - **Status**: Active (v1.1)
 
-### 3. AI Data Sync & Connected Folders (ENHANCED)
+### 4. AI Data Sync & Connected Folders (ENHANCED)
 Sync unlimited data from both Google Drive folders AND local file uploads to power Astra with your complete business knowledge. Organize documents into five categories: Strategy (business plans, goals), Meetings (notes, agendas), Financial (budgets, reports), Projects (project docs, timelines), and Local Uploads.
 - **Icon**: RefreshCw
 - **Color**: Orange
@@ -34,64 +43,64 @@ Sync unlimited data from both Google Drive folders AND local file uploads to pow
   - Document management and deletion
   - Fuel Level progression based on total synced documents
 
-### 4. Smart Visualizations
+### 5. Smart Visualizations
 Turn conversations into actionable insights with AI-generated charts, graphs, and visual reports.
 - **Icon**: BarChart3
-- **Color**: Purple
+- **Color**: Blue
 
-### 5. Private AI Assistant
+### 6. Private AI Assistant
 Have confidential conversations with AI that understands your business context and provides personalized insights.
 - **Icon**: Brain
 - **Color**: Blue
 
-### 6. Team Collaboration
+### 7. Team Collaboration
 Work together with your team and AI in shared conversations. @mention team members and AI for instant insights.
 - **Icon**: Users
 - **Color**: Emerald
 
-### 7. Automated Reports
+### 8. Automated Reports
 Schedule automated reports delivered to your inbox. Stay informed with daily, weekly, or monthly insights.
 - **Icon**: FileText
 - **Color**: Yellow
 
-### 8. AI-Powered Report Emails (NEW)
+### 9. AI-Powered Report Emails
 Receive beautifully designed email summaries of your scheduled reports. Astra generates visually rich emails with key insights, organized sections, and direct links to view full reports.
 - **Icon**: Mail
 - **Color**: Blue-Cyan Gradient
 - **Status**: Active (v1.2)
 
-### 9. Secure & Private
+### 10. Secure & Private
 Your data is encrypted and secure. Control who sees what with team-based permissions and private conversations.
 - **Icon**: Lock
 - **Color**: Cyan
 
 ## Coming Soon Features
 
-### 10. Agent Builder
+### 11. Agent Builder
 Design and deploy custom AI Agents to complete tasks autonomously. Unlocks at Boosters Level 5 in Launch Preparation.
 - **Icon**: Bot
 - **Color**: Pink
 - **Status**: In Development
 
-### 11. Team Dashboard
+### 12. Team Dashboard
 Real-time AI updated team info & insights on the metrics that matter most.
 - **Icon**: LayoutDashboard
 - **Color**: Cyan
 - **Status**: Coming Soon
 
-### 12. AI Specialists
+### 13. AI Specialists
 Create specialized AI team members like Business Coach, Finance Director, Marketing Manager and more to handle tasks 24/7. Unlocks at Boosters Level 5 in Launch Preparation.
 - **Icon**: UserCircle
 - **Color**: Teal
 - **Status**: Coming Soon
 
-### 13. Team SOPs
+### 14. Team SOPs
 Create guidance documents and playbooks that help your team stay aligned and make better decisions. Standard Operating Procedures ensure consistency across your organization.
 - **Icon**: Compass
 - **Color**: Orange
 - **Status**: Coming Soon
 
-### 14. Team Agents
+### 15. Team Agents
 Deploy task-specific AI agents that handle specific workflows like meeting summarization, document processing, or data extraction. Unlike AI Specialists (role-based), Team Agents are workflow-focused.
 - **Icon**: Bot
 - **Color**: Cyan
