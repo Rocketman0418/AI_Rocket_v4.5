@@ -37,7 +37,7 @@ import { supabase } from './lib/supabase';
 import { FEATURES } from './config/features';
 import { AlertTriangle, X } from 'lucide-react';
 
-const SHOW_MAINTENANCE_BANNER = true;
+const SHOW_MAINTENANCE_BANNER = false;
 
 const MaintenanceBanner: React.FC = () => {
   const [dismissed, setDismissed] = React.useState(false);
