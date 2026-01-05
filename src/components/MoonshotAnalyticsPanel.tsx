@@ -30,6 +30,7 @@ interface Registration {
     biggest_pain_points: string;
     industry: string | null;
     email: string | null;
+    mastermind_groups: string[];
   };
   invite_code?: {
     code: string;
@@ -64,6 +65,7 @@ interface MoonshotStats {
   painPointsList: Array<{ email: string; text: string }>;
   registrationsByDay: Array<{ date: string; count: number }>;
   registrationsBySource: Record<string, number>;
+  registrationsByMastermindGroups: Record<string, number>;
   surveyResponseCount: number;
 }
 
@@ -201,7 +203,8 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
             connected_data,
             biggest_pain_points,
             industry,
-            email
+            email,
+            mastermind_groups
           ),
           moonshot_invite_codes (
             code,
@@ -273,6 +276,7 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
       const painPointsList: Array<{ email: string; text: string }> = [];
       const dayCount: Record<string, number> = {};
       const sourceCount: Record<string, number> = {};
+      const mastermindGroupsCount: Record<string, number> = {};
       let surveyResponseCount = 0;
 
       registrationsData.forEach(r => {
@@ -315,6 +319,11 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
               painPointsBreakdown[painPoint] = (painPointsBreakdown[painPoint] || 0) + 1;
             });
           }
+          if (r.survey_response.mastermind_groups && Array.isArray(r.survey_response.mastermind_groups)) {
+            r.survey_response.mastermind_groups.forEach(group => {
+              mastermindGroupsCount[group] = (mastermindGroupsCount[group] || 0) + 1;
+            });
+          }
         }
 
         const day = format(new Date(r.created_at), 'yyyy-MM-dd');
@@ -344,6 +353,7 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
         painPointsList,
         registrationsByDay,
         registrationsBySource: sourceCount,
+        registrationsByMastermindGroups: mastermindGroupsCount,
         surveyResponseCount
       });
     } catch (err) {
@@ -392,7 +402,7 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
       'Name', 'Email', 'Team', 'Industry', 'Source', 'Registered',
       'Invite Code', 'Code Redeemed', 'Team Converted', 'Onboarding Started',
       'Onboarding Completed', 'Challenge Started', 'Converted At',
-      'AI Usage', 'Monthly Spend', 'Pain Points'
+      'AI Usage', 'Monthly Spend', 'Pain Points', 'Mastermind Groups'
     ];
     const rows = registrations.map(r => [
       r.name,
@@ -410,7 +420,8 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
       r.converted_at ? format(new Date(r.converted_at), 'yyyy-MM-dd') : '',
       r.survey_response?.current_ai_usage || '',
       r.survey_response?.monthly_ai_spend || '',
-      r.survey_response?.biggest_pain_points?.replace(/"/g, '""') || ''
+      r.survey_response?.biggest_pain_points?.replace(/"/g, '""') || '',
+      r.survey_response?.mastermind_groups?.join(', ') || ''
     ]);
 
     const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
@@ -658,6 +669,10 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
             <h4 className="text-xs font-medium text-gray-400 mb-2">6. Pain Points</h4>
             <SimplePieChart data={stats?.painPointsBreakdown || {}} size={140} />
           </div>
+          <div className="flex flex-col items-center">
+            <h4 className="text-xs font-medium text-gray-400 mb-2">7. Mastermind Groups</h4>
+            <SimplePieChart data={stats?.registrationsByMastermindGroups || {}} size={140} />
+          </div>
         </div>
       </div>
 
@@ -778,6 +793,26 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
                 </div>
               ))}
             {Object.keys(stats?.painPointsBreakdown || {}).length === 0 && (
+              <div className="text-gray-500 text-sm">No data</div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+          <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Mastermind Groups
+          </h3>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {Object.entries(stats?.registrationsByMastermindGroups || {})
+              .sort((a, b) => b[1] - a[1])
+              .map(([group, count]) => (
+                <div key={group} className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400 truncate">{group}</span>
+                  <span className="text-white font-medium ml-2">{count}</span>
+                </div>
+              ))}
+            {Object.keys(stats?.registrationsByMastermindGroups || {}).length === 0 && (
               <div className="text-gray-500 text-sm">No data</div>
             )}
           </div>
@@ -1022,6 +1057,18 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
                                   <div className="text-gray-500 mb-1">Pain Points</div>
                                   <div className="text-gray-300 bg-gray-700/50 p-3 rounded-lg">
                                     {reg.survey_response.biggest_pain_points}
+                                  </div>
+                                </div>
+                              )}
+                              {reg.survey_response.mastermind_groups && reg.survey_response.mastermind_groups.length > 0 && (
+                                <div className="md:col-span-2 lg:col-span-4">
+                                  <div className="text-gray-500 mb-1">Mastermind Groups</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {reg.survey_response.mastermind_groups.map((group, idx) => (
+                                      <span key={idx} className="px-2 py-0.5 bg-blue-600/20 text-blue-400 rounded text-xs border border-blue-500/30">
+                                        {group}
+                                      </span>
+                                    ))}
                                   </div>
                                 </div>
                               )}

@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Check, Copy, CheckCircle, Mail, Loader2, Users }
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
-type RegistrationStep = 'welcome' | 'basic_info' | 'q1' | 'q2' | 'q3' | 'q4' | 'q5' | 'success';
+type RegistrationStep = 'welcome' | 'basic_info' | 'q1' | 'q2' | 'q3' | 'q4' | 'q5' | 'q6' | 'success';
 
 interface FormData {
   name: string;
@@ -18,6 +18,8 @@ interface FormData {
   monthlyAiSpend: string;
   connectedData: string;
   painPoints: string[];
+  mastermindGroups: string[];
+  customMastermindGroup: string;
 }
 
 interface ExistingUserInfo {
@@ -100,6 +102,17 @@ const PAIN_POINTS = [
   'Integration with existing workflows is hard'
 ];
 
+const MASTERMIND_GROUPS = [
+  'Gobundance',
+  'Entrepreneurs Organization',
+  'YPO',
+  'Strategic Coach',
+  'Genius Network',
+  'BMI',
+  'Other',
+  'None'
+];
+
 const CompactHeader: React.FC = () => (
   <div className="flex items-center justify-center gap-2 py-3 border-b border-white/10">
     <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg" style={{ background: 'linear-gradient(145deg, #5BA4E6, #3B82C4)' }}>
@@ -123,7 +136,9 @@ export const MoonshotRegistrationPage: React.FC = () => {
     customUseCase: '',
     monthlyAiSpend: '',
     connectedData: '',
-    painPoints: []
+    painPoints: [],
+    mastermindGroups: [],
+    customMastermindGroup: ''
   });
   const [inviteCode, setInviteCode] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -196,7 +211,7 @@ export const MoonshotRegistrationPage: React.FC = () => {
     }
   }, [user, authLoading]);
 
-  const steps: RegistrationStep[] = ['welcome', 'basic_info', 'q1', 'q2', 'q3', 'q4', 'q5', 'success'];
+  const steps: RegistrationStep[] = ['welcome', 'basic_info', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'success'];
 
   const generateInviteCode = (): string => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -302,6 +317,10 @@ export const MoonshotRegistrationPage: React.FC = () => {
         if (codeError) throw codeError;
       }
 
+      const finalMastermindGroups = formData.mastermindGroups.includes('Other') && formData.customMastermindGroup
+        ? [...formData.mastermindGroups.filter(g => g !== 'Other'), formData.customMastermindGroup]
+        : formData.mastermindGroups;
+
       const { error: surveyError } = await supabase
         .from('moonshot_survey_responses')
         .insert({
@@ -312,7 +331,8 @@ export const MoonshotRegistrationPage: React.FC = () => {
           ai_use_cases: finalUseCases,
           monthly_ai_spend: formData.monthlyAiSpend,
           connected_data: formData.connectedData,
-          biggest_pain_points: formData.painPoints.join('; ')
+          biggest_pain_points: formData.painPoints.join('; '),
+          mastermind_groups: finalMastermindGroups
         });
 
       if (surveyError) throw surveyError;
@@ -439,6 +459,28 @@ export const MoonshotRegistrationPage: React.FC = () => {
     }));
   };
 
+  const toggleMastermindGroup = (group: string) => {
+    setFormData(prev => {
+      if (group === 'None') {
+        return {
+          ...prev,
+          mastermindGroups: ['None'],
+          customMastermindGroup: ''
+        };
+      }
+
+      const updatedGroups = prev.mastermindGroups.includes(group)
+        ? prev.mastermindGroups.filter(g => g !== group)
+        : [...prev.mastermindGroups.filter(g => g !== 'None'), group];
+
+      return {
+        ...prev,
+        mastermindGroups: updatedGroups,
+        customMastermindGroup: group === 'Other' && !updatedGroups.includes('Other') ? '' : prev.customMastermindGroup
+      };
+    });
+  };
+
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 'welcome':
@@ -462,6 +504,9 @@ export const MoonshotRegistrationPage: React.FC = () => {
         return formData.connectedData !== '';
       case 'q5':
         return formData.painPoints.length > 0;
+      case 'q6':
+        return formData.mastermindGroups.length > 0 &&
+               (!formData.mastermindGroups.includes('Other') || formData.customMastermindGroup.trim() !== '');
       default:
         return true;
     }
@@ -628,7 +673,7 @@ export const MoonshotRegistrationPage: React.FC = () => {
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-6">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-orange-500/20 rounded-full text-orange-400 text-sm font-medium mb-3">
-                Question 1 of 5
+                Question 1 of 6
               </div>
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">How are you currently using AI?</h2>
               <p className="text-gray-400 text-base">Select the option that best describes your team's AI adoption</p>
@@ -665,7 +710,7 @@ export const MoonshotRegistrationPage: React.FC = () => {
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-6">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-orange-500/20 rounded-full text-orange-400 text-sm font-medium mb-3">
-                Question 2 of 5
+                Question 2 of 6
               </div>
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">What do you use AI for?</h2>
               <p className="text-gray-400 text-base">Select all that apply</p>
@@ -712,7 +757,7 @@ export const MoonshotRegistrationPage: React.FC = () => {
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-6">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-orange-500/20 rounded-full text-orange-400 text-sm font-medium mb-3">
-                Question 3 of 5
+                Question 3 of 6
               </div>
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">What's your monthly AI spend?</h2>
               <p className="text-gray-400 text-base">Approximate total across all AI tools and services</p>
@@ -749,7 +794,7 @@ export const MoonshotRegistrationPage: React.FC = () => {
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-6">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-orange-500/20 rounded-full text-orange-400 text-sm font-medium mb-3">
-                Question 4 of 5
+                Question 4 of 6
               </div>
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">What data do you connect to AI?</h2>
               <p className="text-gray-400 text-base">How do you currently provide context to AI tools?</p>
@@ -786,7 +831,7 @@ export const MoonshotRegistrationPage: React.FC = () => {
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-6">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-orange-500/20 rounded-full text-orange-400 text-sm font-medium mb-3">
-                Question 5 of 5
+                Question 5 of 6
               </div>
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">What are your biggest AI pain points?</h2>
               <p className="text-gray-400 text-base">Select all that apply</p>
@@ -812,6 +857,52 @@ export const MoonshotRegistrationPage: React.FC = () => {
                 </button>
               ))}
             </div>
+          </div>
+        );
+
+      case 'q6':
+        return (
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-orange-500/20 rounded-full text-orange-400 text-sm font-medium mb-3">
+                Question 6 of 6
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Are you a member of any business or mastermind groups?</h2>
+              <p className="text-gray-400 text-base">Select all that apply</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              {MASTERMIND_GROUPS.map(group => (
+                <button
+                  key={group}
+                  onClick={() => toggleMastermindGroup(group)}
+                  className={`p-4 rounded-xl border text-left transition-all ${
+                    formData.mastermindGroups.includes(group)
+                      ? 'border-orange-500 bg-orange-500/10'
+                      : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-white text-base">{group}</span>
+                    {formData.mastermindGroups.includes(group) && (
+                      <Check className="w-5 h-5 text-orange-400 flex-shrink-0 ml-2" />
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {formData.mastermindGroups.includes('Other') && (
+              <div className="mt-4">
+                <input
+                  type="text"
+                  placeholder="Please specify the group name..."
+                  value={formData.customMastermindGroup}
+                  onChange={(e) => setFormData(prev => ({ ...prev, customMastermindGroup: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-orange-500 focus:outline-none"
+                />
+              </div>
+            )}
           </div>
         );
 
