@@ -253,6 +253,9 @@ function getFooter(): string {
     <div class="footer">
       <p>Questions? Visit <a href="https://airocket.app/moonshot">the Challenge page</a> for FAQs and details.</p>
       <p style="margin-top: 16px;"><span style="font-size: 18px;">&#128640;</span> <a href="https://airocket.app">AI Rocket</a> <span style="color: #475569;">by RocketHub.AI</span></p>
+      <p style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #1e293b;">
+        <a href="{{unsubscribeUrl}}" style="color: #64748b; font-size: 12px; text-decoration: underline;">Unsubscribe</a>
+      </p>
     </div>
   `;
 }
@@ -611,6 +614,22 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+      // Get unsubscribe token for test email recipient
+      const { data: contactData } = await supabase
+        .from('marketing_contacts')
+        .select('unsubscribe_token')
+        .eq('email', body.email)
+        .maybeSingle();
+
+      const unsubscribeUrl = contactData?.unsubscribe_token
+        ? `${supabaseUrl}/functions/v1/marketing-unsubscribe?token=${contactData.unsubscribe_token}`
+        : '#';
+
+      let emailHtml = template.getHtml(body.name, body.inviteCode);
+      emailHtml = emailHtml.replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl);
+
       const resendResponse = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -621,7 +640,7 @@ Deno.serve(async (req: Request) => {
           from: "AI Rocket Moonshot Challenge <moonshot@airocket.app>",
           to: body.email,
           subject: `[TEST] ${template.subject}`,
-          html: template.getHtml(body.name, body.inviteCode),
+          html: emailHtml,
         }),
       });
 
@@ -696,6 +715,20 @@ Deno.serve(async (req: Request) => {
       }
 
       try {
+        // Get unsubscribe token for this recipient
+        const { data: contactData } = await supabase
+          .from('marketing_contacts')
+          .select('unsubscribe_token')
+          .eq('email', registration.email)
+          .maybeSingle();
+
+        const unsubscribeUrl = contactData?.unsubscribe_token
+          ? `${supabaseUrl}/functions/v1/marketing-unsubscribe?token=${contactData.unsubscribe_token}`
+          : '#';
+
+        let emailHtml = template.getHtml(registration.name, inviteCode);
+        emailHtml = emailHtml.replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl);
+
         const resendResponse = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
@@ -706,7 +739,7 @@ Deno.serve(async (req: Request) => {
             from: "AI Rocket Moonshot Challenge <moonshot@airocket.app>",
             to: registration.email,
             subject: template.subject,
-            html: template.getHtml(registration.name, inviteCode),
+            html: emailHtml,
           }),
         });
 
