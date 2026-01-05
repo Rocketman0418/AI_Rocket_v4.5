@@ -37,7 +37,7 @@ import { supabase } from './lib/supabase';
 import { FEATURES } from './config/features';
 import { AlertTriangle, X } from 'lucide-react';
 
-const SHOW_MAINTENANCE_BANNER = false;
+const SHOW_MAINTENANCE_BANNER = true;
 
 const MaintenanceBanner: React.FC = () => {
   const [dismissed, setDismissed] = React.useState(false);
@@ -49,8 +49,8 @@ const MaintenanceBanner: React.FC = () => {
       <div className="max-w-7xl mx-auto flex items-center justify-center gap-3">
         <AlertTriangle className="w-5 h-5 flex-shrink-0" />
         <p className="text-sm font-medium text-center">
-          <span className="font-semibold">System Update in Progress:</span> Astra Intelligence is currently being updated.
-          You may experience temporary errors or incomplete responses. We'll be back to full capacity shortly.
+          <span className="font-semibold">Agent Workflow Service Unavailable:</span> Our workflow automation service is currently experiencing issues.
+          Some features may be temporarily unavailable. We are working with the provider on a fix.
         </p>
         <button
           onClick={() => setDismissed(true)}

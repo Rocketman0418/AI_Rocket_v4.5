@@ -1,5 +1,5 @@
-import React from 'react';
-import { CheckCircle, Rocket, Users, TrendingUp, Fuel, Zap, Compass, Trophy, Flame } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { CheckCircle, Rocket, Users, TrendingUp, Fuel, Zap, Compass, Trophy, Flame, Clock, ArrowUpDown } from 'lucide-react';
 
 interface LaunchProgressData {
   user_id: string;
@@ -12,6 +12,7 @@ interface LaunchProgressData {
   launched_at: string | null;
   daily_streak: number;
   last_active_date: string | null;
+  updated_at: string | null;
   fuel_level: number;
   fuel_points: number;
   boosters_level: number;
@@ -22,12 +23,39 @@ interface LaunchProgressData {
   max_level: number;
 }
 
+type SortMode = 'recent' | 'stage';
+
 interface SetupProgressPanelProps {
   progressData: LaunchProgressData[];
   loading?: boolean;
 }
 
 export const SetupProgressPanel: React.FC<SetupProgressPanelProps> = ({ progressData, loading }) => {
+  const [sortMode, setSortMode] = useState<SortMode>('recent');
+
+  const sortedProgressData = useMemo(() => {
+    if (sortMode === 'recent') {
+      return [...progressData].sort((a, b) => {
+        const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+        const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        return dateB - dateA;
+      });
+    } else {
+      const stageOrder: Record<string, number> = {
+        'launched': 0,
+        'boosters': 1,
+        'fuel': 2,
+        'guidance': 3,
+      };
+      return [...progressData].sort((a, b) => {
+        const orderA = stageOrder[a.current_stage] ?? 4;
+        const orderB = stageOrder[b.current_stage] ?? 4;
+        if (orderA !== orderB) return orderA - orderB;
+        return b.total_points - a.total_points;
+      });
+    }
+  }, [progressData, sortMode]);
+
   if (loading) {
     return (
       <div className="p-8 text-center">
@@ -222,8 +250,35 @@ export const SetupProgressPanel: React.FC<SetupProgressPanelProps> = ({ progress
 
       {/* User Details Table */}
       <div className="bg-gray-800/50 border border-gray-700 rounded-lg overflow-hidden">
-        <div className="p-4 border-b border-gray-700">
+        <div className="p-4 border-b border-gray-700 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-white">User Progress Details</h3>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-400">Sort by:</span>
+            <div className="flex bg-gray-700 rounded-lg p-1">
+              <button
+                onClick={() => setSortMode('recent')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                  sortMode === 'recent'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                Recent
+              </button>
+              <button
+                onClick={() => setSortMode('stage')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                  sortMode === 'stage'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <ArrowUpDown className="w-3.5 h-3.5" />
+                Stage
+              </button>
+            </div>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -240,14 +295,14 @@ export const SetupProgressPanel: React.FC<SetupProgressPanelProps> = ({ progress
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
-              {progressData.length === 0 ? (
+              {sortedProgressData.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                     No launch preparation data available
                   </td>
                 </tr>
               ) : (
-                progressData.map((user) => {
+                sortedProgressData.map((user) => {
                   return (
                     <tr key={user.user_id} className="hover:bg-gray-700/30 transition-colors">
                       <td className="px-4 py-3 text-sm text-white">{user.user_email}</td>

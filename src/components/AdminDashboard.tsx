@@ -673,7 +673,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen = true, o
       const { data: launchStatusData, error: statusError } = await supabase
         .from('user_launch_status')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('updated_at', { ascending: false });
 
       if (statusError) {
         console.error('Error fetching launch status:', statusError);
@@ -750,6 +750,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen = true, o
           launched_at: status.launched_at,
           daily_streak: status.daily_streak,
           last_active_date: status.last_active_date,
+          updated_at: status.updated_at,
           fuel_level: fuelProgress.level,
           fuel_points: fuelProgress.points_earned,
           boosters_level: boostersProgress.level,
