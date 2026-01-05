@@ -1,17 +1,15 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
-};
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
-      headers: corsHeaders,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+      },
     });
   }
 
@@ -22,24 +20,51 @@ Deno.serve(async (req: Request) => {
 
     const url = new URL(req.url);
     const token = url.searchParams.get("token");
+    const email = url.searchParams.get("email");
 
-    if (!token) {
+    if (!token && !email) {
       return new Response(
-        generateHtmlPage("Invalid Request", "No unsubscribe token provided.", false),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "text/html" } }
+        generateHtmlPage("Invalid Request", "No unsubscribe token or email provided.", false),
+        { status: 400, headers: new Headers({ "Content-Type": "text/html; charset=utf-8" }) }
       );
     }
 
-    const { data: contact, error: fetchError } = await supabaseAdmin
-      .from("marketing_contacts")
-      .select("id, email, first_name, unsubscribed")
-      .eq("unsubscribe_token", token)
-      .maybeSingle();
+    let contact: { id: string; email: string; first_name: string | null; unsubscribed: boolean } | null = null;
+    let fetchError: any = null;
+
+    if (token) {
+      const result = await supabaseAdmin
+        .from("marketing_contacts")
+        .select("id, email, first_name, unsubscribed")
+        .eq("unsubscribe_token", token)
+        .maybeSingle();
+      contact = result.data;
+      fetchError = result.error;
+    } else if (email) {
+      const result = await supabaseAdmin
+        .from("marketing_contacts")
+        .select("id, email, first_name, unsubscribed")
+        .eq("email", email.toLowerCase())
+        .maybeSingle();
+      contact = result.data;
+      fetchError = result.error;
+
+      if (!contact && !fetchError) {
+        return new Response(
+          generateHtmlPage(
+            "Not on Marketing List",
+            `${email} is not on our marketing email list. You may be receiving emails as an active user of AI Rocket. To manage email notifications, please log in to your account and visit Settings.`,
+            true
+          ),
+          { status: 200, headers: new Headers({ "Content-Type": "text/html; charset=utf-8" }) }
+        );
+      }
+    }
 
     if (fetchError || !contact) {
       return new Response(
         generateHtmlPage("Not Found", "This unsubscribe link is invalid or has expired.", false),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "text/html" } }
+        { status: 404, headers: new Headers({ "Content-Type": "text/html; charset=utf-8" }) }
       );
     }
 
@@ -50,7 +75,7 @@ Deno.serve(async (req: Request) => {
           `${contact.email} has already been unsubscribed from our marketing emails.`,
           true
         ),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "text/html" } }
+        { status: 200, headers: new Headers({ "Content-Type": "text/html; charset=utf-8" }) }
       );
     }
 
@@ -66,7 +91,7 @@ Deno.serve(async (req: Request) => {
       console.error("Error updating unsubscribe status:", updateError);
       return new Response(
         generateHtmlPage("Error", "An error occurred while processing your request. Please try again.", false),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "text/html" } }
+        { status: 500, headers: new Headers({ "Content-Type": "text/html; charset=utf-8" }) }
       );
     }
 
@@ -76,13 +101,13 @@ Deno.serve(async (req: Request) => {
         `${contact.email} has been unsubscribed from AI Rocket marketing emails. You will no longer receive promotional emails from us.`,
         true
       ),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "text/html" } }
+      { status: 200, headers: new Headers({ "Content-Type": "text/html; charset=utf-8" }) }
     );
   } catch (error) {
     console.error("Error in marketing-unsubscribe:", error);
     return new Response(
       generateHtmlPage("Error", "An unexpected error occurred. Please try again later.", false),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "text/html" } }
+      { status: 500, headers: new Headers({ "Content-Type": "text/html; charset=utf-8" }) }
     );
   }
 });
@@ -100,11 +125,7 @@ function generateHtmlPage(title: string, message: string, success: boolean): str
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title} - AI Rocket</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -124,21 +145,9 @@ function generateHtmlPage(title: string, message: string, success: boolean): str
       box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
       border: 1px solid #334155;
     }
-    .icon {
-      margin-bottom: 24px;
-    }
-    h1 {
-      color: #f1f5f9;
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 16px;
-    }
-    p {
-      color: #94a3b8;
-      font-size: 16px;
-      line-height: 1.6;
-      margin-bottom: 32px;
-    }
+    .icon { margin-bottom: 24px; }
+    h1 { color: #f1f5f9; font-size: 24px; font-weight: 700; margin-bottom: 16px; }
+    p { color: #94a3b8; font-size: 16px; line-height: 1.6; margin-bottom: 32px; }
     .logo {
       display: flex;
       align-items: center;
@@ -157,11 +166,7 @@ function generateHtmlPage(title: string, message: string, success: boolean): str
       justify-content: center;
       font-size: 16px;
     }
-    .logo-text {
-      color: #f1f5f9;
-      font-size: 16px;
-      font-weight: 600;
-    }
+    .logo-text { color: #f1f5f9; font-size: 16px; font-weight: 600; }
     .home-link {
       display: inline-block;
       background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);

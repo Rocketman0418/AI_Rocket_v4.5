@@ -100,16 +100,15 @@ Deno.serve(async (req: Request) => {
         await delay(1000);
       }
 
-      // Get unsubscribe token for this recipient if they're in marketing_contacts
       const { data: contactData } = await supabaseAdmin
         .from('marketing_contacts')
         .select('unsubscribe_token')
-        .eq('email', recipient.email)
+        .eq('email', recipient.email.toLowerCase())
         .maybeSingle();
 
       const unsubscribeUrl = contactData?.unsubscribe_token
         ? `${supabaseUrl}/functions/v1/marketing-unsubscribe?token=${contactData.unsubscribe_token}`
-        : '#';
+        : `${supabaseUrl}/functions/v1/marketing-unsubscribe?email=${encodeURIComponent(recipient.email)}`;
 
       let emailHtmlContent = htmlContent
         ? htmlContent.replace(/\{\{firstName\}\}/g, recipient.firstName)
