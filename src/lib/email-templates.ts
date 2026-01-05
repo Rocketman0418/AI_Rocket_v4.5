@@ -319,6 +319,9 @@ export const MOONSHOT_EMAIL_TEMPLATE: EmailTemplate = {
           <a href="https://airocket.app">AI Rocket</a>
           <span style="color:#475569">by RocketHub.AI</span>
         </p>
+        <p style="margin-top:20px; padding-top:20px; border-top:1px solid #1e293b">
+          <a href="{{unsubscribeUrl}}" style="color:#64748b; font-size:12px; text-decoration:underline">Unsubscribe</a>
+        </p>
       </div>
     </div>
   </div>

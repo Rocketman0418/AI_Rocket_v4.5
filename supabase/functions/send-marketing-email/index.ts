@@ -100,7 +100,18 @@ Deno.serve(async (req: Request) => {
         await delay(1000);
       }
 
-      const emailHtml = htmlContent
+      // Get unsubscribe token for this recipient if they're in marketing_contacts
+      const { data: contactData } = await supabaseAdmin
+        .from('marketing_contacts')
+        .select('unsubscribe_token')
+        .eq('email', recipient.email)
+        .maybeSingle();
+
+      const unsubscribeUrl = contactData?.unsubscribe_token
+        ? `${supabaseUrl}/functions/v1/marketing-unsubscribe?token=${contactData.unsubscribe_token}`
+        : '#';
+
+      let emailHtmlContent = htmlContent
         ? htmlContent.replace(/\{\{firstName\}\}/g, recipient.firstName)
         : `
         <!DOCTYPE html>
@@ -394,12 +405,17 @@ Deno.serve(async (req: Request) => {
                   <p style="margin-top: 20px;">
                     <a href="${appUrl}">AI Rocket + Astra</a> - AI that Works for Work
                   </p>
+                  <p style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #334155;">
+                    <a href="{{unsubscribeUrl}}" style="color: #64748b; font-size: 12px; text-decoration: underline;">Unsubscribe</a>
+                  </p>
                 </div>
               </div>
             </div>
           </body>
         </html>
       `.replace(/\{\{firstName\}\}/g, recipient.firstName);
+
+      emailHtmlContent = emailHtmlContent.replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl);
 
       try {
         const resendResponse = await fetch("https://api.resend.com/emails", {
@@ -412,7 +428,7 @@ Deno.serve(async (req: Request) => {
             from: "AI Rocket <astra@airocket.app>",
             to: recipient.email,
             subject: emailSubject,
-            html: emailHtml,
+            html: emailHtmlContent,
           }),
         });
 

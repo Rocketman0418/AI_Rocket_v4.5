@@ -182,6 +182,19 @@ Deno.serve(async (req: Request) => {
       let emailHtml = emailData.html_content;
       emailHtml = emailHtml.replace(/\{\{firstName\}\}/g, recipient.firstName);
 
+      // Get unsubscribe token for this recipient
+      const { data: contactData } = await supabaseAdmin
+        .from('marketing_contacts')
+        .select('unsubscribe_token')
+        .eq('email', recipient.email)
+        .maybeSingle();
+
+      const unsubscribeUrl = contactData?.unsubscribe_token
+        ? `${supabaseUrl}/functions/v1/marketing-unsubscribe?token=${contactData.unsubscribe_token}`
+        : '#';
+
+      emailHtml = emailHtml.replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl);
+
       try {
         const resendResponse = await fetch("https://api.resend.com/emails", {
           method: "POST",

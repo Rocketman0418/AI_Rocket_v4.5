@@ -459,6 +459,9 @@ ${emailTemplateStyles}
       <div class="footer">
         <p>You're receiving this from AI Rocket + Astra Intelligence.</p>
         <p style="margin-top: 12px;"><a href="https://airocket.app">Visit AI Rocket</a></p>
+        <p style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #334155;">
+          <a href="{{unsubscribeUrl}}" style="color: #64748b; font-size: 12px; text-decoration: underline;">Unsubscribe</a>
+        </p>
       </div>
     </div>
   </div>
@@ -646,12 +649,26 @@ async function sendCampaign(
 
   for (let i = 0; i < recipients.length; i++) {
     const recipient = recipients[i];
-    
+
     if (i > 0 && i % 2 === 0) {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     let emailHtml = htmlContent.replace(/\{\{firstName\}\}/g, recipient.firstName);
+
+    // Get unsubscribe token for this recipient
+    const { data: contactData } = await supabase
+      .from('marketing_contacts')
+      .select('unsubscribe_token')
+      .eq('email', recipient.email)
+      .maybeSingle();
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const unsubscribeUrl = contactData?.unsubscribe_token
+      ? `${supabaseUrl}/functions/v1/marketing-unsubscribe?token=${contactData.unsubscribe_token}`
+      : '#';
+
+    emailHtml = emailHtml.replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl);
 
     try {
       const resendResponse = await fetch("https://api.resend.com/emails", {
