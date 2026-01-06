@@ -1106,7 +1106,7 @@ export const MoonshotRegistrationPage: React.FC = () => {
                 <p className="text-red-400 text-sm">{error}</p>
               )}
 
-              {currentStep === 'q5' ? (
+              {currentStep === 'q6' ? (
                 <button
                   onClick={handleSubmit}
                   disabled={!canProceed() || isSubmitting}
