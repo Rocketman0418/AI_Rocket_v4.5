@@ -14,6 +14,8 @@ interface GenerateEmailRequest {
   previousHtml?: string;
   regenerationComments?: string;
   featureContext?: string;
+  generateDynamicSubject?: boolean;
+  subjectOnly?: boolean;
 }
 
 Deno.serve(async (req: Request) => {
@@ -51,188 +53,271 @@ Deno.serve(async (req: Request) => {
       specialNotes,
       previousHtml,
       regenerationComments,
-      featureContext
+      featureContext,
+      generateDynamicSubject,
+      subjectOnly
     }: GenerateEmailRequest = await req.json();
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
+    if (subjectOnly && generateDynamicSubject) {
+      console.log("Generating subject line only...");
+      const subjectPrompt = `Generate a compelling email subject line for a marketing email with this content description:
+
+"${contentDescription}"
+
+${subject ? `Hints/keywords to incorporate: ${subject}` : ''}
+
+Requirements:
+- Be engaging, creative, and attention-grabbing
+- Maximum 60 characters
+- Can include 1-2 relevant emojis if appropriate
+- Should create curiosity or convey value
+- Professional but energetic tone
+- Do NOT use generic subjects like "Test Email" or placeholder text
+
+Return ONLY the subject line text, nothing else.`;
+
+      try {
+        const subjectResult = await model.generateContent(subjectPrompt);
+        const generatedSubject = subjectResult.response.text().trim();
+        console.log("Generated subject:", generatedSubject);
+        return new Response(
+          JSON.stringify({ subject: generatedSubject }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      } catch (subjectError) {
+        console.error("Error generating subject:", subjectError);
+        return new Response(
+          JSON.stringify({ subject: "AI Insights for Your Team" }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+    }
+
     const templateReference = `
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta name=\"color-scheme\" content=\"light dark\">
-    <meta name=\"supported-color-schemes\" content=\"light dark\">
-    <style>
-      :root {
-        color-scheme: light dark;
-        supported-color-schemes: light dark;
-      }
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-        line-height: 1.6;
-        color: #e5e7eb !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        background-color: #0f172a !important;
-      }
-      .container {
-        max-width: 600px;
-        margin: 40px auto;
-        background-color: #1e293b !important;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-      }
-      .email-wrapper {
-        background-color: #0f172a !important;
-        padding: 20px;
-      }
-      .header {
-        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-        color: white;
-        padding: 40px 30px;
-        text-align: center;
-      }
-      .header h1 {
-        margin: 0;
-        font-size: 28px;
-        font-weight: 700;
-      }
-      .header .tagline {
-        margin: 8px 0 0 0;
-        font-size: 14px;
-        opacity: 0.95;
-        font-weight: 500;
-      }
-      .content {
-        padding: 40px 30px;
-      }
-      .greeting {
-        font-size: 22px;
-        font-weight: 600;
-        color: #f3f4f6;
-        margin-bottom: 16px;
-        text-align: center;
-      }
-      .hero-text {
-        font-size: 18px;
-        color: #d1d5db;
-        margin-bottom: 24px;
-        line-height: 1.7;
-        text-align: center;
-      }
-      .cta-button {
-        display: inline-block;
-        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-        color: white !important;
-        padding: 18px 48px;
-        border-radius: 12px;
-        text-decoration: none;
-        font-weight: 700;
-        font-size: 18px;
-        margin: 10px 0;
-        transition: transform 0.2s;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-      }
-      .cta-container {
-        text-align: center;
-        margin: 30px 0;
-      }
-      .benefits-grid {
-        width: 100%;
-        margin: 24px 0;
-      }
-      .benefit-card {
-        background: #1e3a5f;
-        border: 1px solid #3b82f6;
-        border-radius: 10px;
-        padding: 20px 16px;
-        text-align: center;
-        vertical-align: top;
-      }
-      .benefit-icon {
-        font-size: 36px;
-        line-height: 1;
-        margin-bottom: 10px;
-        display: block;
-      }
-      .benefit-title {
-        font-size: 15px;
-        font-weight: 700;
-        color: #93c5fd;
-        margin-bottom: 6px;
-        line-height: 1.2;
-      }
-      .benefit-text {
-        font-size: 12px;
-        font-weight: 400;
-        color: #cbd5e1;
-        line-height: 1.4;
-      }
-      @media only screen and (max-width: 600px) {
-        .benefits-grid td {
-          display: block !important;
-          width: 100% !important;
-          margin-bottom: 12px;
-        }
-        .benefit-card {
-          min-height: 140px;
-        }
-      }
-      .footer {
-        background: #0f172a;
-        padding: 30px;
-        text-align: center;
-        border-top: 1px solid #334155;
-        font-size: 13px;
-        color: #94a3b8;
-      }
-      .footer a {
-        color: #60a5fa;
-        text-decoration: none;
-      }
-    </style>
-  </head>
-  <body>
-    <div class=\"email-wrapper\">
-      <div class=\"container\">
-        <div class=\"header\">
-          <h1>🚀 AI Rocket + Astra Intelligence</h1>
-          <p class=\"tagline\">AI that Works for Work</p>
-        </div>
-        <div class=\"content\">
-          <!-- Example benefit cards structure: -->
-          <table class=\"benefits-grid\" cellpadding=\"0\" cellspacing=\"12\" width=\"100%\" role=\"presentation\">
+<head>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      line-height: 1.6;
+      color: #e5e7eb;
+      margin: 0;
+      padding: 0;
+      background-color: #0f172a;
+    }
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background-color: #1e293b;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .email-wrapper {
+      background-color: #0f172a;
+      padding: 20px;
+    }
+    .logo-bar {
+      background-color: #1e293b;
+      padding: 20px 30px;
+      border-bottom: 1px solid #334155;
+    }
+    .header {
+      background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+      color: white;
+      padding: 40px 30px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .header .tagline {
+      margin: 8px 0 0 0;
+      font-size: 14px;
+      opacity: 0.95;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .greeting {
+      font-size: 20px;
+      font-weight: 600;
+      color: #f3f4f6;
+      margin-bottom: 16px;
+    }
+    .intro-text {
+      font-size: 16px;
+      color: #d1d5db;
+      margin-bottom: 24px;
+      line-height: 1.7;
+    }
+    .section-header {
+      margin-top: 32px;
+      margin-bottom: 16px;
+    }
+    .section-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+      border-radius: 12px;
+      text-align: center;
+      line-height: 44px;
+      font-size: 24px;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .section-subtitle {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+    .insight-card {
+      background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%);
+      border: 1px solid #3b82f6;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .insight-icon {
+      font-size: 20px;
+      vertical-align: top;
+      padding-top: 4px;
+    }
+    .insight-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #93c5fd;
+      margin-bottom: 4px;
+    }
+    .insight-text {
+      font-size: 13px;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+    .cta-container {
+      text-align: center;
+      margin: 36px 0;
+    }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+      color: white !important;
+      padding: 18px 48px;
+      border-radius: 50px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 16px;
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+    }
+    .cta-subtext {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 12px;
+    }
+    .footer {
+      background: #0f172a;
+      padding: 24px;
+      text-align: center;
+      border-top: 1px solid #334155;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .footer a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="container">
+      <!-- Logo Bar with Rocket Icon + AI Rocket + Astra Intelligence -->
+      <div class="logo-bar">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td align="center">
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="vertical-align: middle;">
+                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); border-radius: 50%; display: inline-block; text-align: center; line-height: 40px; font-size: 20px;">&#128640;</div>
+                  </td>
+                  <td style="vertical-align: middle; padding-left: 12px;">
+                    <span style="font-size: 18px; font-weight: 600; color: #f1f5f9;">AI Rocket</span>
+                    <span style="font-size: 18px; color: #64748b; margin: 0 8px;">+</span>
+                    <span style="font-size: 18px; font-weight: 600; color: #5eead4;">Astra Intelligence</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </div>
+      <!-- Header with Dynamic Subject Line -->
+      <div class="header">
+        <h1>{{DYNAMIC_SUBJECT}} ✨</h1>
+        <p class="tagline">AI that Works for Work</p>
+      </div>
+      <div class="content">
+        <!-- Greeting -->
+        <p class="greeting">Hi {{firstName}}!</p>
+        <p class="intro-text">Brief intro text here.</p>
+
+        <!-- Section Header with Icon -->
+        <div class="section-header">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
-              <td width=\"48%\" style=\"vertical-align: top;\">
-                <div class=\"benefit-card\">
-                  <span class=\"benefit-icon\">🔒</span>
-                  <div class=\"benefit-title\">Short Title</div>
-                  <div class=\"benefit-text\">One concise sentence.</div>
-                </div>
+              <td width="50" style="vertical-align: middle;">
+                <div class="section-icon">📊</div>
               </td>
-              <td width=\"48%\" style=\"vertical-align: top;\">
-                <div class=\"benefit-card\">
-                  <span class=\"benefit-icon\">⚡</span>
-                  <div class=\"benefit-title\">Short Title</div>
-                  <div class=\"benefit-text\">One concise sentence.</div>
-                </div>
+              <td style="padding-left: 12px; vertical-align: middle;">
+                <div class="section-title">Section Title</div>
+                <div class="section-subtitle">Section subtitle text.</div>
               </td>
             </tr>
           </table>
         </div>
-        <div class=\"footer\">
-          <p>
-            You're receiving this email because you have an account with AI Rocket.
-          </p>
-          <p style=\"margin-top: 20px;\">
-            <a href=\"https://airocket.app\">AI Rocket + Astra</a> - AI that Works for Work
-          </p>
+
+        <!-- Insight Cards (full width, icon on left) -->
+        <div class="insight-card">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td width="32" style="vertical-align: top; padding-top: 4px;">
+                <span class="insight-icon">📈</span>
+              </td>
+              <td>
+                <div class="insight-title">Feature Title</div>
+                <div class="insight-text">Feature description text goes here.</div>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- CTA button -->
+        <div class="cta-container">
+          <a href="https://airocket.app" class="cta-button">Get Started</a>
+          <p class="cta-subtext">Supporting text under CTA</p>
         </div>
       </div>
+      <div class="footer">
+        <p>You're receiving this from AI Rocket + Astra Intelligence.</p>
+        <p style="margin-top: 12px;"><a href="https://airocket.app">Visit AI Rocket</a></p>
+      </div>
     </div>
-  </body>
+  </div>
+</body>
 </html>
     `;
 
@@ -240,45 +325,53 @@ Deno.serve(async (req: Request) => {
 
 BRAND GUIDELINES:
 - Use dark theme (#0f172a background, #1e293b containers)
-- Blue-purple gradient for CTAs and headers (#3b82f6 to #8b5cf6)
+- Blue-to-cyan gradient for CTAs and headers (#3b82f6 to #06b6d4) - NOT purple
 - Professional, friendly, energetic tone
 - Focus on value and capabilities
-- Use emojis sparingly but purposefully
-- Always include the RocketHub branding and tagline
+- Use emojis purposefully for visual interest
 - CTA button should link to https://airocket.app
-- CTA button text should be "Launch AI Rocket"
+- CTA button text should be "Get Started"
+- CTA buttons should have border-radius: 50px (pill shape)
 
 KEY PRODUCT MESSAGING:
 - Astra is powered by Gemini, Claude, and OpenAI working together in alignment with your team
 - Emphasize the multi-AI approach as a unique strength
 
-CRITICAL HEADER REQUIREMENTS:
-- DO NOT modify the header HTML or text in any way
-- The header MUST be EXACTLY: "🚀 AI Rocket + Astra Intelligence"
-- The tagline MUST be EXACTLY: "AI that Works for Work"
-- DO NOT add parentheses, extra descriptions, or modify these in ANY way
+CRITICAL EMAIL STRUCTURE (must follow exactly):
+1. LOGO BAR at top:
+   - Dark background (#1e293b) with border-bottom
+   - Centered content with rocket emoji in circular gradient background
+   - "AI Rocket" in white + "+" in gray + "Astra Intelligence" in teal (#5eead4)
+
+2. HEADER with blue-to-cyan gradient (#3b82f6 to #06b6d4):
+   - Shows the DYNAMIC SUBJECT LINE as h1 (can include sparkle emoji ✨)
+   - Tagline: "AI that Works for Work"
+
+3. CONTENT section:
+   - Greeting: "Hi {{firstName}}!" or "Hi there!"
+   - Brief intro paragraph (2-3 sentences max)
+   - SECTION HEADERS: Icon in gradient box (44x44px, border-radius 12px) + title + subtitle
+   - INSIGHT CARDS: Full-width cards with icon on left, title in blue (#93c5fd), description below
+   - Cards should have gradient background (#1e3a5f to #1e293b) and blue border
+
+4. CTA BUTTON:
+   - Pill-shaped (border-radius: 50px)
+   - Blue-cyan gradient background
+   - Text like "Get Started"
+   - Subtext below button
+
+5. FOOTER:
+   - Dark background
+   - "You're receiving this from AI Rocket + Astra Intelligence."
+   - Link to visit AI Rocket (do NOT include unsubscribe link - it's added automatically)
 
 TEMPLATE STRUCTURE TO FOLLOW:
 ${templateReference}
 
-IMPORTANT STYLING REQUIREMENTS:
-- Maintain exact color schemes from the template
-- Keep the header gradient and footer styling
-- Ensure responsive design (mobile stacks to single column)
-- Use the same font stack
-- Keep consistent spacing and padding
-- Benefits MUST use HTML TABLE layout (not CSS grid) for email client compatibility
-- Use table with 2 columns, each cell contains one benefit card
-- Card structure: icon (36px emoji), title (bold, 15px, 2-4 words max), description (12px, ONE sentence max)
-- CRITICAL: Description must be VERY SHORT - maximum 8-10 words, ONE sentence only
-- Titles should be 2-4 words maximum
-- Mobile displays cards in single column, desktop shows 2 columns
-- Add visual breaks with graphics/cards early - don't put too much text before the first visual elements
-
 ${featureContext ? `PRODUCT FEATURE CONTEXT:\n${featureContext}\n\nUse this context to create accurate, specific content about our actual features and benefits.\n` : ''}
 
 USER REQUEST:
-Subject: ${subject || 'To be determined'}
+Subject/Theme: ${subject || 'To be determined'}
 Content Description: ${contentDescription}
 ${specialNotes ? `Special Instructions: ${specialNotes}` : ''}
 `;
@@ -292,27 +385,23 @@ ${regenerationComments}
 
 Please regenerate the email incorporating this feedback while maintaining the brand guidelines and template structure.`;
     } else {
-      prompt += `\n\nGenerate a complete HTML email that matches the template structure above while incorporating the user's content request. Include:
-1. Header with EXACT text: "🚀 AI Rocket + Astra Intelligence" and tagline "AI that Works for Work" - DO NOT modify these
-2. Personalized greeting with {{firstName}} variable
-3. Brief opening paragraph (2-3 sentences max)
-4. IMMEDIATELY after opening text, show 4-6 benefit cards using HTML TABLE layout:
-   - Use <table class="benefits-grid" cellpadding="0" cellspacing="12" width="100%" role="presentation">
-   - Each row has 2 cells (td width="48%" style="vertical-align: top;"), each containing one card
-   - Each card: <div class="benefit-card">
-   - Card content: <span class="benefit-icon">emoji</span><div class="benefit-title">2-4 Word Title</div><div class="benefit-text">One short sentence (8-10 words max).</div>
-   - CRITICAL: Titles 2-4 words, descriptions ONE sentence of 8-10 words maximum
-5. Additional content sections with visuals interspersed
-6. At least 2 CTA buttons (one near top, one at bottom) - use "Launch AI Rocket" as button text
-7. Professional footer (do NOT include unsubscribe links)
+      prompt += `\n\nGenerate a complete HTML email that EXACTLY matches the template structure above. Include:
+1. Logo bar with rocket icon + "AI Rocket" + "Astra Intelligence" (teal)
+2. Header with dynamic subject as h1 and "AI that Works for Work" tagline
+3. Personalized greeting with {{firstName}} variable
+4. Brief opening paragraph
+5. 2-3 section headers with icons in gradient boxes
+6. Multiple insight cards under each section (full-width, icon on left)
+7. CTA button (pill-shaped, blue-cyan gradient)
+8. Professional footer (do NOT include unsubscribe links)
 
 CRITICAL REMINDERS:
-- Keep opening text BRIEF before showing graphics
-- Use TABLE layout for benefit cards (NOT CSS grid)
-- Card titles: 2-4 words ONLY
-- Card descriptions: ONE sentence, 8-10 words MAXIMUM
-- Mobile will stack cards vertically, desktop shows 2 columns
-- DO NOT modify the header text or tagline
+- Use blue-to-cyan gradient (#3b82f6 to #06b6d4), NOT purple
+- Logo bar must have rocket emoji in circular gradient background
+- Section headers must have icons in square gradient boxes with rounded corners
+- Insight cards are full-width with icon on the left side
+- CTA button is pill-shaped (border-radius: 50px)
+- Use the exact CSS classes and structure from the template
 
 Return ONLY the complete HTML code, no markdown formatting or additional text.`;
     }
@@ -325,9 +414,50 @@ Return ONLY the complete HTML code, no markdown formatting or additional text.`;
     console.log("Generated content length:", htmlContent.length);
     htmlContent = htmlContent.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
 
+    let generatedSubject: string | undefined;
+
+    if (generateDynamicSubject) {
+      console.log("Generating dynamic subject line...");
+      const subjectPrompt = `Generate a compelling email subject line for a marketing email with this content description:
+
+"${contentDescription}"
+
+${subject ? `Hints/keywords to incorporate: ${subject}` : ''}
+
+Requirements:
+- Be engaging, creative, and attention-grabbing
+- Maximum 60 characters
+- Can include 1-2 relevant emojis if appropriate
+- Should create curiosity or convey value
+- Professional but energetic tone
+- Do NOT use generic subjects like "Test Email" or placeholder text
+
+Return ONLY the subject line text, nothing else.`;
+
+      try {
+        const subjectResult = await model.generateContent(subjectPrompt);
+        generatedSubject = subjectResult.response.text().trim();
+        console.log("Generated subject:", generatedSubject);
+      } catch (subjectError) {
+        console.error("Error generating subject:", subjectError);
+        generatedSubject = "AI Insights for Your Team";
+      }
+    }
+
+    if (generatedSubject) {
+      htmlContent = htmlContent.replace(/\{\{DYNAMIC_SUBJECT\}\}/g, generatedSubject);
+    } else if (subject) {
+      htmlContent = htmlContent.replace(/\{\{DYNAMIC_SUBJECT\}\}/g, subject);
+    } else {
+      htmlContent = htmlContent.replace(/\{\{DYNAMIC_SUBJECT\}\}/g, 'AI Insights for Your Team');
+    }
+
     console.log("Email generation successful");
     return new Response(
-      JSON.stringify({ html: htmlContent }),
+      JSON.stringify({
+        html: htmlContent,
+        ...(generatedSubject && { subject: generatedSubject })
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

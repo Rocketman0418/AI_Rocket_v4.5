@@ -11,6 +11,7 @@ interface MarketingEmailRequest {
   recipientEmails?: string[];
   subject?: string;
   htmlContent?: string;
+  isTestEmail?: boolean;
 }
 
 Deno.serve(async (req: Request) => {
@@ -44,7 +45,7 @@ Deno.serve(async (req: Request) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { recipientEmails, subject, htmlContent }: MarketingEmailRequest = await req.json();
+    const { recipientEmails, subject, htmlContent, isTestEmail }: MarketingEmailRequest = await req.json();
 
     let recipients: { email: string; firstName: string }[] = [];
 
@@ -340,27 +341,27 @@ Deno.serve(async (req: Request) => {
 
                   <div class="benefits-grid">
                     <div class="benefit-card">
-                      <div class="benefit-icon">📊</div>
+                      <div class="benefit-icon">chart</div>
                       <div class="benefit-text">Strategy Intelligence</div>
                     </div>
                     <div class="benefit-card">
-                      <div class="benefit-icon">📝</div>
+                      <div class="benefit-icon">notes</div>
                       <div class="benefit-text">Meeting Insights</div>
                     </div>
                     <div class="benefit-card">
-                      <div class="benefit-icon">💰</div>
+                      <div class="benefit-icon">money</div>
                       <div class="benefit-text">Financial Analysis</div>
                     </div>
                     <div class="benefit-card">
-                      <div class="benefit-icon">🎯</div>
+                      <div class="benefit-icon">target</div>
                       <div class="benefit-text">Cross-Data Insights</div>
                     </div>
                     <div class="benefit-card">
-                      <div class="benefit-icon">📈</div>
+                      <div class="benefit-icon">trending</div>
                       <div class="benefit-text">Visual Reports</div>
                     </div>
                     <div class="benefit-card">
-                      <div class="benefit-icon">🤝</div>
+                      <div class="benefit-icon">handshake</div>
                       <div class="benefit-text">Team Collaboration</div>
                     </div>
                   </div>
@@ -372,17 +373,17 @@ Deno.serve(async (req: Request) => {
                         <div class="step-number">1</div>
                         <div class="step-text">Open AI Rocket app</div>
                       </div>
-                      <div class="arrow-down">↓</div>
+                      <div class="arrow-down">down</div>
                       <div class="step-row">
                         <div class="step-number">2</div>
                         <div class="step-text">Click the <strong>+</strong> button in Features Menu</div>
                       </div>
-                      <div class="arrow-down">↓</div>
+                      <div class="arrow-down">down</div>
                       <div class="step-row">
                         <div class="step-number">3</div>
                         <div class="step-text">Select "Launch Guided Setup"</div>
                       </div>
-                      <div class="arrow-down">↓</div>
+                      <div class="arrow-down">down</div>
                       <div class="step-row">
                         <div class="step-number">4</div>
                         <div class="step-text">Follow Astra's guidance</div>
@@ -414,7 +415,24 @@ Deno.serve(async (req: Request) => {
         </html>
       `.replace(/\{\{firstName\}\}/g, recipient.firstName);
 
-      emailHtmlContent = emailHtmlContent.replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl);
+      if (emailHtmlContent.includes('{{unsubscribeUrl}}')) {
+        emailHtmlContent = emailHtmlContent.replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl);
+      } else if (!emailHtmlContent.toLowerCase().includes('unsubscribe')) {
+        const unsubscribeFooter = `
+          <div style="text-align: center; padding: 20px; border-top: 1px solid #334155; margin-top: 20px;">
+            <p style="font-size: 12px; color: #64748b; margin: 0;">
+              <a href="${unsubscribeUrl}" style="color: #64748b; text-decoration: underline;">Unsubscribe</a> from future emails
+            </p>
+          </div>`;
+
+        if (emailHtmlContent.includes('</body>')) {
+          emailHtmlContent = emailHtmlContent.replace('</body>', `${unsubscribeFooter}</body>`);
+        } else if (emailHtmlContent.includes('</html>')) {
+          emailHtmlContent = emailHtmlContent.replace('</html>', `${unsubscribeFooter}</html>`);
+        } else {
+          emailHtmlContent += unsubscribeFooter;
+        }
+      }
 
       try {
         const resendResponse = await fetch("https://api.resend.com/emails", {

@@ -452,12 +452,10 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
 
   const CONNECTED_DATA_LABELS: Record<string, string> = {
     none: 'None',
-    google_drive: 'Google Drive',
-    dropbox: 'Dropbox',
-    sharepoint: 'SharePoint',
-    notion: 'Notion',
-    slack: 'Slack',
-    other: 'Other'
+    manual: 'Manual uploads',
+    documents: 'Documents (Google Drive, Dropbox, etc.)',
+    crm_meetings: 'CRM / Meetings Data',
+    multiple: 'Multiple sources'
   };
 
   const USE_CASE_LABELS: Record<string, string> = {
@@ -1037,7 +1035,7 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
                               </div>
                               <div>
                                 <div className="text-gray-500 mb-1">Connected Data</div>
-                                <div className="text-white capitalize">{reg.survey_response.connected_data}</div>
+                                <div className="text-white">{CONNECTED_DATA_LABELS[reg.survey_response.connected_data] || reg.survey_response.connected_data}</div>
                               </div>
                               <div>
                                 <div className="text-gray-500 mb-1">AI Use Cases</div>

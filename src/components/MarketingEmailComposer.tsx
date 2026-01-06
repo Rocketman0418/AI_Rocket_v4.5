@@ -233,6 +233,12 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
 
   const saveDraft = async () => {
     try {
+      const { data: existingEmail } = draftId
+        ? await supabase.from('marketing_emails').select('status, is_recurring').eq('id', draftId).maybeSingle()
+        : { data: null };
+
+      const shouldPreserveStatus = existingEmail?.status === 'recurring' && existingEmail?.is_recurring;
+
       const payload = {
         subject: emailData.subject,
         subject_mode: emailData.subject_mode,
@@ -242,7 +248,7 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
         recipient_filter: emailData.recipient_filter,
         scheduled_for: emailData.scheduled_for,
         context_type: emailData.context_type,
-        status: 'draft'
+        ...(shouldPreserveStatus ? {} : { status: 'draft' })
       };
 
       if (draftId) {
@@ -380,6 +386,34 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
     if (!user?.email) return;
 
     try {
+      let testSubject = emailData.subject;
+      const testHtmlContent = emailData.html_content;
+
+      if (emailData.subject_mode === 'dynamic') {
+        const generateResponse = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-marketing-email`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              subject: emailData.subject,
+              contentDescription: emailData.content_description,
+              specialNotes: emailData.special_notes,
+              generateDynamicSubject: true,
+              subjectOnly: true
+            }),
+          }
+        );
+
+        if (generateResponse.ok) {
+          const result = await generateResponse.json();
+          testSubject = result.subject || 'AI Insights for Your Team';
+        }
+      }
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-marketing-email`,
         {
@@ -390,8 +424,9 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
           },
           body: JSON.stringify({
             recipientEmails: [user.email],
-            subject: emailData.subject,
-            htmlContent: emailData.html_content
+            subject: testSubject,
+            htmlContent: testHtmlContent,
+            isTestEmail: true
           }),
         }
       );
