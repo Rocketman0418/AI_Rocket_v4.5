@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 
 interface SupportMessage {
   id: string;
+  user_name: string;
   user_email: string;
   created_at: string;
   support_type: string;
@@ -109,8 +110,8 @@ export default function SupportResponseModal({ message, onClose, onSuccess }: Su
       >
         <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-4 md:p-6 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-white">Respond to Support Message</h2>
-            <p className="text-sm text-gray-400 mt-1">Send a response to {message.user_email}</p>
+            <h2 className="text-xl font-semibold text-white">Respond to {message.user_name}</h2>
+            <p className="text-sm text-gray-400 mt-1">{message.user_email}</p>
           </div>
           <button
             onClick={onClose}
@@ -129,6 +130,11 @@ export default function SupportResponseModal({ message, onClose, onSuccess }: Su
               Original Message
             </h3>
             <div className="space-y-2 text-sm">
+              <div>
+                <span className="text-gray-400">From:</span>
+                <span className="ml-2 text-white font-medium">{message.user_name}</span>
+                <span className="ml-2 text-gray-400">({message.user_email})</span>
+              </div>
               <div>
                 <span className="text-gray-400">Type:</span>
                 <span className={`ml-2 px-2 py-0.5 text-xs rounded ${

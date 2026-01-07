@@ -84,6 +84,7 @@ interface FeedbackItem {
 
 interface SupportMessage {
   id: string;
+  user_name: string;
   user_email: string;
   created_at: string;
   support_type: string;
@@ -1150,12 +1151,13 @@ Sign up here: https://airocket.app`;
       const enrichedSupport = await Promise.all((data || []).map(async (msg) => {
         const { data: userData } = await supabase
           .from('users')
-          .select('email')
+          .select('name, email')
           .eq('id', msg.user_id)
           .maybeSingle();
 
         return {
           id: msg.id,
+          user_name: userData?.name || userData?.email || 'Unknown',
           user_email: userData?.email || 'Unknown',
           created_at: msg.submitted_at,
           support_type: msg.support_type || 'general',
@@ -2407,7 +2409,7 @@ Sign up here: https://airocket.app`;
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-white">{message.user_email}</span>
+                            <span className="font-medium text-white">{message.user_name}</span>
                             <span
                               className={`px-2 py-0.5 rounded text-xs ${
                                 message.support_type === 'bug_report'
