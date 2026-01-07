@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ChatMode, TabType } from '../types';
 import { NotificationBell } from './NotificationBell';
+import { RefreshVersionButton } from './RefreshVersionButton';
 import { UserSettingsModal } from './UserSettingsModal';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { SupportMenu } from './SupportMenu';
@@ -165,6 +166,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Right side - User info */}
         <div className="flex items-center space-x-2">
           <InstallAppButton />
+          <RefreshVersionButton />
           <NotificationBell onOpenSettings={() => setShowSettings(true)} />
 
           {/* Mission Control - Show if user has launched (only for old UI) */}

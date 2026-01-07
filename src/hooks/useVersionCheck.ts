@@ -1,0 +1,140 @@
+import { useState, useEffect, useCallback } from 'react';
+
+const CURRENT_VERSION = '1.0.0';
+const VERSION_CHECK_INTERVAL = 2 * 60 * 1000;
+
+interface VersionState {
+  currentVersion: string;
+  serverVersion: string | null;
+  newVersionAvailable: boolean;
+  isRefreshing: boolean;
+  lastChecked: Date | null;
+}
+
+let globalState: VersionState = {
+  currentVersion: CURRENT_VERSION,
+  serverVersion: null,
+  newVersionAvailable: false,
+  isRefreshing: false,
+  lastChecked: null
+};
+
+const listeners = new Set<(state: VersionState) => void>();
+
+const notifyListeners = () => {
+  listeners.forEach(listener => listener({ ...globalState }));
+};
+
+const updateState = (updates: Partial<VersionState>) => {
+  globalState = { ...globalState, ...updates };
+  notifyListeners();
+};
+
+const checkVersion = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(`/version.json?t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const serverVersion = data.version;
+      const hasNewVersion = serverVersion && serverVersion !== CURRENT_VERSION;
+
+      updateState({
+        serverVersion,
+        newVersionAvailable: hasNewVersion,
+        lastChecked: new Date()
+      });
+
+      return hasNewVersion;
+    }
+  } catch (error) {
+    console.error('[Version] Check failed:', error);
+  }
+  return false;
+};
+
+const performUpdate = async (): Promise<void> => {
+  updateState({ isRefreshing: true });
+
+  try {
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        await registration.unregister();
+      }
+    }
+
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+    }
+
+    window.location.reload();
+  } catch (error) {
+    console.error('[Version] Update failed:', error);
+    updateState({ isRefreshing: false });
+    throw error;
+  }
+};
+
+let initialized = false;
+let intervalId: number | null = null;
+
+const initialize = () => {
+  if (initialized) return;
+  initialized = true;
+
+  checkVersion();
+
+  intervalId = window.setInterval(checkVersion, VERSION_CHECK_INTERVAL);
+
+  const handleVisibilityChange = () => {
+    if (!document.hidden) {
+      checkVersion();
+    }
+  };
+
+  const handleSWUpdate = () => {
+    updateState({ newVersionAvailable: true });
+  };
+
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  window.addEventListener('sw-update-available', handleSWUpdate);
+};
+
+export const useVersionCheck = () => {
+  const [state, setState] = useState<VersionState>({ ...globalState });
+
+  useEffect(() => {
+    initialize();
+
+    const listener = (newState: VersionState) => {
+      setState(newState);
+    };
+
+    listeners.add(listener);
+    setState({ ...globalState });
+
+    return () => {
+      listeners.delete(listener);
+    };
+  }, []);
+
+  const refresh = useCallback(async () => {
+    if (!state.newVersionAvailable) return;
+    await performUpdate();
+  }, [state.newVersionAvailable]);
+
+  return {
+    ...state,
+    refresh,
+    checkVersion
+  };
+};

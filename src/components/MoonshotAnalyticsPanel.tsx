@@ -913,7 +913,7 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
                 >
                   Industry
                 </th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Source</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Groups</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Status</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Onboarding</th>
                 <th
@@ -937,16 +937,17 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
                     <td className="py-3 px-4 text-sm text-gray-300">{reg.team_name}</td>
                     <td className="py-3 px-4 text-sm text-gray-300">{getIndustry(reg) || <span className="text-gray-500">-</span>}</td>
                     <td className="py-3 px-4">
-                      {reg.source === 'landing_page' ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs">
-                          <UserPlus className="w-3 h-3" />
-                          New
-                        </span>
-                      ) : reg.source === 'existing_team' ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded text-xs">
-                          <Users className="w-3 h-3" />
-                          Existing
-                        </span>
+                      {reg.survey_response?.mastermind_groups && reg.survey_response.mastermind_groups.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 max-w-[150px]">
+                          {reg.survey_response.mastermind_groups.slice(0, 2).map((group, idx) => (
+                            <span key={idx} className="px-1.5 py-0.5 bg-blue-600/20 text-blue-400 rounded text-xs truncate max-w-[70px]" title={group}>
+                              {group}
+                            </span>
+                          ))}
+                          {reg.survey_response.mastermind_groups.length > 2 && (
+                            <span className="text-gray-500 text-xs">+{reg.survey_response.mastermind_groups.length - 2}</span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-gray-500 text-xs">-</span>
                       )}
