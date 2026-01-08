@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const CURRENT_VERSION = '1.0.0';
+declare const __APP_VERSION__: string;
+
+const CURRENT_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0';
 const VERSION_CHECK_INTERVAL = 2 * 60 * 1000;
 
 interface VersionState {
@@ -132,9 +134,14 @@ export const useVersionCheck = () => {
     await performUpdate();
   }, [state.newVersionAvailable]);
 
+  const forceRefresh = useCallback(async () => {
+    await performUpdate();
+  }, []);
+
   return {
     ...state,
     refresh,
+    forceRefresh,
     checkVersion
   };
 };
