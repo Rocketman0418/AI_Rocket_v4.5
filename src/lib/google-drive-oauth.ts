@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_ID_ALT = import.meta.env.VITE_GOOGLE_CLIENT_ID_ALT;
 
 // Minimal scopes for Google Drive access
 // Only requesting what we need: email and drive access
@@ -38,23 +39,56 @@ export const getRedirectUri = () => {
 };
 
 /**
+ * Checks if the current user should use the alternate OAuth app
+ * Returns true if user has 'use_alt_google_oauth' feature flag enabled
+ */
+export const checkShouldUseAltOAuth = async (): Promise<boolean> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { data, error } = await supabase
+      .from('feature_flags')
+      .select('enabled')
+      .eq('feature_name', 'use_alt_google_oauth')
+      .or(`user_id.eq.${user.id},email.eq.${user.email}`);
+
+    if (error) {
+      console.error('Error checking alt OAuth flag:', error);
+      return false;
+    }
+
+    return data?.some(flag => flag.enabled) ?? false;
+  } catch (error) {
+    console.error('Error checking alt OAuth:', error);
+    return false;
+  }
+};
+
+/**
  * Initiates the Google Drive OAuth flow
  * Opens Google's OAuth consent screen
  */
-export const initiateGoogleDriveOAuth = (fromGuidedSetup: boolean = false, fromLaunchPrep: boolean = false) => {
-  if (!GOOGLE_CLIENT_ID) {
+export const initiateGoogleDriveOAuth = (
+  fromGuidedSetup: boolean = false,
+  fromLaunchPrep: boolean = false,
+  useAltOAuth: boolean = false
+) => {
+  const clientId = useAltOAuth && GOOGLE_CLIENT_ID_ALT ? GOOGLE_CLIENT_ID_ALT : GOOGLE_CLIENT_ID;
+  const oauthAppId = useAltOAuth && GOOGLE_CLIENT_ID_ALT ? 'alternate' : 'primary';
+
+  if (!clientId) {
     throw new Error('Google Client ID is not configured. Please set VITE_GOOGLE_CLIENT_ID in your .env file');
   }
 
   const state = crypto.randomUUID();
   sessionStorage.setItem('google_drive_oauth_state', state);
+  sessionStorage.setItem('google_drive_oauth_app_id', oauthAppId);
 
-  // Store flag if coming from Guided Setup
   if (fromGuidedSetup) {
     sessionStorage.setItem('google_drive_from_guided_setup', 'true');
   }
 
-  // Store flag if coming from Launch Preparation
   if (fromLaunchPrep) {
     sessionStorage.setItem('google_drive_from_launch_prep', 'true');
   }
@@ -62,16 +96,17 @@ export const initiateGoogleDriveOAuth = (fromGuidedSetup: boolean = false, fromL
   const redirectUri = getRedirectUri();
   console.log('📁 Starting Google Drive OAuth flow...');
   console.log('📁 window.location.origin:', window.location.origin);
-  console.log('📁 Client ID:', GOOGLE_CLIENT_ID.substring(0, 20) + '...');
+  console.log('📁 OAuth App:', oauthAppId);
+  console.log('📁 Client ID:', clientId.substring(0, 20) + '...');
   console.log('📁 Redirect URI:', redirectUri);
 
   const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  authUrl.searchParams.append('client_id', GOOGLE_CLIENT_ID);
+  authUrl.searchParams.append('client_id', clientId);
   authUrl.searchParams.append('redirect_uri', redirectUri);
   authUrl.searchParams.append('response_type', 'code');
   authUrl.searchParams.append('scope', SCOPES);
-  authUrl.searchParams.append('access_type', 'offline'); // Get refresh token
-  authUrl.searchParams.append('prompt', 'consent'); // Force consent to get refresh token
+  authUrl.searchParams.append('access_type', 'offline');
+  authUrl.searchParams.append('prompt', 'consent');
   authUrl.searchParams.append('state', state);
 
   console.log('📁 Full auth URL:', authUrl.toString());
@@ -93,6 +128,9 @@ export const handleGoogleDriveCallback = async (
   }
   sessionStorage.removeItem('google_drive_oauth_state');
 
+  const oauthAppId = sessionStorage.getItem('google_drive_oauth_app_id') || 'primary';
+  sessionStorage.removeItem('google_drive_oauth_app_id');
+
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     throw new Error('Not authenticated');
@@ -100,6 +138,7 @@ export const handleGoogleDriveCallback = async (
 
   const redirectUri = getRedirectUri();
   console.log('📁 Exchanging OAuth code for tokens...');
+  console.log('📁 OAuth App ID:', oauthAppId);
   console.log('📁 Using redirect URI:', redirectUri);
 
   const response = await fetch(
@@ -110,7 +149,7 @@ export const handleGoogleDriveCallback = async (
         'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ code, redirect_uri: redirectUri })
+      body: JSON.stringify({ code, redirect_uri: redirectUri, oauth_app_id: oauthAppId })
     }
   );
 

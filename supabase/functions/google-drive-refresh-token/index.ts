@@ -20,6 +20,8 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
     const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+    const googleClientIdAlt = Deno.env.get('GOOGLE_CLIENT_ID_ALT');
+    const googleClientSecretAlt = Deno.env.get('GOOGLE_CLIENT_SECRET_ALT');
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Missing Supabase configuration');
@@ -101,14 +103,19 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const useAltCredentials = driveConnection.oauth_app_id === 'alternate' && googleClientIdAlt && googleClientSecretAlt;
+    const activeClientId = useAltCredentials ? googleClientIdAlt : googleClientId;
+    const activeClientSecret = useAltCredentials ? googleClientSecretAlt : googleClientSecret;
+
     console.log('🔄 Requesting new access token from Google...');
+    console.log('🔄 Using OAuth App:', driveConnection.oauth_app_id || 'primary');
 
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        client_id: googleClientId,
-        client_secret: googleClientSecret,
+        client_id: activeClientId,
+        client_secret: activeClientSecret,
         refresh_token: driveConnection.refresh_token,
         grant_type: 'refresh_token'
       })

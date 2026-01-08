@@ -20,6 +20,8 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
     const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+    const googleClientIdAlt = Deno.env.get('GOOGLE_CLIENT_ID_ALT');
+    const googleClientSecretAlt = Deno.env.get('GOOGLE_CLIENT_SECRET_ALT');
     const driveRedirectUri = Deno.env.get('GOOGLE_DRIVE_REDIRECT_URI');
 
     if (!supabaseUrl || !supabaseServiceKey) {
@@ -96,7 +98,7 @@ Deno.serve(async (req: Request) => {
 
     console.log('✅ User verified:', user.email);
 
-    const { code, redirect_uri } = await req.json();
+    const { code, redirect_uri, oauth_app_id } = await req.json();
 
     if (!code) {
       return new Response(
@@ -108,10 +110,16 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const useAltCredentials = oauth_app_id === 'alternate' && googleClientIdAlt && googleClientSecretAlt;
+    const activeClientId = useAltCredentials ? googleClientIdAlt : googleClientId;
+    const activeClientSecret = useAltCredentials ? googleClientSecretAlt : googleClientSecret;
+    const activeOAuthAppId = useAltCredentials ? 'alternate' : 'primary';
+
     const finalRedirectUri = redirect_uri || driveRedirectUri;
 
     console.log('📁 Exchanging authorization code for tokens...');
-    console.log('📁 Client ID:', googleClientId?.substring(0, 30) + '...');
+    console.log('📁 OAuth App ID:', activeOAuthAppId);
+    console.log('📁 Client ID:', activeClientId?.substring(0, 30) + '...');
     console.log('📁 Using redirect URI:', finalRedirectUri);
     console.log('📁 Env GOOGLE_DRIVE_REDIRECT_URI:', driveRedirectUri);
 
@@ -120,8 +128,8 @@ Deno.serve(async (req: Request) => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code,
-        client_id: googleClientId,
-        client_secret: googleClientSecret,
+        client_id: activeClientId,
+        client_secret: activeClientSecret,
         redirect_uri: finalRedirectUri,
         grant_type: 'authorization_code'
       })
@@ -192,7 +200,8 @@ Deno.serve(async (req: Request) => {
       google_account_email: profile.email,
       is_active: true,
       connection_status: 'connected',
-      scope_version: 2, // Current scope version (includes Sheets API)
+      scope_version: 2,
+      oauth_app_id: activeOAuthAppId,
     };
 
     // Note: Folder configuration is handled separately via save-folder-selection edge function
