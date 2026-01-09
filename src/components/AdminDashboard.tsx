@@ -3,7 +3,7 @@ import {
   Users, Building2, FileText, MessageSquare, BarChart3, Download,
   TrendingUp, TrendingDown, Minus, Mail, HardDrive, AlertCircle,
   CheckCircle, XCircle, Search, ArrowUpDown, MessageCircleQuestion, Shield, X, ChevronRight, MessageCircle,
-  Copy, UserPlus, Send, RefreshCw, ClipboardList, Rocket, Trash2
+  Copy, UserPlus, Send, RefreshCw, ClipboardList, Rocket, Trash2, Workflow
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -13,6 +13,7 @@ import { MarketingEmailsPanel } from './MarketingEmailsPanel';
 import { SetupProgressPanel } from './SetupProgressPanel';
 import { MoonshotAnalyticsPanel } from './MoonshotAnalyticsPanel';
 import { DatabaseMetricsPanel } from './DatabaseMetricsPanel';
+import { AgentWorkflowsPanel } from './AgentWorkflowsPanel';
 
 interface UserMetric {
   id: string;
@@ -127,7 +128,7 @@ interface FeedbackStats {
 type TimeFilter = '7days' | '30days' | '90days' | 'all';
 type SortField = 'email' | 'created_at' | 'team_name' | 'documents' | 'messages';
 type SortDirection = 'asc' | 'desc';
-type DetailView = 'users' | 'teams' | 'documents' | 'chats' | 'preview_requests' | 'support' | 'feedback' | 'active_users' | 'marketing_emails' | 'setup_progress' | 'moonshot' | 'database_metrics' | null;
+type DetailView = 'users' | 'teams' | 'documents' | 'chats' | 'preview_requests' | 'support' | 'feedback' | 'active_users' | 'marketing_emails' | 'setup_progress' | 'moonshot' | 'database_metrics' | 'agent_workflows' | null;
 type SupportFilter = 'all' | 'bug_report' | 'support_message' | 'feature_request';
 type DocumentCategoryFilter = 'all' | 'strategy' | 'meetings' | 'financial' | 'people' | 'legal' | 'customer' | 'industry' | 'product' | 'marketing' | 'sales' | 'operations' | 'support' | 'reference' | 'other';
 
@@ -196,6 +197,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen = true, o
   const [setupProgressData, setSetupProgressData] = useState<any[]>([]);
   const [loadingSetupProgress, setLoadingSetupProgress] = useState(false);
   const [moonshotRegistrationCount, setMoonshotRegistrationCount] = useState<number>(0);
+  const [workflowExecutionCount, setWorkflowExecutionCount] = useState<number | null>(null);
 
   const superAdminEmails = ['clay@rockethub.ai', 'derek@rockethub.ai', 'marshall@rockethub.ai'];
   const isSuperAdmin = user?.email && superAdminEmails.includes(user.email);
@@ -209,6 +211,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen = true, o
         loadPreviewRequests();
         loadSetupProgress();
         loadMoonshotCount();
+        loadWorkflowExecutionCount();
         sessionStorage.setItem('adminDashboardTimeFilter', timeFilter);
       } else {
         setLoading(false);
@@ -781,6 +784,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen = true, o
       setMoonshotRegistrationCount(count || 0);
     } catch (error) {
       console.error('Error loading moonshot count:', error);
+    }
+  };
+
+  const loadWorkflowExecutionCount = async () => {
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return;
+
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/n8n-execution-metrics?action=metrics`;
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setWorkflowExecutionCount(data.summary?.totalExecutions || 0);
+      }
+    } catch (error) {
+      console.error('Error loading workflow execution count:', error);
     }
   };
 
@@ -1530,19 +1556,22 @@ Sign up here: https://airocket.app`;
               </button>
 
               <button
-                onClick={() => setDetailView('documents')}
+                onClick={() => setDetailView('database_metrics')}
                 className={`bg-gray-800 border rounded-xl p-6 transition-all text-left w-full ${
-                  detailView === 'documents'
-                    ? 'border-purple-500 shadow-lg shadow-purple-500/20'
-                    : 'border-gray-700 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/20'
+                  detailView === 'database_metrics'
+                    ? 'border-blue-500 shadow-lg shadow-blue-500/20'
+                    : 'border-gray-700 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/20'
                 }`}
               >
                 <div className="flex items-center justify-between mb-4">
-                  <FileText className="w-8 h-8 text-purple-400" />
+                  <HardDrive className="w-8 h-8 text-blue-400" />
                   <ChevronRight className="w-5 h-5 text-gray-400" />
                 </div>
-                <div className="text-3xl font-bold text-white mb-1">{overviewMetrics.totalDocuments}</div>
-                <div className="text-sm text-gray-400">Total Documents</div>
+                <div className="text-3xl font-bold text-white mb-1">{overviewMetrics?.totalDocuments.toLocaleString() || '0'}</div>
+                <div className="text-sm text-gray-400">Data Sync</div>
+                <div className="mt-2 text-xs text-gray-500">
+                  Database Metrics
+                </div>
               </button>
 
               <button
@@ -1698,23 +1727,23 @@ Sign up here: https://airocket.app`;
               </button>
 
               <button
-                onClick={() => setDetailView('database_metrics')}
+                onClick={() => setDetailView('agent_workflows')}
                 className={`bg-gray-800 border rounded-xl p-6 transition-all text-left w-full ${
-                  detailView === 'database_metrics'
-                    ? 'border-purple-500 shadow-lg shadow-purple-500/20'
-                    : 'border-gray-700 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/20'
+                  detailView === 'agent_workflows'
+                    ? 'border-teal-500 shadow-lg shadow-teal-500/20'
+                    : 'border-gray-700 hover:border-teal-500 hover:shadow-lg hover:shadow-teal-500/20'
                 }`}
               >
                 <div className="flex items-center justify-between mb-4">
-                  <HardDrive className="w-8 h-8 text-purple-400" />
+                  <Workflow className="w-8 h-8 text-teal-400" />
                   <ChevronRight className="w-5 h-5 text-gray-400" />
                 </div>
                 <div className="text-3xl font-bold text-white mb-1">
-                  {overviewMetrics?.totalDocuments.toLocaleString() || '0'}
+                  {workflowExecutionCount !== null ? workflowExecutionCount.toLocaleString() : '...'}
                 </div>
-                <div className="text-sm text-gray-400">Database Health</div>
+                <div className="text-sm text-gray-400">Agent Workflows</div>
                 <div className="mt-2 text-xs text-gray-500">
-                  Storage & performance metrics
+                  Execution Metrics
                 </div>
               </button>
 
@@ -2668,6 +2697,10 @@ Sign up here: https://airocket.app`;
 
             {detailView === 'database_metrics' && (
               <DatabaseMetricsPanel />
+            )}
+
+            {detailView === 'agent_workflows' && (
+              <AgentWorkflowsPanel />
             )}
           </div>
         </div>

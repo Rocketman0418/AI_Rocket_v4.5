@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   HardDrive, Activity, AlertTriangle, RefreshCw, Download,
-  CheckCircle, AlertCircle, Database, Calendar, TrendingUp
+  CheckCircle, AlertCircle, Database, Calendar, TrendingUp,
+  ArrowUpDown, Clock
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
@@ -17,10 +18,18 @@ interface DocumentChunksHealth {
   newest_modified: string;
 }
 
+interface TeamStats {
+  team_id: string;
+  team_name: string;
+  doc_count: number;
+  chunk_count: number;
+}
+
 interface TeamStorageStats {
   teamId: string;
   teamName: string;
-  count: number;
+  docCount: number;
+  recordCount: number;
   percentage: string;
 }
 
@@ -29,10 +38,8 @@ interface HealthWarning {
   message: string;
 }
 
-interface TeamData {
-  id: string;
-  name: string;
-}
+type SortField = 'documents' | 'records';
+type SortDirection = 'asc' | 'desc';
 
 export function DatabaseMetricsPanel() {
   const [metrics, setMetrics] = useState<DocumentChunksHealth | null>(null);
@@ -40,7 +47,10 @@ export function DatabaseMetricsPanel() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [teams, setTeams] = useState<TeamData[]>([]);
+  const [teamStats, setTeamStats] = useState<TeamStats[]>([]);
+  const [docs24h, setDocs24h] = useState<number>(0);
+  const [sortField, setSortField] = useState<SortField>('records');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   const fetchMetrics = useCallback(async (skipCache = false) => {
     try {
@@ -83,12 +93,17 @@ export function DatabaseMetricsPanel() {
       sessionStorage.setItem(cacheKey, JSON.stringify(metricsData));
       sessionStorage.setItem(cacheTimeKey, now.toString());
 
-      const { data: teamsData } = await supabase
-        .from('teams')
-        .select('id, name');
+      const [teamStatsResult, docs24hResult] = await Promise.all([
+        supabase.rpc('get_admin_team_document_stats'),
+        supabase.rpc('get_documents_synced_last_24h')
+      ]);
 
-      if (teamsData) {
-        setTeams(teamsData);
+      if (teamStatsResult.data) {
+        setTeamStats(teamStatsResult.data);
+      }
+
+      if (docs24hResult.data !== null) {
+        setDocs24h(docs24hResult.data);
       }
 
     } catch (err) {
@@ -155,7 +170,7 @@ export function DatabaseMetricsPanel() {
     if (warnings.length === 0) {
       warnings.push({
         level: 'info',
-        message: 'Database health is optimal'
+        message: 'AI Data Sync is optimal'
       });
     }
 
@@ -163,33 +178,72 @@ export function DatabaseMetricsPanel() {
   };
 
   const getTeamStats = (): TeamStorageStats[] => {
-    if (!metrics) return [];
+    if (!metrics || teamStats.length === 0) return [];
 
-    return Object.entries(metrics.rows_per_team)
-      .map(([teamId, count]) => {
-        const team = teams.find(t => t.id === teamId);
-        const percentage = ((count / metrics.total_rows) * 100).toFixed(1);
+    const totalRecords = teamStats.reduce((sum, stat) => sum + stat.chunk_count, 0);
 
-        return {
-          teamId,
-          teamName: team?.name || 'Unknown Team',
-          count,
-          percentage
-        };
-      })
-      .sort((a, b) => b.count - a.count);
+    const stats = teamStats.map((stat) => {
+      const percentage = totalRecords > 0
+        ? ((stat.chunk_count / totalRecords) * 100).toFixed(1)
+        : '0.0';
+
+      return {
+        teamId: stat.team_id,
+        teamName: stat.team_name || 'Unknown Team',
+        docCount: stat.doc_count,
+        recordCount: stat.chunk_count,
+        percentage
+      };
+    });
+
+    return stats.sort((a, b) => {
+      const aVal = sortField === 'documents' ? a.docCount : a.recordCount;
+      const bVal = sortField === 'documents' ? b.docCount : b.recordCount;
+      return sortDirection === 'desc' ? bVal - aVal : aVal - bVal;
+    });
+  };
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  const formatSizeToGB = (sizeStr: string): string => {
+    const match = sizeStr.match(/(\d+(?:\.\d+)?)\s*(MB|GB|KB|bytes)/i);
+    if (!match) return sizeStr;
+
+    const value = parseFloat(match[1]);
+    const unit = match[2].toUpperCase();
+
+    let gbValue: number;
+    if (unit === 'GB') {
+      gbValue = value;
+    } else if (unit === 'MB') {
+      gbValue = value / 1024;
+    } else if (unit === 'KB') {
+      gbValue = value / (1024 * 1024);
+    } else {
+      gbValue = value / (1024 * 1024 * 1024);
+    }
+
+    return `${gbValue.toFixed(1)} GB`;
   };
 
   const exportToCSV = () => {
     if (!metrics) return;
 
-    const teamStats = getTeamStats();
+    const stats = getTeamStats();
     const rows = [
-      ['Team Name', 'Team ID', 'Document Chunks', 'Percentage of Total'],
-      ...teamStats.map(stat => [
+      ['Team Name', 'Team ID', 'Documents', 'Records', 'Percentage of Total'],
+      ...stats.map(stat => [
         stat.teamName,
         stat.teamId,
-        stat.count.toString(),
+        stat.docCount.toString(),
+        stat.recordCount.toString(),
         `${stat.percentage}%`
       ])
     ];
@@ -235,14 +289,14 @@ export function DatabaseMetricsPanel() {
 
   const health = calculateHealth();
   const warnings = getWarnings();
-  const teamStats = getTeamStats();
+  const sortedTeamStats = getTeamStats();
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-white flex items-center gap-2 mb-1">
-            <Database className="w-6 h-6 text-purple-400" />
+            <Database className="w-6 h-6 text-blue-400" />
             Database Metrics
           </h2>
           {lastUpdated && (
@@ -257,14 +311,14 @@ export function DatabaseMetricsPanel() {
               type="checkbox"
               checked={autoRefresh}
               onChange={(e) => setAutoRefresh(e.target.checked)}
-              className="rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500"
+              className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
             />
             Auto-refresh (5m)
           </label>
           <button
             onClick={handleRefresh}
             disabled={loading}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -272,7 +326,7 @@ export function DatabaseMetricsPanel() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-gray-700/50 rounded-lg p-5 border border-gray-600">
           <div className="flex items-center justify-between mb-2">
             <HardDrive className="w-5 h-5 text-blue-400" />
@@ -295,22 +349,32 @@ export function DatabaseMetricsPanel() {
 
         <div className="bg-gray-700/50 rounded-lg p-5 border border-gray-600">
           <div className="flex items-center justify-between mb-2">
-            <Database className="w-5 h-5 text-purple-400" />
+            <Database className="w-5 h-5 text-cyan-400" />
           </div>
           <div className="text-3xl font-bold text-white mb-1">
-            {metrics.total_size}
+            {formatSizeToGB(metrics.total_size)}
           </div>
           <div className="text-sm text-gray-400">Database Size</div>
         </div>
 
         <div className="bg-gray-700/50 rounded-lg p-5 border border-gray-600">
           <div className="flex items-center justify-between mb-2">
-            <TrendingUp className="w-5 h-5 text-cyan-400" />
+            <TrendingUp className="w-5 h-5 text-orange-400" />
           </div>
           <div className="text-3xl font-bold text-white mb-1">
-            {metrics.index_size}
+            {formatSizeToGB(metrics.index_size)}
           </div>
           <div className="text-sm text-gray-400">Index Size</div>
+        </div>
+
+        <div className="bg-gray-700/50 rounded-lg p-5 border border-gray-600">
+          <div className="flex items-center justify-between mb-2">
+            <Clock className="w-5 h-5 text-yellow-400" />
+          </div>
+          <div className="text-3xl font-bold text-white mb-1">
+            {docs24h.toLocaleString()}
+          </div>
+          <div className="text-sm text-gray-400">Last 24 Hours</div>
         </div>
       </div>
 
@@ -374,12 +438,12 @@ export function DatabaseMetricsPanel() {
       <div className="bg-gray-700/50 rounded-lg p-5 border border-gray-600">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-            <HardDrive className="w-5 h-5 text-purple-400" />
-            Storage by Team ({teamStats.length})
+            <HardDrive className="w-5 h-5 text-blue-400" />
+            Storage by Team ({sortedTeamStats.length})
           </h3>
           <button
             onClick={exportToCSV}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm"
           >
             <Download className="w-4 h-4" />
             Export CSV
@@ -391,17 +455,37 @@ export function DatabaseMetricsPanel() {
             <thead>
               <tr className="border-b border-gray-600">
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Team Name</th>
-                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">Chunks</th>
+                <th
+                  className="text-right py-3 px-4 text-sm font-semibold text-gray-400 cursor-pointer hover:text-white transition-colors"
+                  onClick={() => toggleSort('documents')}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    Documents
+                    <ArrowUpDown className={`w-3.5 h-3.5 ${sortField === 'documents' ? 'text-blue-400' : 'text-gray-500'}`} />
+                  </div>
+                </th>
+                <th
+                  className="text-right py-3 px-4 text-sm font-semibold text-gray-400 cursor-pointer hover:text-white transition-colors"
+                  onClick={() => toggleSort('records')}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    Records
+                    <ArrowUpDown className={`w-3.5 h-3.5 ${sortField === 'records' ? 'text-blue-400' : 'text-gray-500'}`} />
+                  </div>
+                </th>
                 <th className="text-right py-3 px-4 text-sm font-semibold text-gray-400">% of Total</th>
                 <th className="text-left py-3 px-4 text-sm font-semibold text-gray-400">Distribution</th>
               </tr>
             </thead>
             <tbody>
-              {teamStats.map((stat) => (
+              {sortedTeamStats.map((stat) => (
                 <tr key={stat.teamId} className="border-b border-gray-700/50 hover:bg-gray-600/30">
                   <td className="py-3 px-4 text-sm text-white">{stat.teamName}</td>
                   <td className="py-3 px-4 text-sm text-white text-right font-mono">
-                    {stat.count.toLocaleString()}
+                    {stat.docCount.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-white text-right font-mono">
+                    {stat.recordCount.toLocaleString()}
                   </td>
                   <td className="py-3 px-4 text-sm text-gray-300 text-right font-mono">
                     {stat.percentage}%
@@ -409,7 +493,7 @@ export function DatabaseMetricsPanel() {
                   <td className="py-3 px-4">
                     <div className="w-full bg-gray-600 rounded-full h-2 overflow-hidden">
                       <div
-                        className="h-full bg-purple-500 transition-all duration-500"
+                        className="h-full bg-blue-500 transition-all duration-500"
                         style={{ width: `${stat.percentage}%` }}
                       />
                     </div>
