@@ -1,5 +1,5 @@
-const CACHE_NAME = 'astra-intelligence-v5';
-const RUNTIME_CACHE = 'astra-runtime-v5';
+const CACHE_NAME = 'astra-intelligence-v6';
+const RUNTIME_CACHE = 'astra-runtime-v6';
 
 const urlsToCache = [
   '/',
@@ -20,8 +20,7 @@ self.addEventListener('install', (event) => {
         return cache.addAll(urlsToCache);
       })
       .then(() => {
-        console.log('[Service Worker] Skip waiting');
-        return self.skipWaiting();
+        console.log('[Service Worker] Installed, waiting for activation request');
       })
   );
 });

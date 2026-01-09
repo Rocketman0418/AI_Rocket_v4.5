@@ -26,29 +26,23 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 console.log('[PWA] New service worker installed, update available');
-                window.dispatchEvent(new CustomEvent('sw-update-available'));
+                window.dispatchEvent(new CustomEvent('sw-update-available', { detail: { registration } }));
               }
             });
           }
         });
 
-        // Check for updates every 30 seconds
+        // Check for updates every 10 minutes (not aggressively)
         setInterval(() => {
           console.log('[PWA] Checking for service worker updates...');
           registration.update();
-        }, 30000);
+        }, 10 * 60 * 1000);
       })
       .catch((error) => {
         console.warn('[PWA] Service Worker registration failed:', error);
       });
 
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!refreshing) {
-        refreshing = true;
-        console.log('[PWA] Controller changed, reloading...');
-        window.location.reload();
-      }
-    });
+    // Only reload when user explicitly triggers an update (via VersionChecker button)
+    // No automatic reload on controllerchange to avoid interrupting active sessions
   });
 }

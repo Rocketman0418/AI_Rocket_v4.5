@@ -17,6 +17,8 @@ export interface FinancialAccessWarning {
 }
 
 const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
+const WEBHOOK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const PROGRESS_MESSAGE_DELAY_MS = 2 * 60 * 1000; // 2 minutes
 
 export const useChat = () => {
   const { logChatMessage, currentMessages, currentConversationId, loading: chatsLoading, loadConversation, startNewConversation: chatsStartNewConversation, updateVisualizationStatus, conversations, hasInitialized, getVisualizationState, updateVisualizationState, updateVisualizationData } = useChats();
@@ -43,6 +45,7 @@ export const useChat = () => {
   });
   const [userFinancialAccess, setUserFinancialAccess] = useState<boolean>(true);
   const [financialAccessLoading, setFinancialAccessLoading] = useState<boolean>(true);
+  const [progressMessageId, setProgressMessageId] = useState<string | null>(null);
 
   // Fetch user financial access status
   useEffect(() => {
@@ -128,19 +131,18 @@ export const useChat = () => {
 
   // Convert database messages to UI messages
   useEffect(() => {
-    console.log('useChat: currentMessages changed', { 
-      currentMessagesLength: currentMessages.length, 
-      currentConversationId, 
+    console.log('useChat: currentMessages changed', {
+      currentMessagesLength: currentMessages.length,
+      currentConversationId,
       chatsLoading,
       isLoading
     });
-    
+
     if (currentMessages.length > 0) {
       const uiMessages: Message[] = [];
-      
-      currentMessages.forEach((dbMessage, index) => {
+
+      currentMessages.forEach((dbMessage) => {
         if (dbMessage.isUser) {
-          // Add user message
           uiMessages.push({
             id: `${dbMessage.id}-user`,
             text: dbMessage.message,
@@ -151,7 +153,6 @@ export const useChat = () => {
             replyToId: dbMessage.message.startsWith('@reply ') ? dbMessage.message.split(' ')[1] : undefined
           });
         } else {
-          // Add Astra response
           uiMessages.push({
             id: `${dbMessage.id}-astra`,
             text: dbMessage.message,
@@ -164,7 +165,7 @@ export const useChat = () => {
             messageType: 'astra',
             metadata: dbMessage.metadata || {}
           });
-          
+
           console.log('🔍 useChat: Added Astra message with visualization data:', {
             chatId: dbMessage.id,
             hasVisualizationData: !!dbMessage.visualizationData,
@@ -172,7 +173,7 @@ export const useChat = () => {
           });
         }
       });
-      
+
       console.log('useChat: Setting messages from database', { uiMessagesLength: uiMessages.length });
       setMessages([
         {
@@ -184,9 +185,10 @@ export const useChat = () => {
         },
         ...uiMessages
       ]);
-    } else if (!currentConversationId || (currentMessages.length === 0 && !chatsLoading)) {
-      // Reset to welcome message for new conversations
-      console.log('useChat: Resetting to welcome message', {
+    } else if (!currentConversationId && !chatsLoading && !isLoading) {
+      // Only reset to welcome message when explicitly starting fresh
+      // (no conversation ID and nothing is loading)
+      console.log('useChat: Resetting to welcome message (new chat)', {
         hasConversationId: !!currentConversationId,
         currentMessagesLength: currentMessages.length,
         chatsLoading,
@@ -202,7 +204,9 @@ export const useChat = () => {
         }
       ]);
     }
-  }, [currentMessages, currentConversationId, chatsLoading]);
+    // Note: If currentMessages is empty but we have a conversationId or something is loading,
+    // we preserve existing UI messages to avoid flickering during load/refresh
+  }, [currentMessages, currentConversationId, chatsLoading, isLoading]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -339,7 +343,7 @@ export const useChat = () => {
 
     try {
       const requestStartTime = Date.now();
-      
+
       console.log('🌐 Sending request to webhook:', WEBHOOK_URL);
       console.log('📤 Request payload:', {
         chatInput: messageToSend,
@@ -354,24 +358,54 @@ export const useChat = () => {
         mode: 'private'
       });
 
-      const response = await fetch(WEBHOOK_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chatInput: messageToSend,
-          user_id: userId,
-          user_email: userEmail,
-          user_name: userName,
-          conversation_id: currentConversationId,
-          team_id: teamId,
-          team_name: teamName,
-          role: role,
-          view_financial: viewFinancial,
-          mode: 'private'
-        })
-      });
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => abortController.abort(), WEBHOOK_TIMEOUT_MS);
+
+      const progressMsgId = `${messageId}-progress`;
+      const progressTimeoutId = setTimeout(() => {
+        const progressMessage: Message = {
+          id: progressMsgId,
+          text: "Still working on it, giving maximum effort...",
+          isUser: false,
+          timestamp: new Date(),
+          messageType: 'system',
+          isProgressMessage: true
+        };
+        setMessages(prev => [...prev, progressMessage]);
+        setProgressMessageId(progressMsgId);
+      }, PROGRESS_MESSAGE_DELAY_MS);
+
+      let response: Response;
+      try {
+        response = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: abortController.signal,
+          body: JSON.stringify({
+            chatInput: messageToSend,
+            user_id: userId,
+            user_email: userEmail,
+            user_name: userName,
+            conversation_id: currentConversationId,
+            team_id: teamId,
+            team_name: teamName,
+            role: role,
+            view_financial: viewFinancial,
+            mode: 'private'
+          })
+        });
+      } finally {
+        clearTimeout(timeoutId);
+        clearTimeout(progressTimeoutId);
+        if (progressMessageId) {
+          setMessages(prev => prev.filter(m => m.id !== progressMessageId));
+          setProgressMessageId(null);
+        }
+        setMessages(prev => prev.filter(m => m.id !== progressMsgId));
+      }
+
       const requestEndTime = Date.now();
       const responseTimeMs = requestEndTime - requestStartTime;
 
@@ -514,13 +548,8 @@ export const useChat = () => {
             success: true,
             mode: 'chat'
           });
-        }
 
-        // Refresh messages to ensure UI is updated with database changes
-        await refreshMessages();
-
-        // Update the message in state with the database chatId
-        if (chatId) {
+          // Update the message in state with the database chatId
           setMessages(prev => prev.map(msg =>
             msg.id === astraMessage.id
               ? { ...msg, chatId: chatId }
@@ -528,6 +557,8 @@ export const useChat = () => {
           ));
           console.log('✅ Updated Astra message with chatId:', chatId);
         }
+        // Note: No need to refreshMessages() here - message is already in UI
+        // and the realtime subscription will handle any database updates
       } catch (error) {
         console.error('Failed to log chat message:', error);
         // Don't block the UI if logging fails
@@ -547,7 +578,9 @@ export const useChat = () => {
       let errorMessage = "⚠️ I'm having trouble connecting right now.\n\n**What you can try:**\n• Wait a moment and try again\n• Check your internet connection\n• Refresh the page\n\nIf this issue continues, please use the Help menu to contact support.";
 
       if (error instanceof Error) {
-        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        if (error.name === 'AbortError') {
+          errorMessage = "⚠️ The request timed out after 5 minutes.\n\n**What you can try:**\n• Your question may require a very complex analysis\n• Try breaking it into smaller, more focused questions\n• The response may still be processing - check back in a moment\n\nIf you need help, please contact support through the Help menu.";
+        } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
           errorMessage = "⚠️ Network connection error.\n\n**What you can try:**\n• Check your internet connection\n• Try again in a moment\n• Refresh the page\n\nIf you're still having issues, please contact support through the Help menu.";
         } else if (error.message.includes('Webhook request failed')) {
           errorMessage = `⚠️ Server error occurred.\n\n**What you can try:**\n• Wait a moment and try again\n• Rephrase your question\n• Try a simpler query\n\nIf this persists, please contact support through the Help menu.`;

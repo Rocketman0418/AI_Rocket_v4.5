@@ -273,15 +273,20 @@ export const useChats = () => {
       return;
     }
 
-    // Don't reload if it's already the current conversation
-    if (conversationId === currentConversationId && currentMessages.length > 0) {
+    const isCurrentConversation = conversationId === currentConversationId;
+
+    // Don't reload if it's already the current conversation with messages
+    if (isCurrentConversation && currentMessages.length > 0) {
       return;
     }
     try {
       setLoading(true);
 
-      // Clear current messages first to show loading state
-      setCurrentMessages([]);
+      // Only clear messages if switching to a different conversation
+      // This prevents the UI from flashing empty when refreshing current conversation
+      if (!isCurrentConversation) {
+        setCurrentMessages([]);
+      }
       setCurrentConversationId(conversationId);
       
       const { data, error } = await supabase

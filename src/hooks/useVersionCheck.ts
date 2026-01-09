@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 declare const __APP_VERSION__: string;
 
 const CURRENT_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0';
-const VERSION_CHECK_INTERVAL = 2 * 60 * 1000;
+const VERSION_CHECK_INTERVAL = 10 * 60 * 1000;
 
 interface VersionState {
   currentVersion: string;
@@ -62,15 +62,15 @@ const checkVersion = async (): Promise<boolean> => {
   return false;
 };
 
+let pendingRegistration: ServiceWorkerRegistration | null = null;
+
 const performUpdate = async (): Promise<void> => {
   updateState({ isRefreshing: true });
 
   try {
-    if ('serviceWorker' in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      for (const registration of registrations) {
-        await registration.unregister();
-      }
+    if ('serviceWorker' in navigator && pendingRegistration?.waiting) {
+      pendingRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     if ('caches' in window) {
@@ -103,7 +103,11 @@ const initialize = () => {
     }
   };
 
-  const handleSWUpdate = () => {
+  const handleSWUpdate = (event: Event) => {
+    const customEvent = event as CustomEvent<{ registration?: ServiceWorkerRegistration }>;
+    if (customEvent.detail?.registration) {
+      pendingRegistration = customEvent.detail.registration;
+    }
     updateState({ newVersionAvailable: true });
   };
 

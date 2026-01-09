@@ -107,6 +107,11 @@ export const helpFAQ: FAQItem[] = [
   },
   {
     category: 'integrations',
+    question: 'How do I disconnect and reconnect Google Drive?',
+    answer: 'To disconnect and reconnect Google Drive: 1) Go to Settings (click your profile picture, then Settings), 2) Scroll down to the "Google Drive Sync" section, 3) Click the red "Disconnect" button next to your connected account, 4) Confirm the disconnection, 5) Click "Connect Google Drive" to start fresh. When reconnecting, select "See all your Google Drive files" for full folder access. Your existing synced data will remain available during this process.'
+  },
+  {
+    category: 'integrations',
     question: 'Why can\'t I connect additional folders?',
     answer: 'If you\'re unable to connect additional folders, you may need to reconnect your Google Drive with expanded permissions. When you first connected, you only granted access to specific folders. To add more folders: 1) Click "Disconnect Google Drive" at the bottom of the folder management screen, 2) Sign out of your Google account in your browser, 3) Reconnect Google Drive and select "See all your Google Drive files" when prompted, 4) Choose your new folders. This gives Astra permission to access additional folders beyond the original selection.'
   },

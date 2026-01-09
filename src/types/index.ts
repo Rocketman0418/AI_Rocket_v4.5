@@ -10,31 +10,11 @@ export interface Message {
   hasStoredVisualization?: boolean;
   isCentered?: boolean;
   isFavorited?: boolean;
-export interface ReportMessage {
-  id: string;
-  chatId: string;
-  text: string;
-  timestamp: Date;
-  isUser: boolean;
-  reportMetadata?: {
-    reportId?: string;
-    title?: string;
-    report_title?: string;
-    report_schedule?: string;
-    report_frequency?: string;
-    is_manual_run?: boolean;
-    executed_at?: string;
-    visualization_generating?: boolean;
-    visualization_error?: string;
-  };
-  visualization_data?: string;
-  visualization?: boolean;
-}
-
   messageType?: 'user' | 'astra' | 'system';
   isReply?: boolean;
   replyToId?: string;
   metadata?: any;
+  isProgressMessage?: boolean;
 }
 
 export interface VisualizationState {
