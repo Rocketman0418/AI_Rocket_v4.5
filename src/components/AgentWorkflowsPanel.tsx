@@ -54,7 +54,11 @@ interface MetricsData {
   syncedAt: string | null;
 }
 
-export function AgentWorkflowsPanel() {
+interface AgentWorkflowsPanelProps {
+  onMetricsLoad?: (totalExecutions: number) => void;
+}
+
+export function AgentWorkflowsPanel({ onMetricsLoad }: AgentWorkflowsPanelProps) {
   const [metrics, setMetrics] = useState<MetricsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +114,9 @@ export function AgentWorkflowsPanel() {
       }
       setMetrics(data);
       setLastUpdated(new Date());
+      if (onMetricsLoad && data.summary?.totalExecutions) {
+        onMetricsLoad(data.summary.totalExecutions);
+      }
     } catch (err) {
       console.error('Error fetching agent workflow metrics:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch metrics');

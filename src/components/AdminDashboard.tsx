@@ -2700,7 +2700,7 @@ Sign up here: https://airocket.app`;
             )}
 
             {detailView === 'agent_workflows' && (
-              <AgentWorkflowsPanel />
+              <AgentWorkflowsPanel onMetricsLoad={setWorkflowExecutionCount} />
             )}
           </div>
         </div>
