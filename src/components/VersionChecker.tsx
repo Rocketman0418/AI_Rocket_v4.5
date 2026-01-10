@@ -1,11 +1,12 @@
-import React from 'react';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertCircle, RefreshCw, X } from 'lucide-react';
 import { useVersionCheck } from '../hooks/useVersionCheck';
 
 export const VersionChecker: React.FC = () => {
   const { newVersionAvailable, isRefreshing, refresh } = useVersionCheck();
+  const [isDismissed, setIsDismissed] = useState(false);
 
-  if (!newVersionAvailable) {
+  if (!newVersionAvailable || isDismissed) {
     return null;
   }
 
@@ -24,6 +25,13 @@ export const VersionChecker: React.FC = () => {
         >
           <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           {isRefreshing ? 'Updating...' : 'Update Now'}
+        </button>
+        <button
+          onClick={() => setIsDismissed(true)}
+          className="p-1 hover:bg-white/20 rounded-full transition-colors"
+          title="Dismiss"
+        >
+          <X className="w-5 h-5" />
         </button>
       </div>
     </div>
