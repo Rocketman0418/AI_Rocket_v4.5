@@ -333,8 +333,8 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
     <div className="flex flex-col h-full bg-slate-900" data-tour="mission-control-page">
       <div className="flex-1 overflow-y-auto">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col lg:grid lg:grid-cols-12 gap-6">
-            <div className="order-1 lg:col-span-8 lg:row-start-1">
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="flex-1 lg:max-w-[66.666%] space-y-6">
               <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-5">
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-3">
@@ -437,9 +437,7 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
                   })}
                 </div>
               </div>
-            </div>
 
-            <div className="order-3 lg:order-none lg:col-span-8 lg:row-start-2">
               <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-5" data-tour="launch-points">
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-3">
@@ -506,7 +504,7 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
               </div>
             </div>
 
-            <div className="order-2 lg:order-none lg:col-span-4 lg:row-start-1 lg:row-span-2 space-y-6">
+            <div className="lg:w-[33.333%] space-y-6">
               <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-5" data-tour="data-sync">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
