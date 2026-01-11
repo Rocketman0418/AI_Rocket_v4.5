@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   HardDrive, Activity, AlertTriangle, RefreshCw, Download,
   CheckCircle, AlertCircle, Database, Calendar, TrendingUp,
-  ArrowUpDown, Clock
+  ArrowUpDown, Clock, Gauge, Zap, Layers, Info
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
@@ -38,6 +38,28 @@ interface HealthWarning {
   message: string;
 }
 
+interface PerformanceMetrics {
+  total_rows: number;
+  total_size_mb: number;
+  index_size_mb: number;
+  table_size_mb: number;
+  avg_row_size_bytes: number;
+  index_hit_rate: number;
+  seq_scan_count: number;
+  idx_scan_count: number;
+  seq_scan_ratio: number;
+  dead_tuple_count: number;
+  dead_tuple_ratio: number;
+  last_vacuum: string | null;
+  last_analyze: string | null;
+  largest_team_id: string;
+  largest_team_rows: number;
+  largest_team_percentage: number;
+  team_count: number;
+  partitioning_recommended: boolean;
+  partitioning_reason: string;
+}
+
 type SortField = 'documents' | 'records';
 type SortDirection = 'asc' | 'desc';
 
@@ -51,6 +73,8 @@ export function DatabaseMetricsPanel() {
   const [docs24h, setDocs24h] = useState<number>(0);
   const [sortField, setSortField] = useState<SortField>('records');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
+  const [showPerformanceDetails, setShowPerformanceDetails] = useState(false);
 
   const fetchMetrics = useCallback(async (skipCache = false) => {
     try {
@@ -93,9 +117,10 @@ export function DatabaseMetricsPanel() {
       sessionStorage.setItem(cacheKey, JSON.stringify(metricsData));
       sessionStorage.setItem(cacheTimeKey, now.toString());
 
-      const [teamStatsResult, docs24hResult] = await Promise.all([
+      const [teamStatsResult, docs24hResult, perfMetricsResult] = await Promise.all([
         supabase.rpc('get_admin_team_document_stats'),
-        supabase.rpc('get_documents_synced_last_24h')
+        supabase.rpc('get_documents_synced_last_24h'),
+        supabase.rpc('get_document_chunks_performance_metrics')
       ]);
 
       if (teamStatsResult.data) {
@@ -104,6 +129,10 @@ export function DatabaseMetricsPanel() {
 
       if (docs24hResult.data !== null) {
         setDocs24h(docs24hResult.data);
+      }
+
+      if (perfMetricsResult.data && perfMetricsResult.data.length > 0) {
+        setPerformanceMetrics(perfMetricsResult.data[0]);
       }
 
     } catch (err) {
@@ -148,22 +177,22 @@ export function DatabaseMetricsPanel() {
     const warnings: HealthWarning[] = [];
     const sizeMB = parseInt(metrics.total_size);
 
-    if (metrics.total_rows > 500000) {
+    if (metrics.total_rows > 2000000) {
       warnings.push({
         level: 'critical',
         message: `Database size critical: ${metrics.total_rows.toLocaleString()} rows requires immediate attention`
       });
-    } else if (metrics.total_rows > 100000) {
+    } else if (metrics.total_rows > 1000000) {
       warnings.push({
         level: 'warning',
-        message: `Approaching 100K document limit: ${metrics.total_rows.toLocaleString()} rows`
+        message: `Approaching 1M record limit: ${metrics.total_rows.toLocaleString()} rows`
       });
     }
 
-    if (sizeMB > 2000) {
+    if (sizeMB > 8000) {
       warnings.push({
         level: 'warning',
-        message: `Storage exceeding 2GB: ${metrics.total_size}`
+        message: `Storage exceeding 8GB: ${metrics.total_size}`
       });
     }
 
@@ -231,6 +260,17 @@ export function DatabaseMetricsPanel() {
     }
 
     return `${gbValue.toFixed(1)} GB`;
+  };
+
+  const getPerformanceColor = (value: number, thresholds: { good: number; warning: number }, inverse = false) => {
+    if (inverse) {
+      if (value <= thresholds.good) return 'text-green-400';
+      if (value <= thresholds.warning) return 'text-yellow-400';
+      return 'text-red-400';
+    }
+    if (value >= thresholds.good) return 'text-green-400';
+    if (value >= thresholds.warning) return 'text-yellow-400';
+    return 'text-red-400';
   };
 
   const exportToCSV = () => {
@@ -526,6 +566,181 @@ export function DatabaseMetricsPanel() {
           </div>
         </div>
       </div>
+
+      {performanceMetrics && (
+        <div className="bg-gray-700/50 rounded-lg p-5 border border-gray-600">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Gauge className="w-5 h-5 text-orange-400" />
+              Performance Monitoring
+            </h3>
+            <button
+              onClick={() => setShowPerformanceDetails(!showPerformanceDetails)}
+              className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              {showPerformanceDetails ? 'Hide Details' : 'Show Details'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+            <div className="bg-gray-800/50 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Zap className="w-4 h-4 text-yellow-400" />
+                <span className="text-xs text-gray-400">Index Hit Rate</span>
+              </div>
+              <div className={`text-2xl font-bold ${getPerformanceColor(performanceMetrics.index_hit_rate, { good: 99, warning: 95 })}`}>
+                {performanceMetrics.index_hit_rate}%
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Target: 99%+</div>
+            </div>
+
+            <div className="bg-gray-800/50 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Activity className="w-4 h-4 text-blue-400" />
+                <span className="text-xs text-gray-400">Seq Scan Ratio</span>
+              </div>
+              <div className={`text-2xl font-bold ${getPerformanceColor(performanceMetrics.seq_scan_ratio, { good: 5, warning: 15 }, true)}`}>
+                {performanceMetrics.seq_scan_ratio}%
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Target: &lt;5%</div>
+            </div>
+
+            <div className="bg-gray-800/50 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Database className="w-4 h-4 text-cyan-400" />
+                <span className="text-xs text-gray-400">Dead Tuples</span>
+              </div>
+              <div className={`text-2xl font-bold ${getPerformanceColor(performanceMetrics.dead_tuple_ratio, { good: 5, warning: 10 }, true)}`}>
+                {performanceMetrics.dead_tuple_ratio}%
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Target: &lt;5%</div>
+            </div>
+
+            <div className="bg-gray-800/50 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Layers className="w-4 h-4 text-green-400" />
+                <span className="text-xs text-gray-400">Teams</span>
+              </div>
+              <div className="text-2xl font-bold text-white">
+                {performanceMetrics.team_count}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Active teams</div>
+            </div>
+          </div>
+
+          {showPerformanceDetails && (
+            <div className="space-y-4 border-t border-gray-600 pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-300 mb-3">Scan Statistics</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Index Scans:</span>
+                      <span className="text-white font-mono">{performanceMetrics.idx_scan_count.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Sequential Scans:</span>
+                      <span className="text-white font-mono">{performanceMetrics.seq_scan_count.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Avg Row Size:</span>
+                      <span className="text-white font-mono">{Math.round(performanceMetrics.avg_row_size_bytes).toLocaleString()} bytes</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-300 mb-3">Maintenance</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Last Vacuum:</span>
+                      <span className="text-white font-mono">
+                        {performanceMetrics.last_vacuum
+                          ? format(new Date(performanceMetrics.last_vacuum), 'MMM dd, HH:mm')
+                          : 'Never'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Last Analyze:</span>
+                      <span className="text-white font-mono">
+                        {performanceMetrics.last_analyze
+                          ? format(new Date(performanceMetrics.last_analyze), 'MMM dd, HH:mm')
+                          : 'Never'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Dead Tuples:</span>
+                      <span className="text-white font-mono">{performanceMetrics.dead_tuple_count.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-semibold text-gray-300 mb-3">Largest Team</h4>
+                <div className="bg-gray-800/50 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-400">
+                      {teamStats.find(t => t.team_id === performanceMetrics.largest_team_id)?.team_name || 'Unknown'}
+                    </span>
+                    <span className="text-sm text-white font-mono">
+                      {performanceMetrics.largest_team_rows.toLocaleString()} rows ({performanceMetrics.largest_team_percentage}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-600 rounded-full h-2 overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-500 ${
+                        performanceMetrics.largest_team_percentage > 70 ? 'bg-yellow-500' : 'bg-blue-500'
+                      }`}
+                      style={{ width: `${performanceMetrics.largest_team_percentage}%` }}
+                    />
+                  </div>
+                  {performanceMetrics.largest_team_percentage > 70 && (
+                    <p className="text-xs text-yellow-400 mt-2">
+                      Single team dominance ({performanceMetrics.largest_team_percentage}%) may benefit from partitioning
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className={`mt-4 rounded-lg p-4 border ${
+            performanceMetrics.partitioning_recommended
+              ? 'bg-yellow-900/20 border-yellow-500'
+              : 'bg-green-900/20 border-green-500'
+          }`}>
+            <div className="flex items-start gap-3">
+              {performanceMetrics.partitioning_recommended ? (
+                <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+              ) : (
+                <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+              )}
+              <div>
+                <h4 className={`text-sm font-semibold mb-1 ${
+                  performanceMetrics.partitioning_recommended ? 'text-yellow-200' : 'text-green-200'
+                }`}>
+                  Partitioning {performanceMetrics.partitioning_recommended ? 'Recommended' : 'Not Required'}
+                </h4>
+                <p className={`text-sm ${
+                  performanceMetrics.partitioning_recommended ? 'text-yellow-300/80' : 'text-green-300/80'
+                }`}>
+                  {performanceMetrics.partitioning_reason}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 p-3 bg-gray-800/30 rounded-lg border border-gray-700">
+            <div className="flex items-start gap-2">
+              <Info className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+              <div className="text-xs text-gray-400">
+                <span className="font-semibold">Partitioning triggers:</span> Row count &gt;500K, single team &gt;70%, seq scan ratio &gt;20%, index hit rate &lt;95%, or table size &gt;5GB
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
