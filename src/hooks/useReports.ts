@@ -1,8 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { ReportMessage } from '../types';
 import { useMetricsTracking } from './useMetricsTracking';
+
+const REPORT_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes for report generation
 
 export interface ReportTemplate {
   id: string;
@@ -563,8 +565,17 @@ export const useReports = () => {
         viewFinancial
       });
 
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.log('⚠️ Report generation timeout - aborting request');
+        abortController.abort();
+      }, REPORT_TIMEOUT_MS);
+
       const requestStartTime = Date.now();
-      const response = await fetch(webhookUrl, {
+      let response: Response;
+      try {
+        response = await fetch(webhookUrl, {
+          signal: abortController.signal,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -589,7 +600,10 @@ export const useReports = () => {
             executed_at: new Date().toISOString()
           }
         })
-      });
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       const requestEndTime = Date.now();
       const responseTimeMs = requestEndTime - requestStartTime;
@@ -709,8 +723,12 @@ export const useReports = () => {
       
     } catch (err) {
       console.error('Error running report:', err);
-      setError(`Failed to run report: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      throw err; // Re-throw so the modal can handle it
+      let errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      if (err instanceof Error && err.name === 'AbortError') {
+        errorMsg = 'Report generation timed out after 10 minutes. The report may still be processing - please check back shortly.';
+      }
+      setError(`Failed to run report: ${errorMsg}`);
+      throw err;
     } finally {
       setRunningReports(prev => {
         const newSet = new Set(prev);

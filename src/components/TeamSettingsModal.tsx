@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Loader2, Sparkles, FastForward } from 'lucide-react';
+import { X, Save, Loader2, Sparkles, FastForward, Calendar, Newspaper, Shield } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { TeamSettings, MeetingType, NewsPreferences } from '../types';
+import { MeetingType, NewsPreferences } from '../types';
 import { MeetingTypesSection } from './MeetingTypesSection';
 import { NewsPreferencesSection } from './NewsPreferencesSection';
+import { CategoryAccessManager } from './CategoryAccessManager';
+
+type SettingsTab = 'meetings' | 'news' | 'access';
 
 interface TeamSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   teamId: string;
   isOnboarding?: boolean;
+  initialTab?: SettingsTab;
 }
 
 const DEFAULT_MEETING_TYPES: MeetingType[] = [
@@ -51,12 +55,20 @@ const DEFAULT_NEWS_PREFERENCES: NewsPreferences = {
   max_results: 10,
 };
 
+const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
+  { id: 'meetings', label: 'Meeting Types', icon: <Calendar className="w-4 h-4" /> },
+  { id: 'news', label: 'News & Industry', icon: <Newspaper className="w-4 h-4" /> },
+  { id: 'access', label: 'Category Access', icon: <Shield className="w-4 h-4" /> },
+];
+
 export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
   isOpen,
   onClose,
   teamId,
   isOnboarding = false,
+  initialTab = 'meetings',
 }) => {
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,8 +83,9 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
   useEffect(() => {
     if (isOpen && teamId) {
       loadTeamSettings();
+      setActiveTab(initialTab);
     }
-  }, [isOpen, teamId]);
+  }, [isOpen, teamId, initialTab]);
 
   const loadTeamSettings = async () => {
     setIsLoading(true);
@@ -214,6 +227,9 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
 
   if (!isOpen) return null;
 
+  const showTabs = !isOnboarding;
+  const availableTabs = isOnboarding ? TABS.filter(t => t.id !== 'access') : TABS;
+
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
       <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl shadow-2xl border border-gray-700 w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
@@ -247,15 +263,15 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
               </p>
               <ul className="mt-3 space-y-2 text-sm text-gray-400">
                 <li className="flex items-start gap-2">
-                  <span className="text-blue-400 mt-0.5">•</span>
+                  <span className="text-blue-400 mt-0.5">-</span>
                   <span>Automatically categorize and summarize your meetings</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-blue-400 mt-0.5">•</span>
+                  <span className="text-blue-400 mt-0.5">-</span>
                   <span>Monitor industry news and trends relevant to your business</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-blue-400 mt-0.5">•</span>
+                  <span className="text-blue-400 mt-0.5">-</span>
                   <span>Provide better context-aware responses to your questions</span>
                 </li>
               </ul>
@@ -271,40 +287,79 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
             </button>
           </div>
         ) : (
-          <div className="flex justify-between items-center p-4 sm:p-6 border-b border-gray-700">
-            <div>
-              <h2 className="text-2xl font-bold text-white">Team Settings</h2>
-              <p className="text-sm text-gray-400 mt-1">
-                Manage your team preferences
-              </p>
+          <div className="border-b border-gray-700">
+            <div className="flex justify-between items-center p-4 sm:p-6">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Team Settings</h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  Manage your team preferences
+                </p>
+              </div>
+              <button
+                onClick={handleClose}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
-            <button
-              onClick={handleClose}
-              className="text-gray-400 hover:text-white transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
+
+            {showTabs && (
+              <div className="px-4 sm:px-6 flex gap-1 overflow-x-auto">
+                {availableTabs.map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`
+                      flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-t-lg transition-all whitespace-nowrap
+                      ${activeTab === tab.id
+                        ? 'bg-gray-800 text-white border-t border-l border-r border-gray-600'
+                        : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                      }
+                    `}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-gray-800/30">
+        <div className="flex-1 overflow-y-auto p-6 bg-gray-800/30">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
             </div>
           ) : (
             <>
-              <MeetingTypesSection
-                meetingTypes={meetingTypes}
-                onChange={handleMeetingTypesChange}
-              />
+              {(activeTab === 'meetings' || isOnboarding) && (
+                <MeetingTypesSection
+                  meetingTypes={meetingTypes}
+                  onChange={handleMeetingTypesChange}
+                />
+              )}
 
-              <div className="border-t border-gray-700 my-8"></div>
+              {activeTab === 'news' && !isOnboarding && (
+                <NewsPreferencesSection
+                  preferences={newsPreferences}
+                  onChange={handleNewsPreferencesChange}
+                />
+              )}
 
-              <NewsPreferencesSection
-                preferences={newsPreferences}
-                onChange={handleNewsPreferencesChange}
-              />
+              {activeTab === 'access' && !isOnboarding && (
+                <CategoryAccessManager teamId={teamId} />
+              )}
+
+              {isOnboarding && (
+                <>
+                  <div className="border-t border-gray-700 my-8"></div>
+                  <NewsPreferencesSection
+                    preferences={newsPreferences}
+                    onChange={handleNewsPreferencesChange}
+                  />
+                </>
+              )}
             </>
           )}
         </div>
@@ -333,23 +388,33 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
                 Use Defaults & Continue
               </button>
             )}
-            <button
-              onClick={handleSave}
-              disabled={isSaving || isLoading}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg transition-all disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium shadow-lg"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  {isOnboarding ? 'Save & Continue' : 'Save Settings'}
-                </>
-              )}
-            </button>
+            {activeTab !== 'access' && (
+              <button
+                onClick={handleSave}
+                disabled={isSaving || isLoading}
+                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium shadow-lg"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    {isOnboarding ? 'Save & Continue' : 'Save Settings'}
+                  </>
+                )}
+              </button>
+            )}
+            {activeTab === 'access' && (
+              <button
+                onClick={onClose}
+                className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium"
+              >
+                Done
+              </button>
+            )}
           </div>
 
           {isOnboarding && (

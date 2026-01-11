@@ -14,6 +14,7 @@ interface InviteRequest {
   role: string;
   testMode?: boolean;
   inviterEmail?: string;
+  categoryAccess?: string[];
 }
 
 const featureContent = [
@@ -97,7 +98,24 @@ Deno.serve(async (req: Request) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     const body: InviteRequest = await req.json();
-    const { email, inviteCode, teamName, role, testMode, inviterEmail: testInviterEmail } = body;
+    const { email, inviteCode, teamName, role, testMode, inviterEmail: testInviterEmail, categoryAccess } = body;
+
+    const CATEGORY_LABELS: Record<string, string> = {
+      meetings: 'Meetings',
+      strategy: 'Strategy',
+      financial: 'Financial',
+      operations: 'Operations',
+      marketing: 'Marketing',
+      sales: 'Sales',
+      customer: 'Customer',
+      product: 'Product',
+      people: 'People',
+      legal: 'Legal',
+      support: 'Support',
+      industry: 'Industry',
+      reference: 'Reference',
+      other: 'Other',
+    };
 
     let inviterEmailToUse: string;
 
@@ -540,6 +558,22 @@ Deno.serve(async (req: Request) => {
                     <strong>Your Role:</strong> You'll be joining as a <strong>${role}</strong> with access to team conversations, AI-powered insights, meeting transcripts, action items, strategy documents, and company goals.
                   </div>
                 </div>
+
+                ${categoryAccess && categoryAccess.length > 0 ? `
+                <div class="steps" style="margin-top: 24px;">
+                  <div class="steps-title">Your Data Access</div>
+                  <p style="color: #93c5fd; font-size: 14px; margin-bottom: 16px;">
+                    You'll have access to the following data categories:
+                  </p>
+                  <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    ${categoryAccess.map(cat => `
+                      <span style="background: #3b82f6; color: white; padding: 6px 14px; border-radius: 9999px; font-size: 13px; font-weight: 500; display: inline-block;">
+                        ${CATEGORY_LABELS[cat] || cat}
+                      </span>
+                    `).join('')}
+                  </div>
+                </div>
+                ` : ''}
 
                 <div class="invite-box">
                   <div class="invite-label">Your Invite Code</div>

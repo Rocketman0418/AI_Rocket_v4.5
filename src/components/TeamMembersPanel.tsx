@@ -1,7 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Shield, Edit2, Trash2, Save, X, UserPlus, Key, Info, Mail, Copy, Eye } from 'lucide-react';
+import { Users, Shield, Edit2, Trash2, Save, X, UserPlus, Key, Info, Mail, Copy, Eye, EyeOff, ChevronDown, ChevronRight, Loader2, Settings, Clock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { TeamSettingsModal } from './TeamSettingsModal';
+
+interface CategoryAccess {
+  category: string;
+  has_access: boolean;
+  document_count: number;
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  meetings: 'Meetings',
+  strategy: 'Strategy',
+  financial: 'Financial',
+  operations: 'Operations',
+  marketing: 'Marketing',
+  sales: 'Sales',
+  customer: 'Customer',
+  product: 'Product',
+  people: 'People',
+  legal: 'Legal',
+  support: 'Support',
+  industry: 'Industry',
+  reference: 'Reference',
+  other: 'Other',
+};
 
 interface TeamMember {
   id: string;
@@ -12,9 +36,20 @@ interface TeamMember {
   avatar_url: string | null;
 }
 
+interface PendingInvite {
+  id: string;
+  code: string;
+  invited_email: string;
+  assigned_role: 'admin' | 'member';
+  view_financial: boolean;
+  created_at: string;
+  category_access: Record<string, boolean> | null;
+}
+
 export const TeamMembersPanel: React.FC = () => {
   const { user } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editingMember, setEditingMember] = useState<string | null>(null);
@@ -37,6 +72,11 @@ export const TeamMembersPanel: React.FC = () => {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const [teamCategories, setTeamCategories] = useState<CategoryAccess[]>([]);
+  const [inviteCategoryAccess, setInviteCategoryAccess] = useState<Record<string, boolean>>({});
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [showCategorySettings, setShowCategorySettings] = useState(false);
+  const [showTeamSettings, setShowTeamSettings] = useState(false);
 
   const isAdmin = currentUserData?.role === 'admin';
   const teamId = currentUserData?.team_id;
@@ -67,8 +107,39 @@ export const TeamMembersPanel: React.FC = () => {
     if (teamId) {
       loadTeamMembers();
       loadTeamName();
+      loadTeamCategories();
+      loadPendingInvites();
     }
   }, [teamId]);
+
+  const loadTeamCategories = async () => {
+    if (!teamId) return;
+
+    setLoadingCategories(true);
+    try {
+      const { data, error } = await supabase.rpc('get_team_categories', { p_team_id: teamId });
+
+      if (error) throw error;
+
+      const categories = (data || []).map((c: { category: string; document_count: number }) => ({
+        category: c.category,
+        has_access: true,
+        document_count: c.document_count,
+      }));
+
+      setTeamCategories(categories);
+
+      const defaultAccess: Record<string, boolean> = {};
+      categories.forEach((c: CategoryAccess) => {
+        defaultAccess[c.category] = true;
+      });
+      setInviteCategoryAccess(defaultAccess);
+    } catch (err) {
+      console.error('Error loading team categories:', err);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
 
   const loadTeamName = async () => {
     if (!teamId) return;
@@ -130,6 +201,44 @@ export const TeamMembersPanel: React.FC = () => {
     }
   };
 
+  const loadPendingInvites = async () => {
+    if (!teamId) return;
+
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('invite_codes')
+        .select('id, code, invited_email, assigned_role, view_financial, created_at, category_access')
+        .eq('team_id', teamId)
+        .eq('is_active', true)
+        .eq('times_used', 0)
+        .order('created_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+
+      setPendingInvites(data || []);
+    } catch (err: any) {
+      console.error('Error loading pending invites:', err);
+    }
+  };
+
+  const cancelPendingInvite = async (inviteId: string) => {
+    if (!confirm('Are you sure you want to cancel this invite?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('invite_codes')
+        .update({ is_active: false })
+        .eq('id', inviteId);
+
+      if (error) throw error;
+
+      await loadPendingInvites();
+    } catch (err: any) {
+      console.error('Error canceling invite:', err);
+      setError('Failed to cancel invite');
+    }
+  };
+
   const startEditing = (member: TeamMember) => {
     setEditingMember(member.id);
     setEditRole(member.role);
@@ -147,8 +256,6 @@ export const TeamMembersPanel: React.FC = () => {
       setSaving(true);
       setError('');
 
-      // Update the public.users table
-      // The trigger will automatically sync to auth.users.raw_user_meta_data
       const { error: updateError } = await supabase
         .from('users')
         .update({
@@ -158,6 +265,15 @@ export const TeamMembersPanel: React.FC = () => {
         .eq('id', memberId);
 
       if (updateError) throw updateError;
+
+      if (teamId) {
+        await supabase.rpc('update_user_category_access', {
+          p_user_id: memberId,
+          p_category: 'financial',
+          p_has_access: editViewFinancial,
+          p_granted_by: user?.id,
+        });
+      }
 
       await loadTeamMembers();
       setEditingMember(null);
@@ -220,6 +336,8 @@ export const TeamMembersPanel: React.FC = () => {
 
       const inviteCode = generateInviteCode();
 
+      const categoryAccessObj = Object.keys(inviteCategoryAccess).length > 0 ? inviteCategoryAccess : null;
+
       const { error } = await supabase
         .from('invite_codes')
         .insert({
@@ -230,7 +348,8 @@ export const TeamMembersPanel: React.FC = () => {
           view_financial: viewFinancial,
           created_by: user?.id,
           max_uses: 1,
-          is_active: true
+          is_active: true,
+          category_access: categoryAccessObj
         });
 
       if (error) throw error;
@@ -238,6 +357,7 @@ export const TeamMembersPanel: React.FC = () => {
       setGeneratedCode(inviteCode);
       setShowInviteMessage(true);
       setInviteSuccess(`Invite code generated for ${inviteEmail}`);
+      await loadPendingInvites();
     } catch (err: any) {
       console.error('Error creating invite:', err);
       setInviteError(err.message || 'Failed to create invite');
@@ -275,6 +395,7 @@ export const TeamMembersPanel: React.FC = () => {
             inviteCode: generatedCode,
             teamName: teamName || 'your team',
             role: inviteRole,
+            categoryAccess: getEnabledCategories(),
           }),
         }
       );
@@ -633,6 +754,22 @@ export const TeamMembersPanel: React.FC = () => {
                 <strong>Your Role:</strong> You'll be joining as a <strong>${inviteRole}</strong> with access to team conversations, AI-powered insights, meeting transcripts, action items, strategy documents, and company goals.
               </div>
 
+              ${getEnabledCategories().length > 0 ? `
+              <div class="steps" style="background: #1e3a5f; margin-top: 20px;">
+                <div class="steps-title">📁 Your Data Access</div>
+                <p style="color: #93c5fd; font-size: 14px; margin-bottom: 12px;">
+                  You'll have access to the following data categories:
+                </p>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                  ${getEnabledCategories().map(cat => `
+                    <span style="background: #3b82f6; color: white; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 500;">
+                      ${CATEGORY_LABELS[cat] || cat}
+                    </span>
+                  `).join('')}
+                </div>
+              </div>
+              ` : ''}
+
               <div class="divider"></div>
 
               <div class="invite-box">
@@ -743,7 +880,10 @@ What Can Astra Do For You?
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Your Role: You'll be joining as a ${inviteRole} with access to team conversations, AI-powered insights, meeting transcripts, action items, strategy documents, and company goals.
-
+${getEnabledCategories().length > 0 ? `
+📁 Your Data Access:
+${getEnabledCategories().map(cat => `• ${CATEGORY_LABELS[cat] || cat}`).join('\n')}
+` : ''}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 YOUR INVITE CODE (reminder)
@@ -769,7 +909,6 @@ ${appUrl}
   const resetInviteForm = () => {
     setInviteEmail('');
     setInviteRole('member');
-    setViewFinancial(true);
     setGeneratedCode('');
     setShowInviteMessage(false);
     setInviteError('');
@@ -777,6 +916,49 @@ ${appUrl}
     setShowAddMember(false);
     setEmailSent(false);
     setShowEmailPreview(false);
+    setShowCategorySettings(false);
+    const defaultAccess: Record<string, boolean> = {};
+    teamCategories.forEach(c => {
+      defaultAccess[c.category] = true;
+    });
+    setInviteCategoryAccess(defaultAccess);
+    setViewFinancial(true);
+  };
+
+  const toggleCategoryAccess = (category: string) => {
+    const newValue = !inviteCategoryAccess[category];
+    setInviteCategoryAccess(prev => ({
+      ...prev,
+      [category]: newValue
+    }));
+    if (category === 'financial') {
+      setViewFinancial(newValue);
+    }
+  };
+
+  const setAllCategoryAccess = (enabled: boolean) => {
+    const newAccess: Record<string, boolean> = {};
+    teamCategories.forEach(c => {
+      newAccess[c.category] = enabled;
+    });
+    setInviteCategoryAccess(newAccess);
+    if (teamCategories.some(c => c.category === 'financial')) {
+      setViewFinancial(enabled);
+    }
+  };
+
+  const getEnabledCategories = () => {
+    return Object.entries(inviteCategoryAccess)
+      .filter(([_, enabled]) => enabled)
+      .map(([category]) => category);
+  };
+
+  const getCategoryAccessSummary = () => {
+    const enabledCount = Object.values(inviteCategoryAccess).filter(Boolean).length;
+    const totalCount = teamCategories.length;
+    if (enabledCount === totalCount) return 'All categories';
+    if (enabledCount === 0) return 'No categories';
+    return `${enabledCount}/${totalCount} categories`;
   };
 
   // Show panel for all team members, just hide admin controls for non-admins
@@ -976,20 +1158,88 @@ ${appUrl}
         })}
       </div>
 
-      {members.length === 0 ? (
+      {pendingInvites.length > 0 && (
+        <div className="mt-6">
+          <h4 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            Pending Invites ({pendingInvites.length})
+          </h4>
+          <div className="space-y-3">
+            {pendingInvites.map((invite) => (
+              <div
+                key={invite.id}
+                className="bg-gray-800/50 rounded-lg p-4 border border-dashed border-gray-600"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-yellow-400" />
+                    </div>
+                    <div>
+                      <p className="text-white font-medium">{invite.invited_email}</p>
+                      <p className="text-xs text-yellow-400">Pending - invite sent</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <div className="flex items-center space-x-1">
+                        <Shield
+                          className={`w-4 h-4 ${
+                            invite.assigned_role === 'admin' ? 'text-yellow-400' : 'text-gray-400'
+                          }`}
+                        />
+                        <span
+                          className={`text-xs sm:text-sm font-medium whitespace-nowrap ${
+                            invite.assigned_role === 'admin' ? 'text-yellow-400' : 'text-gray-400'
+                          }`}
+                        >
+                          {invite.assigned_role === 'admin' ? 'Admin' : 'Member'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 whitespace-nowrap">
+                        {invite.view_financial ? 'Financial: Yes' : 'Financial: No'}
+                      </p>
+                    </div>
+                    {isAdmin && (
+                      <button
+                        onClick={() => cancelPendingInvite(invite.id)}
+                        className="p-2 hover:bg-gray-700 rounded transition-colors"
+                        title="Cancel invite"
+                      >
+                        <X className="w-4 h-4 text-red-400" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {members.length === 0 && pendingInvites.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
           <p>No team members found</p>
         </div>
       ) : (
         isAdmin && (
-          <button
-            onClick={() => setShowAddMember(!showAddMember)}
-            className="w-full mt-4 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>{showAddMember ? 'Cancel' : 'Add Member'}</span>
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
+            <button
+              onClick={() => setShowAddMember(!showAddMember)}
+              className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>{showAddMember ? 'Cancel' : 'Add Member'}</span>
+            </button>
+            <button
+              onClick={() => setShowTeamSettings(true)}
+              className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center space-x-2"
+            >
+              <Settings className="w-4 h-4" />
+              <span>Manage Category Access</span>
+            </button>
+          </div>
         )
       )}
 
@@ -1074,7 +1324,14 @@ ${appUrl}
                   <p className="text-xs text-gray-500 mt-1">Allow access to financial data and documents</p>
                 </div>
                 <button
-                  onClick={() => setViewFinancial(!viewFinancial)}
+                  onClick={() => {
+                    const newValue = !viewFinancial;
+                    setViewFinancial(newValue);
+                    setInviteCategoryAccess(prev => ({
+                      ...prev,
+                      financial: newValue
+                    }));
+                  }}
                   disabled={inviting}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     viewFinancial ? 'bg-green-600' : 'bg-gray-600'
@@ -1087,6 +1344,96 @@ ${appUrl}
                   />
                 </button>
               </div>
+
+              {teamCategories.length > 0 && (
+                <div className="bg-gray-800 rounded-lg border border-gray-600 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowCategorySettings(!showCategorySettings)}
+                    disabled={inviting}
+                    className="w-full p-4 flex items-center justify-between hover:bg-gray-700/50 transition-colors disabled:opacity-50"
+                  >
+                    <div className="text-left">
+                      <p className="text-white text-sm font-medium">Category Access</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {getCategoryAccessSummary()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {showCategorySettings ? (
+                        <ChevronDown className="w-5 h-5 text-gray-400" />
+                      ) : (
+                        <ChevronRight className="w-5 h-5 text-gray-400" />
+                      )}
+                    </div>
+                  </button>
+
+                  {showCategorySettings && (
+                    <div className="border-t border-gray-700 p-4 bg-gray-900/50">
+                      <div className="flex gap-2 mb-4">
+                        <button
+                          type="button"
+                          onClick={() => setAllCategoryAccess(true)}
+                          disabled={inviting}
+                          className="px-3 py-1.5 text-xs bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-1.5"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          Enable All
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAllCategoryAccess(false)}
+                          disabled={inviting}
+                          className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-1.5"
+                        >
+                          <EyeOff className="w-3.5 h-3.5" />
+                          Disable All
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {teamCategories.map(cat => {
+                          const hasAccess = inviteCategoryAccess[cat.category] ?? true;
+                          return (
+                            <button
+                              key={cat.category}
+                              type="button"
+                              onClick={() => toggleCategoryAccess(cat.category)}
+                              disabled={inviting}
+                              className={`
+                                p-3 rounded-lg border transition-all text-left
+                                ${hasAccess
+                                  ? 'bg-blue-500/20 border-blue-500/30 text-blue-400'
+                                  : 'bg-gray-800 border-gray-600 text-gray-500'
+                                }
+                                hover:opacity-80 disabled:opacity-50
+                              `}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-sm font-medium">
+                                  {CATEGORY_LABELS[cat.category] || cat.category}
+                                </span>
+                                {hasAccess ? (
+                                  <Eye className="w-4 h-4" />
+                                ) : (
+                                  <EyeOff className="w-4 h-4" />
+                                )}
+                              </div>
+                              <span className="text-xs opacity-70">
+                                {cat.document_count} doc{cat.document_count !== 1 ? 's' : ''}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <p className="text-xs text-gray-500 mt-3">
+                        Select which data categories this user can access. They won't see documents from disabled categories in their AI responses.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <button
                 onClick={handleInviteTeamMember}
@@ -1201,6 +1548,15 @@ ${appUrl}
             </div>
           </div>
         </div>
+      )}
+
+      {teamId && (
+        <TeamSettingsModal
+          isOpen={showTeamSettings}
+          onClose={() => setShowTeamSettings(false)}
+          teamId={teamId}
+          initialTab="access"
+        />
       )}
     </div>
   );

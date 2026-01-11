@@ -17,8 +17,21 @@ export interface FinancialAccessWarning {
 }
 
 const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL;
-const WEBHOOK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
-const PROGRESS_MESSAGE_DELAY_MS = 2 * 60 * 1000; // 2 minutes
+const WEBHOOK_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+const PROGRESS_MESSAGE_INTERVAL_MS = 60 * 1000; // 1 minute intervals for progress updates
+
+const PROGRESS_MESSAGES = [
+  "Still working on it, giving maximum effort...",
+  "Analyzing your data thoroughly... this is a complex request.",
+  "Almost there! Processing the final details...",
+  "Deep analysis in progress... quality takes time.",
+  "Crunching the numbers... your patience is appreciated.",
+  "Still on it! Ensuring accuracy in the response...",
+  "Working hard behind the scenes... hang tight!",
+  "This is a detailed request - making sure it's done right.",
+  "Finalizing the analysis... thanks for waiting!",
+  "Just a bit longer... putting together a comprehensive response."
+];
 
 export const useChat = () => {
   const { logChatMessage, currentMessages, currentConversationId, loading: chatsLoading, loadConversation, startNewConversation: chatsStartNewConversation, updateVisualizationStatus, conversations, hasInitialized, getVisualizationState, updateVisualizationState, updateVisualizationData } = useChats();
@@ -185,10 +198,8 @@ export const useChat = () => {
         },
         ...uiMessages
       ]);
-    } else if (!currentConversationId && !chatsLoading && !isLoading) {
-      // Only reset to welcome message when explicitly starting fresh
-      // (no conversation ID and nothing is loading)
-      console.log('useChat: Resetting to welcome message (new chat)', {
+    } else if (!chatsLoading && !isLoading) {
+      console.log('useChat: Resetting to welcome message (new chat or empty conversation)', {
         hasConversationId: !!currentConversationId,
         currentMessagesLength: currentMessages.length,
         chatsLoading,
@@ -204,8 +215,6 @@ export const useChat = () => {
         }
       ]);
     }
-    // Note: If currentMessages is empty but we have a conversationId or something is loading,
-    // we preserve existing UI messages to avoid flickering during load/refresh
   }, [currentMessages, currentConversationId, chatsLoading, isLoading]);
 
   const scrollToBottom = useCallback(() => {
@@ -362,18 +371,32 @@ export const useChat = () => {
       const timeoutId = setTimeout(() => abortController.abort(), WEBHOOK_TIMEOUT_MS);
 
       const progressMsgId = `${messageId}-progress`;
-      const progressTimeoutId = setTimeout(() => {
+      let progressMessageIndex = 0;
+      const progressIntervalIds: NodeJS.Timeout[] = [];
+
+      const showProgressMessage = () => {
+        const message = PROGRESS_MESSAGES[progressMessageIndex % PROGRESS_MESSAGES.length];
+        const minutesElapsed = progressMessageIndex + 1;
         const progressMessage: Message = {
           id: progressMsgId,
-          text: "Still working on it, giving maximum effort...",
+          text: `${message} (${minutesElapsed} min)`,
           isUser: false,
           timestamp: new Date(),
           messageType: 'system',
           isProgressMessage: true
         };
-        setMessages(prev => [...prev, progressMessage]);
+        setMessages(prev => {
+          const filtered = prev.filter(m => m.id !== progressMsgId);
+          return [...filtered, progressMessage];
+        });
         setProgressMessageId(progressMsgId);
-      }, PROGRESS_MESSAGE_DELAY_MS);
+        progressMessageIndex++;
+      };
+
+      const progressIntervalId = setInterval(() => {
+        showProgressMessage();
+      }, PROGRESS_MESSAGE_INTERVAL_MS);
+      progressIntervalIds.push(progressIntervalId);
 
       let response: Response;
       try {
@@ -398,7 +421,7 @@ export const useChat = () => {
         });
       } finally {
         clearTimeout(timeoutId);
-        clearTimeout(progressTimeoutId);
+        progressIntervalIds.forEach(id => clearInterval(id));
         if (progressMessageId) {
           setMessages(prev => prev.filter(m => m.id !== progressMessageId));
           setProgressMessageId(null);
@@ -579,7 +602,7 @@ export const useChat = () => {
 
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          errorMessage = "⚠️ The request timed out after 5 minutes.\n\n**What you can try:**\n• Your question may require a very complex analysis\n• Try breaking it into smaller, more focused questions\n• The response may still be processing - check back in a moment\n\nIf you need help, please contact support through the Help menu.";
+          errorMessage = "⚠️ The request timed out after 10 minutes.\n\n**What you can try:**\n• Your question may require a very complex analysis\n• Try breaking it into smaller, more focused questions\n• The response may still be processing - check back in a moment\n\nIf you need help, please contact support through the Help menu.";
         } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
           errorMessage = "⚠️ Network connection error.\n\n**What you can try:**\n• Check your internet connection\n• Try again in a moment\n• Refresh the page\n\nIf you're still having issues, please contact support through the Help menu.";
         } else if (error.message.includes('Webhook request failed')) {
