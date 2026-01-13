@@ -18,7 +18,7 @@ interface EmailData {
   special_notes: string;
   html_content: string;
   recipient_filter: {
-    types: ('all_users' | 'specific' | 'preview_requests' | 'marketing_contacts')[];
+    types: ('all_users' | 'specific' | 'preview_requests' | 'marketing_contacts' | 'moonshot_registrations')[];
     emails?: string[];
   };
   scheduled_for: string | null;
@@ -84,6 +84,7 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
   const [draftId, setDraftId] = useState<string | null>(emailId);
   const [previewRequestCount, setPreviewRequestCount] = useState(0);
   const [marketingContactsCount, setMarketingContactsCount] = useState(0);
+  const [moonshotRegistrationCount, setMoonshotRegistrationCount] = useState(0);
   const [activeTemplate, setActiveTemplate] = useState<EmailTemplate | null>(template || null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -95,6 +96,7 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
     loadUsers();
     loadPreviewRequests();
     loadMarketingContactsCount();
+    loadMoonshotRegistrationCount();
   }, [emailId]);
 
   useEffect(() => {
@@ -188,6 +190,20 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
       setMarketingContactsCount(data?.length || 0);
     } catch (error) {
       console.error('Error loading marketing contacts count:', error);
+    }
+  };
+
+  const loadMoonshotRegistrationCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('moonshot_registrations')
+        .select('*', { count: 'exact', head: true })
+        .is('converted_at', null);
+
+      if (error) throw error;
+      setMoonshotRegistrationCount(count || 0);
+    } catch (error) {
+      console.error('Error loading moonshot registration count:', error);
     }
   };
 
@@ -617,6 +633,9 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
     if (types.includes('marketing_contacts')) {
       count += marketingContactsCount;
     }
+    if (types.includes('moonshot_registrations')) {
+      count += moonshotRegistrationCount;
+    }
     if (types.includes('specific')) {
       count += selectedUserIds.length;
     }
@@ -1014,6 +1033,30 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
                   <div>
                     <div className="text-white font-medium">Marketing Contacts</div>
                     <div className="text-sm text-gray-400">Send to {marketingContactsCount} contacts (excludes users already in the system and unsubscribed contacts)</div>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-4 bg-gradient-to-r from-yellow-900/30 to-amber-900/30 border border-yellow-700/50 rounded-lg cursor-pointer hover:from-yellow-900/40 hover:to-amber-900/40 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={emailData.recipient_filter.types.includes('moonshot_registrations')}
+                    onChange={(e) => {
+                      const types = e.target.checked
+                        ? [...emailData.recipient_filter.types, 'moonshot_registrations']
+                        : emailData.recipient_filter.types.filter(t => t !== 'moonshot_registrations');
+                      setEmailData(prev => ({
+                        ...prev,
+                        recipient_filter: { ...prev.recipient_filter, types }
+                      }));
+                    }}
+                    className="w-5 h-5 rounded border-slate-600 bg-slate-700 text-yellow-500 focus:ring-yellow-500"
+                  />
+                  <div>
+                    <div className="text-white font-medium flex items-center gap-2">
+                      <Rocket className="w-4 h-4 text-yellow-400" />
+                      Moonshot Challenge Registrations
+                    </div>
+                    <div className="text-sm text-gray-400">Send to {moonshotRegistrationCount} registrations who haven't created accounts yet</div>
                   </div>
                 </label>
 

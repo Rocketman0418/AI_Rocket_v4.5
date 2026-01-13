@@ -62,8 +62,8 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     const unsubscribeUrl = contactData?.unsubscribe_token
-      ? `${supabaseUrl}/functions/v1/marketing-unsubscribe?token=${contactData.unsubscribe_token}`
-      : '#';
+      ? `https://airocket.app/unsubscribe?token=${contactData.unsubscribe_token}`
+      : 'https://airocket.app/unsubscribe';
 
     const firstName = name.split(' ')[0];
     const appUrl = 'https://airocket.app';

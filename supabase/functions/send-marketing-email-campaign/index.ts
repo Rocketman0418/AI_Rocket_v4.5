@@ -15,7 +15,7 @@ interface CampaignRequest {
   marketingEmailId: string;
   recipientFilter?: {
     type?: 'all' | 'specific' | 'preview_requests';
-    types?: ('all_users' | 'specific' | 'preview_requests' | 'marketing_contacts')[];
+    types?: ('all_users' | 'specific' | 'preview_requests' | 'marketing_contacts' | 'moonshot_registrations')[];
     emails?: string[];
   };
 }
@@ -129,6 +129,21 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    if (types.includes('moonshot_registrations')) {
+      const { data: registrations, error } = await supabaseAdmin
+        .from('moonshot_registrations')
+        .select('email, name')
+        .is('converted_at', null);
+
+      if (!error && registrations) {
+        registrations.forEach((r: any) => addRecipient({
+          id: null,
+          email: r.email,
+          firstName: r.name?.split(' ')[0] || 'there'
+        }));
+      }
+    }
+
     if (types.includes('specific') && recipientFilter?.emails && recipientFilter.emails.length > 0) {
       const { data: users, error } = await supabaseAdmin
         .from('users')
@@ -189,8 +204,8 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       const unsubscribeUrl = contactData?.unsubscribe_token
-        ? `${supabaseUrl}/functions/v1/marketing-unsubscribe?token=${contactData.unsubscribe_token}`
-        : `${supabaseUrl}/functions/v1/marketing-unsubscribe?email=${encodeURIComponent(recipient.email)}`;
+        ? `https://airocket.app/unsubscribe?token=${contactData.unsubscribe_token}`
+        : `https://airocket.app/unsubscribe?email=${encodeURIComponent(recipient.email)}`;
 
       emailHtml = emailHtml.replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl);
 

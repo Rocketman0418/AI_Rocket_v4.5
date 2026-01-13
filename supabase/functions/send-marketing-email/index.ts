@@ -108,8 +108,8 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       const unsubscribeUrl = contactData?.unsubscribe_token
-        ? `${supabaseUrl}/functions/v1/marketing-unsubscribe?token=${contactData.unsubscribe_token}`
-        : `${supabaseUrl}/functions/v1/marketing-unsubscribe?email=${encodeURIComponent(recipient.email)}`;
+        ? `https://airocket.app/unsubscribe?token=${contactData.unsubscribe_token}`
+        : `https://airocket.app/unsubscribe?email=${encodeURIComponent(recipient.email)}`;
 
       let emailHtmlContent = htmlContent
         ? htmlContent.replace(/\{\{firstName\}\}/g, recipient.firstName)

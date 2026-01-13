@@ -261,6 +261,18 @@ function getFooter(): string {
 }
 
 const emailTemplates: EmailTemplates = {
+  countdown_2_days: {
+    subject: 'Moonshot Challenge: 2 DAYS Until Launch - Your Launch Code Inside!',
+    getHtml: (name: string, inviteCode: string) => generateCountdownWithFeaturesEmail(name, inviteCode, '2 DAYS')
+  },
+  countdown_1_day: {
+    subject: 'Moonshot Challenge: TOMORROW is Launch Day - Get Ready!',
+    getHtml: (name: string, inviteCode: string) => generateCountdownWithFeaturesEmail(name, inviteCode, '1 DAY')
+  },
+  launch_live: {
+    subject: 'Moonshot Challenge: IT\'S LIVE! Create Your Account NOW',
+    getHtml: (name: string, inviteCode: string) => generateLaunchLiveEmail(name, inviteCode)
+  },
   feature_connected_data: {
     subject: 'Moonshot Challenge: Sync Your Data - AI That Understands Your Team',
     getHtml: (name: string, inviteCode: string) => generateFeatureEmail(name, inviteCode, featureContent.sync_data)
@@ -310,6 +322,233 @@ const emailTemplates: EmailTemplates = {
     getHtml: (name: string, inviteCode: string) => generateFeatureCatchupEmail(name, inviteCode)
   }
 };
+
+function generateCountdownWithFeaturesEmail(name: string, inviteCode: string, daysLabel: string): string {
+  const firstName = name.split(' ')[0];
+  const countdown = getCountdownValues();
+  const topFeatures = [
+    featureContent.sync_data,
+    featureContent.visualizations,
+    featureContent.reports
+  ];
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta name="color-scheme" content="light dark">
+        <meta name="supported-color-schemes" content="light dark">
+        <style>
+          ${getBaseStyles()}
+          .countdown-hero { text-align: center; margin-bottom: 32px; padding: 32px; background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(16, 185, 129, 0.1)); border-radius: 20px; border: 2px solid rgba(249, 115, 22, 0.3); }
+          .countdown-hero-number { font-size: 72px; font-weight: 900; color: #f97316; line-height: 1; margin-bottom: 8px; }
+          .countdown-hero-label { font-size: 24px; font-weight: 700; color: #fbbf24; text-transform: uppercase; letter-spacing: 2px; }
+          .feature-grid { margin: 32px 0; }
+          .feature-mini { background: #1e293b; border-radius: 16px; padding: 24px; margin-bottom: 16px; border: 1px solid #334155; }
+          .feature-mini-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+          .feature-mini-icon { font-size: 32px; }
+          .feature-mini-title { font-size: 18px; font-weight: 700; color: #f3f4f6; }
+          .feature-mini-tagline { font-size: 14px; color: #f97316; font-weight: 600; margin-bottom: 8px; }
+          .feature-mini-summary { font-size: 14px; color: #9ca3af; line-height: 1.6; margin: 0; }
+          .what-is-section { background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border-radius: 16px; padding: 28px; margin: 32px 0; border: 1px solid #334155; }
+          .what-is-title { font-size: 20px; font-weight: 700; color: #f3f4f6; margin-bottom: 16px; text-align: center; }
+          .what-is-text { font-size: 15px; color: #d1d5db; line-height: 1.7; margin-bottom: 16px; }
+          .what-is-list { list-style: none; padding: 0; margin: 0; }
+          .what-is-list li { padding: 10px 0; color: #d1d5db; font-size: 14px; display: flex; align-items: flex-start; gap: 10px; }
+          .what-is-list li::before { content: "✓"; color: #10b981; font-weight: bold; flex-shrink: 0; }
+        </style>
+      </head>
+      <body>
+        <div class="email-wrapper">
+          <div class="container">
+            ${getHeroHeader()}
+            <div class="content">
+              <div class="countdown-hero">
+                <div class="countdown-hero-number">${daysLabel}</div>
+                <div class="countdown-hero-label">Until Launch</div>
+              </div>
+
+              <div class="greeting">Hi ${firstName}!</div>
+              <div class="message">
+                The $5M Moonshot Challenge launches on <strong style="color: #fbbf24;">January 15, 2026</strong>! You're registered and your launch code is ready. Here's what you need to know.
+              </div>
+
+              <div class="invite-box">
+                <div class="launch-label">Your Launch Code</div>
+                <div class="launch-code">${inviteCode}</div>
+                <div class="valid-date">Use this code on January 15th to create your account</div>
+                <div class="countdown-section" style="margin-top: 24px; padding-top: 20px;">
+                  <div class="countdown-label">Exact Time Until Launch</div>
+                  <table class="countdown-table">
+                    <tr>
+                      <td class="countdown-cell">
+                        <div class="countdown-value">${countdown.days}</div>
+                        <div class="countdown-unit">Days</div>
+                      </td>
+                      <td class="countdown-cell">
+                        <div class="countdown-value">${countdown.hours}</div>
+                        <div class="countdown-unit">Hours</div>
+                      </td>
+                      <td class="countdown-cell">
+                        <div class="countdown-value">${countdown.minutes}</div>
+                        <div class="countdown-unit">Minutes</div>
+                      </td>
+                      <td class="countdown-cell">
+                        <div class="countdown-value">${countdown.seconds}</div>
+                        <div class="countdown-unit">Seconds</div>
+                      </td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+
+              <div class="what-is-section">
+                <div class="what-is-title">What is the Moonshot Challenge?</div>
+                <div class="what-is-text">
+                  The $5M AI Moonshot Challenge gives 300 entrepreneurial teams 90 days of FREE unlimited access to AI Rocket - the AI platform built specifically for business teams.
+                </div>
+                <ul class="what-is-list">
+                  <li><strong style="color: #f3f4f6;">$5M Prize Pool</strong> - Top 10 teams share in the winnings</li>
+                  <li><strong style="color: #f3f4f6;">90 Days FREE</strong> - Full unlimited access, no credit card required</li>
+                  <li><strong style="color: #f3f4f6;">Only 300 Spots</strong> - First come, first served on launch day</li>
+                  <li><strong style="color: #f3f4f6;">Real Business Results</strong> - Winners judged on actual AI-driven outcomes</li>
+                </ul>
+              </div>
+
+              <div style="text-align: center; margin: 32px 0;">
+                <div style="font-size: 13px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 2px; margin-bottom: 20px;">3 Powerful Features You'll Get Access To</div>
+              </div>
+
+              <div class="feature-grid">
+                ${topFeatures.map(f => `
+                  <div class="feature-mini">
+                    <div class="feature-mini-header">
+                      <span class="feature-mini-icon">${f.icon}</span>
+                      <span class="feature-mini-title">${f.title}</span>
+                    </div>
+                    <div class="feature-mini-tagline">${f.tagline}</div>
+                    <p class="feature-mini-summary">${f.summary}</p>
+                  </div>
+                `).join('')}
+              </div>
+
+              ${getStatsSection()}
+
+              <div class="cta-container">
+                <a href="https://airocket.app/moonshot" class="cta-button">
+                  View Full Challenge Details
+                </a>
+              </div>
+
+              ${getShareSection()}
+            </div>
+            ${getFooter()}
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
+function generateLaunchLiveEmail(name: string, inviteCode: string): string {
+  const firstName = name.split(' ')[0];
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta name="color-scheme" content="light dark">
+        <meta name="supported-color-schemes" content="light dark">
+        <style>
+          ${getBaseStyles()}
+          .live-badge { display: inline-block; background: linear-gradient(135deg, #ef4444, #f97316); color: white; font-size: 14px; font-weight: 800; padding: 8px 24px; border-radius: 25px; text-transform: uppercase; letter-spacing: 2px; animation: pulse 2s infinite; margin-bottom: 16px; }
+          @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
+          .launch-hero { text-align: center; margin-bottom: 32px; padding: 40px 24px; background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(16, 185, 129, 0.15)); border-radius: 24px; border: 3px solid #f97316; }
+          .launch-hero-title { font-size: 42px; font-weight: 900; color: #fbbf24; margin: 0 0 8px 0; line-height: 1.1; }
+          .launch-hero-subtitle { font-size: 20px; color: #10b981; font-weight: 600; margin: 0; }
+          .urgency-banner { background: linear-gradient(90deg, #7c2d12, #422006); border: 2px solid #f59e0b; border-radius: 12px; padding: 20px; margin: 24px 0; text-align: center; }
+          .urgency-text { color: #fbbf24; font-weight: 700; font-size: 18px; margin: 0; }
+          .urgency-subtext { color: #fcd34d; font-size: 14px; margin-top: 8px; }
+          .code-box-live { background: linear-gradient(135deg, #0f172a, #1e293b); border: 4px solid #f97316; border-radius: 24px; padding: 40px 24px; margin: 32px 0; text-align: center; box-shadow: 0 0 60px rgba(249, 115, 22, 0.3); }
+          .code-label { font-size: 14px; text-transform: uppercase; color: #fbbf24; font-weight: 800; letter-spacing: 3px; margin-bottom: 16px; }
+          .code-value { font-size: 48px; font-weight: 900; color: #f97316; font-family: 'Courier New', monospace; letter-spacing: 8px; margin-bottom: 24px; word-break: break-all; }
+          .create-button { display: inline-block; background: linear-gradient(135deg, #f97316 0%, #10b981 100%); color: white; padding: 20px 60px; border-radius: 50px; text-decoration: none; font-weight: 800; font-size: 20px; box-shadow: 0 8px 40px rgba(249, 115, 22, 0.5); text-transform: uppercase; letter-spacing: 1px; }
+          .steps-section { background: #1e293b; border-radius: 20px; padding: 32px; margin: 32px 0; }
+          .steps-title { font-size: 22px; font-weight: 800; color: #f3f4f6; margin-bottom: 24px; text-align: center; }
+          .step-row { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+          .step-row:last-child { margin-bottom: 0; }
+          .step-num { background: linear-gradient(135deg, #f97316, #10b981); color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; flex-shrink: 0; }
+          .step-text { color: #e5e7eb; font-size: 16px; line-height: 1.5; padding-top: 6px; }
+          .step-text strong { color: #f97316; }
+        </style>
+      </head>
+      <body>
+        <div class="email-wrapper">
+          <div class="container">
+            ${getHeroHeader()}
+            <div class="content">
+              <div class="launch-hero">
+                <span class="live-badge">LIVE NOW</span>
+                <h2 class="launch-hero-title">The Challenge Has Begun!</h2>
+                <p class="launch-hero-subtitle">Create your account and claim your spot</p>
+              </div>
+
+              <div class="greeting">${firstName}, this is it!</div>
+              <div class="message">
+                Today is <strong style="color: #fbbf24;">January 15, 2026</strong> - the $5M Moonshot Challenge is officially LIVE. Your launch code is active and ready to use. Create your account now before the 300 spots fill up!
+              </div>
+
+              <div class="urgency-banner">
+                <p class="urgency-text">Only 300 Team Spots Available!</p>
+                <p class="urgency-subtext">First come, first served - don't wait!</p>
+              </div>
+
+              <div class="code-box-live">
+                <div class="code-label">Your Launch Code</div>
+                <div class="code-value">${inviteCode}</div>
+                <a href="https://airocket.app" class="create-button">Create My Account</a>
+              </div>
+
+              <div class="steps-section">
+                <div class="steps-title">How to Get Started</div>
+                <div class="step-row">
+                  <span class="step-num">1</span>
+                  <span class="step-text">Click the button above to go to <strong>airocket.app</strong></span>
+                </div>
+                <div class="step-row">
+                  <span class="step-num">2</span>
+                  <span class="step-text">Click <strong>"Sign Up"</strong> and enter your email address</span>
+                </div>
+                <div class="step-row">
+                  <span class="step-num">3</span>
+                  <span class="step-text">Enter your launch code: <strong>${inviteCode}</strong></span>
+                </div>
+                <div class="step-row">
+                  <span class="step-num">4</span>
+                  <span class="step-text">Set up your team and start your <strong>90 days of FREE</strong> unlimited access!</span>
+                </div>
+              </div>
+
+              ${getStatsSection()}
+
+              <div class="message" style="text-align: center; font-size: 18px; color: #d1d5db;">
+                Good luck in the Challenge! We can't wait to see what you and your team accomplish.
+              </div>
+
+              <div class="cta-container">
+                <a href="https://airocket.app" class="cta-button">
+                  Create Your Account Now
+                </a>
+              </div>
+
+              ${getShareSection()}
+            </div>
+            ${getFooter()}
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+}
 
 function generateFeatureEmail(name: string, inviteCode: string, feature: { title: string; tagline: string; icon: string; summary: string; benefits: string[] }): string {
   const firstName = name.split(' ')[0];
@@ -616,7 +855,6 @@ Deno.serve(async (req: Request) => {
 
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-      // Get unsubscribe token for test email recipient
       const { data: contactData } = await supabase
         .from('marketing_contacts')
         .select('unsubscribe_token')
@@ -624,8 +862,8 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       const unsubscribeUrl = contactData?.unsubscribe_token
-        ? `${supabaseUrl}/functions/v1/marketing-unsubscribe?token=${contactData.unsubscribe_token}`
-        : '#';
+        ? `https://airocket.app/unsubscribe?token=${contactData.unsubscribe_token}`
+        : 'https://airocket.app/unsubscribe';
 
       let emailHtml = template.getHtml(body.name, body.inviteCode);
       emailHtml = emailHtml.replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl);
@@ -715,7 +953,6 @@ Deno.serve(async (req: Request) => {
       }
 
       try {
-        // Get unsubscribe token for this recipient
         const { data: contactData } = await supabase
           .from('marketing_contacts')
           .select('unsubscribe_token')
@@ -723,8 +960,8 @@ Deno.serve(async (req: Request) => {
           .maybeSingle();
 
         const unsubscribeUrl = contactData?.unsubscribe_token
-          ? `${supabaseUrl}/functions/v1/marketing-unsubscribe?token=${contactData.unsubscribe_token}`
-          : '#';
+          ? `https://airocket.app/unsubscribe?token=${contactData.unsubscribe_token}`
+          : 'https://airocket.app/unsubscribe';
 
         let emailHtml = template.getHtml(registration.name, inviteCode);
         emailHtml = emailHtml.replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl);

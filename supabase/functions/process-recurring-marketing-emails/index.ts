@@ -613,6 +613,19 @@ async function sendCampaign(
     }));
   }
 
+  if (types.includes('moonshot_registrations')) {
+    const { data: registrations } = await supabase
+      .from('moonshot_registrations')
+      .select('email, name')
+      .is('converted_at', null);
+
+    (registrations || []).forEach((r: any) => addRecipient({
+      id: null,
+      email: r.email,
+      firstName: r.name?.split(' ')[0] || 'there'
+    }));
+  }
+
   if (types.includes('specific') && recipientFilter?.emails?.length > 0) {
     const { data: users } = await supabase
       .from('users')
@@ -663,10 +676,9 @@ async function sendCampaign(
       .eq('email', recipient.email)
       .maybeSingle();
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const unsubscribeUrl = contactData?.unsubscribe_token
-      ? `${supabaseUrl}/functions/v1/marketing-unsubscribe?token=${contactData.unsubscribe_token}`
-      : '#';
+      ? `https://airocket.app/unsubscribe?token=${contactData.unsubscribe_token}`
+      : 'https://airocket.app/unsubscribe';
 
     emailHtml = emailHtml.replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl);
 

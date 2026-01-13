@@ -30,6 +30,7 @@ import { MoonshotRegistrationPage } from './components/MoonshotRegistrationPage'
 import { UpdatesPage } from './components/UpdatesPage';
 import { DemoPage } from './pages/DemoPage';
 import { UnsubscribeResultPage } from './components/UnsubscribeResultPage';
+import { UnsubscribePage } from './components/UnsubscribePage';
 import { useFeedbackPrompt } from './hooks/useFeedbackPrompt';
 import { useActivityTracking } from './hooks/useActivityTracking';
 import { useLaunchPreparation } from './hooks/useLaunchPreparation';
@@ -327,7 +328,8 @@ const AppContent: React.FC = () => {
       {/* Demo Page - Public Route */}
       <Route path="/demo" element={<DemoPage />} />
 
-      {/* Unsubscribe Result Page - Public Route */}
+      {/* Unsubscribe Pages - Public Routes */}
+      <Route path="/unsubscribe" element={<UnsubscribePage />} />
       <Route path="/unsubscribe-result" element={<UnsubscribeResultPage />} />
 
       {/* Main App Routes */}
