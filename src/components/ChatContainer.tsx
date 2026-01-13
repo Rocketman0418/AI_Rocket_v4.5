@@ -436,7 +436,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
       </div>
 
       <div ref={containerRef} className="flex-1 overflow-y-auto px-3 md:px-4 chat-messages-container" style={{ paddingBottom: '120px' }}>
-        <div className="max-w-4xl mx-auto space-y-3 md:space-y-4 pt-4">
+        <div className="w-full lg:w-[80%] max-w-6xl mx-auto space-y-3 md:space-y-4 pt-4">
           {messages.map((message) => (
             <div key={message.id} id={`message-${message.id}`}>
               <MessageBubble

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, Sparkles, Eye, Code, Send, Clock, Mail, Users, ChevronLeft, ChevronRight, RefreshCw, Rocket } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Sparkles, Eye, Code, Send, Clock, Mail, Users, ChevronLeft, ChevronRight, RefreshCw, Rocket, ImagePlus, Trash2, Upload } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { getFeatureContext } from '../lib/marketing-context';
@@ -27,6 +27,7 @@ interface EmailData {
   frequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
   custom_interval_days?: number;
   send_hour?: number;
+  featured_image_url?: string;
 }
 
 const INITIAL_DATA: EmailData = {
@@ -41,7 +42,8 @@ const INITIAL_DATA: EmailData = {
   is_recurring: false,
   frequency: 'weekly',
   custom_interval_days: 3,
-  send_hour: 9
+  send_hour: 9,
+  featured_image_url: ''
 };
 
 const FREQUENCY_OPTIONS = [
@@ -83,6 +85,8 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
   const [previewRequestCount, setPreviewRequestCount] = useState(0);
   const [marketingContactsCount, setMarketingContactsCount] = useState(0);
   const [activeTemplate, setActiveTemplate] = useState<EmailTemplate | null>(template || null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (emailId) {
@@ -187,6 +191,52 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
     }
   };
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file (PNG, JPEG, GIF, or WebP)');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be less than 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `email-images/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('marketing-images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('marketing-images')
+        .getPublicUrl(filePath);
+
+      setEmailData(prev => ({ ...prev, featured_image_url: publicUrl }));
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image. Please try again.');
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const removeImage = () => {
+    setEmailData(prev => ({ ...prev, featured_image_url: '' }));
+  };
+
   const generateEmail = async () => {
     setGenerating(true);
     try {
@@ -206,7 +256,8 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
             specialNotes: emailData.special_notes,
             previousHtml: emailData.html_content || undefined,
             regenerationComments: regenerationComments || undefined,
-            featureContext
+            featureContext,
+            featuredImageUrl: emailData.featured_image_url || undefined
           }),
         }
       );
@@ -765,6 +816,65 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
                       className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 resize-none"
                       placeholder="Any specific instructions for the AI (tone, key points, CTAs, etc.)..."
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Featured Image (Optional)
+                    </label>
+                    <p className="text-sm text-gray-400 mb-3">
+                      Upload an image to feature prominently in the email (e.g., infographic, product screenshot, promotional graphic)
+                    </p>
+
+                    {emailData.featured_image_url ? (
+                      <div className="relative">
+                        <div className="border border-slate-700 rounded-lg overflow-hidden bg-slate-800">
+                          <img
+                            src={emailData.featured_image_url}
+                            alt="Featured image preview"
+                            className="w-full max-h-64 object-contain bg-slate-900"
+                          />
+                          <div className="flex items-center justify-between p-3 border-t border-slate-700">
+                            <span className="text-sm text-green-400 flex items-center gap-2">
+                              <ImagePlus className="w-4 h-4" />
+                              Image uploaded
+                            </span>
+                            <button
+                              onClick={removeImage}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 hover:bg-slate-800/50 transition-all"
+                      >
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/png,image/jpeg,image/gif,image/webp"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                        {uploadingImage ? (
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                            <span className="text-gray-400">Uploading...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <Upload className="w-10 h-10 text-gray-500 mx-auto mb-3" />
+                            <p className="text-gray-400 mb-1">Click to upload an image</p>
+                            <p className="text-xs text-gray-500">PNG, JPEG, GIF, or WebP (max 5MB)</p>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

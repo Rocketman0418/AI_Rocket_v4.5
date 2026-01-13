@@ -3,7 +3,7 @@ import {
   Users, Building2, FileText, MessageSquare, BarChart3, Download,
   TrendingUp, TrendingDown, Minus, Mail, HardDrive, AlertCircle,
   CheckCircle, XCircle, Search, ArrowUpDown, MessageCircleQuestion, Shield, X, ChevronRight, MessageCircle,
-  Copy, UserPlus, Send, RefreshCw, ClipboardList, Rocket, Trash2, Workflow
+  Copy, UserPlus, Send, RefreshCw, ClipboardList, Rocket, Trash2, Workflow, KeyRound, Calendar
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -125,10 +125,26 @@ interface FeedbackStats {
   }>;
 }
 
+interface OAuthCertification {
+  id: string;
+  oauth_app_id: string;
+  app_name: string;
+  client_id: string;
+  certification_date: string;
+  recertification_due: string;
+  status: 'active' | 'pending_recertification' | 'expired';
+  last_recertification: string | null;
+  notification_sent_30_days: boolean;
+  notification_sent_7_days: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 type TimeFilter = '7days' | '30days' | '90days' | 'all';
 type SortField = 'email' | 'created_at' | 'team_name' | 'documents' | 'messages';
 type SortDirection = 'asc' | 'desc';
-type DetailView = 'users' | 'teams' | 'documents' | 'chats' | 'preview_requests' | 'support' | 'feedback' | 'active_users' | 'marketing_emails' | 'setup_progress' | 'moonshot' | 'database_metrics' | 'agent_workflows' | null;
+type DetailView = 'users' | 'teams' | 'documents' | 'chats' | 'preview_requests' | 'support' | 'feedback' | 'active_users' | 'marketing_emails' | 'setup_progress' | 'moonshot' | 'database_metrics' | 'agent_workflows' | 'oauth_certifications' | null;
 type SupportFilter = 'all' | 'bug_report' | 'support_message' | 'feature_request';
 type DocumentCategoryFilter = 'all' | 'strategy' | 'meetings' | 'financial' | 'people' | 'legal' | 'customer' | 'industry' | 'product' | 'marketing' | 'sales' | 'operations' | 'support' | 'reference' | 'other';
 
@@ -198,6 +214,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen = true, o
   const [loadingSetupProgress, setLoadingSetupProgress] = useState(false);
   const [moonshotRegistrationCount, setMoonshotRegistrationCount] = useState<number>(0);
   const [workflowExecutionCount, setWorkflowExecutionCount] = useState<number | null>(null);
+  const [oauthCertifications, setOauthCertifications] = useState<OAuthCertification[]>([]);
 
   const superAdminEmails = ['clay@rockethub.ai', 'derek@rockethub.ai', 'marshall@rockethub.ai'];
   const isSuperAdmin = user?.email && superAdminEmails.includes(user.email);
@@ -212,6 +229,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen = true, o
         loadSetupProgress();
         loadMoonshotCount();
         loadWorkflowExecutionCount();
+        loadOAuthCertifications();
         sessionStorage.setItem('adminDashboardTimeFilter', timeFilter);
       } else {
         setLoading(false);
@@ -280,6 +298,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen = true, o
       await loadPreviewRequests();
       await loadSetupProgress();
       await loadMoonshotCount();
+      await loadOAuthCertifications();
     } finally {
       setRefreshing(false);
     }
@@ -807,6 +826,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ isOpen = true, o
       }
     } catch (error) {
       console.error('Error loading workflow execution count:', error);
+    }
+  };
+
+  const loadOAuthCertifications = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('oauth_app_certifications')
+        .select('*')
+        .order('recertification_due', { ascending: true });
+
+      if (error) throw error;
+      setOauthCertifications(data || []);
+    } catch (error) {
+      console.error('Error loading OAuth certifications:', error);
     }
   };
 
@@ -1744,6 +1777,34 @@ Sign up here: https://airocket.app`;
                 <div className="text-sm text-gray-400">Agent Workflows</div>
                 <div className="mt-2 text-xs text-gray-500">
                   Execution Metrics
+                </div>
+              </button>
+
+              <button
+                onClick={() => setDetailView('oauth_certifications')}
+                className={`bg-gray-800 border rounded-xl p-6 transition-all text-left w-full ${
+                  detailView === 'oauth_certifications'
+                    ? 'border-amber-500 shadow-lg shadow-amber-500/20'
+                    : 'border-gray-700 hover:border-amber-500 hover:shadow-lg hover:shadow-amber-500/20'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <KeyRound className="w-8 h-8 text-amber-400" />
+                  {oauthCertifications.some(c => {
+                    const daysUntilDue = Math.ceil((new Date(c.recertification_due).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                    return daysUntilDue <= 90;
+                  }) ? (
+                    <AlertCircle className="w-5 h-5 text-amber-400" />
+                  ) : (
+                    <CheckCircle className="w-5 h-5 text-emerald-400" />
+                  )}
+                </div>
+                <div className="text-3xl font-bold text-white mb-1">
+                  {oauthCertifications.length}
+                </div>
+                <div className="text-sm text-gray-400">OAuth Apps</div>
+                <div className="mt-2 text-xs text-gray-500">
+                  {oauthCertifications.filter(c => c.status === 'active').length} active
                 </div>
               </button>
 
@@ -2701,6 +2762,115 @@ Sign up here: https://airocket.app`;
 
             {detailView === 'agent_workflows' && (
               <AgentWorkflowsPanel onMetricsLoad={setWorkflowExecutionCount} />
+            )}
+
+            {detailView === 'oauth_certifications' && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                    <KeyRound className="w-6 h-6 text-amber-400" />
+                    OAuth App Certifications
+                  </h2>
+                </div>
+
+                {oauthCertifications.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400">
+                    No OAuth apps configured yet.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {oauthCertifications.map((cert) => {
+                      const daysUntilDue = Math.ceil((new Date(cert.recertification_due).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                      const isUrgent = daysUntilDue <= 30;
+                      const isWarning = daysUntilDue <= 90 && daysUntilDue > 30;
+                      const isExpired = daysUntilDue <= 0;
+
+                      return (
+                        <div
+                          key={cert.id}
+                          className={`p-4 rounded-xl border ${
+                            isExpired ? 'bg-red-900/20 border-red-500/50' :
+                            isUrgent ? 'bg-amber-900/20 border-amber-500/50' :
+                            isWarning ? 'bg-yellow-900/20 border-yellow-500/50' :
+                            'bg-gray-700/50 border-gray-600'
+                          }`}
+                        >
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h3 className="text-lg font-semibold text-white">{cert.app_name}</h3>
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                  cert.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' :
+                                  cert.status === 'pending_recertification' ? 'bg-amber-500/20 text-amber-400' :
+                                  'bg-red-500/20 text-red-400'
+                                }`}>
+                                  {cert.status.replace('_', ' ').toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-400 space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-500">OAuth App ID:</span>
+                                  <code className="bg-gray-800 px-2 py-0.5 rounded text-xs">{cert.oauth_app_id}</code>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-500">Client ID:</span>
+                                  <code className="bg-gray-800 px-2 py-0.5 rounded text-xs truncate max-w-xs">{cert.client_id}</code>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              <div className="flex items-center gap-2 text-sm">
+                                <Calendar className="w-4 h-4 text-gray-400" />
+                                <span className="text-gray-400">Certified:</span>
+                                <span className="text-white">{format(new Date(cert.certification_date), 'MMM d, yyyy')}</span>
+                              </div>
+                              <div className={`flex items-center gap-2 text-sm ${
+                                isExpired ? 'text-red-400' :
+                                isUrgent ? 'text-amber-400' :
+                                isWarning ? 'text-yellow-400' :
+                                'text-emerald-400'
+                              }`}>
+                                {isExpired ? (
+                                  <AlertCircle className="w-4 h-4" />
+                                ) : isUrgent || isWarning ? (
+                                  <AlertCircle className="w-4 h-4" />
+                                ) : (
+                                  <CheckCircle className="w-4 h-4" />
+                                )}
+                                <span>
+                                  {isExpired ? 'EXPIRED - Recertification overdue' :
+                                   isUrgent ? `Recertification due in ${daysUntilDue} days` :
+                                   isWarning ? `Recertification due in ${daysUntilDue} days` :
+                                   `${daysUntilDue} days until recertification`}
+                                </span>
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Due: {format(new Date(cert.recertification_due), 'MMM d, yyyy')}
+                              </div>
+                            </div>
+                          </div>
+                          {cert.notes && (
+                            <div className="mt-3 pt-3 border-t border-gray-600">
+                              <p className="text-sm text-gray-400">{cert.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="mt-6 p-4 bg-blue-900/20 border border-blue-500/30 rounded-xl">
+                  <h3 className="text-sm font-semibold text-blue-400 mb-2">Google OAuth Recertification Guide</h3>
+                  <ul className="text-sm text-gray-400 space-y-1 list-disc list-inside">
+                    <li>Google requires annual recertification for OAuth apps with sensitive scopes</li>
+                    <li>Start the process 90 days before the due date to allow time for review</li>
+                    <li>Visit the Google Cloud Console to initiate recertification</li>
+                    <li>Ensure your privacy policy and terms of service are up to date</li>
+                    <li>Review and update your OAuth consent screen information</li>
+                  </ul>
+                </div>
+              </div>
             )}
           </div>
         </div>
