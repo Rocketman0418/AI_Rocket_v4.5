@@ -31,11 +31,10 @@ export function TeamPulseHeader({
     try {
       const nextDate = new Date(settings.next_generation_at);
       const dateStr = nextDate.toLocaleDateString('en-US', {
-        weekday: 'short',
         month: 'short',
         day: 'numeric'
       });
-      return `${dateStr} at 3AM EST`;
+      return `Mon, ${dateStr} at 3AM EST`;
     } catch {
       return 'Unknown';
     }
@@ -58,14 +57,14 @@ export function TeamPulseHeader({
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-4 text-sm text-slate-400">
-              <div className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4" />
+            <div className="flex flex-col items-end text-xs text-slate-500 gap-0.5">
+              <div className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
                 <span>Updated {formatLastGenerated()}</span>
               </div>
               {settings?.next_generation_at && (
-                <div className="hidden sm:flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4" />
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
                   <span>Next: {formatNextGeneration()}</span>
                 </div>
               )}

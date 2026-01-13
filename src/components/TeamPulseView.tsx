@@ -4,7 +4,6 @@ import { useTeamPulse } from '../hooks/useTeamPulse';
 import { TeamPulseHeader } from './team-pulse/TeamPulseHeader';
 import { TeamPulseInfographic } from './team-pulse/TeamPulseInfographic';
 import { TeamPulseEmptyState } from './team-pulse/TeamPulseEmptyState';
-import { TeamPulseHealthScore } from './team-pulse/TeamPulseHealthScore';
 import { TeamPulseInsightsPanel } from './team-pulse/TeamPulseInsightsPanel';
 import { AlertCircle, Loader2, Sparkles } from 'lucide-react';
 
@@ -121,14 +120,6 @@ export default function TeamPulseView({ onClose }: TeamPulseViewProps) {
                 <p className="text-slate-300 leading-relaxed">{currentSnapshot.health_explanation}</p>
               </div>
             )}
-
-            <TeamPulseHealthScore
-              score={currentSnapshot.health_score}
-              factors={currentSnapshot.health_factors}
-              insights={currentSnapshot.insights_and_trends}
-              explanation={null}
-              factorExplanations={currentSnapshot.sections?.factor_explanations}
-            />
 
             <TeamPulseInsightsPanel
               insights={currentSnapshot.insights_and_trends}

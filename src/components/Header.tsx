@@ -153,8 +153,6 @@ export const Header: React.FC<HeaderProps> = ({
 
             <h1 className="text-sm md:text-2xl font-bold tracking-tight flex items-center gap-1 md:gap-3">
               <span className="md:hidden text-blue-400">AI Rocket</span>
-              <span className="md:hidden text-white font-normal">+</span>
-              <span className="md:hidden text-emerald-400">Astra</span>
 
               <span className="hidden md:inline text-blue-400">AI Rocket</span>
               <span className="hidden md:inline text-white font-normal">+</span>

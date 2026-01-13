@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, ZoomIn, ZoomOut, X, Maximize2 } from 'lucide-react';
+import { Download, ZoomIn, ZoomOut, X, Maximize2, FlaskConical, Info } from 'lucide-react';
 
 interface TeamPulseInfographicProps {
   imageUrl: string | null;
@@ -16,6 +16,7 @@ export function TeamPulseInfographic({
   const [zoom, setZoom] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [showExperimentalInfo, setShowExperimentalInfo] = useState(false);
 
   const imageSrc = imageUrl || (imageBase64 ? `data:image/png;base64,${imageBase64}` : null);
 
@@ -53,7 +54,16 @@ export function TeamPulseInfographic({
     <>
       <div className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
         <div className="flex items-center justify-between p-3 border-b border-slate-700">
-          <span className="text-sm text-slate-400">Team Pulse Infographic</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-400">Team Pulse Infographic</span>
+            <button
+              onClick={() => setShowExperimentalInfo(true)}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs hover:bg-amber-500/30 transition-colors"
+            >
+              <FlaskConical className="w-3 h-3" />
+              <span>Experimental</span>
+            </button>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleZoomOut}
@@ -176,6 +186,60 @@ export function TeamPulseInfographic({
                 objectFit: 'contain'
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {showExperimentalInfo && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                  <FlaskConical className="w-4 h-4 text-amber-400" />
+                </div>
+                <h3 className="text-lg font-medium text-white">Experimental Feature</h3>
+              </div>
+              <button
+                onClick={() => setShowExperimentalInfo(false)}
+                className="p-1 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <p className="text-slate-300 text-sm leading-relaxed">
+                This infographic is generated using <span className="text-amber-400 font-medium">Nano Banana Pro</span>, an experimental AI image generation model.
+              </p>
+              <div className="bg-slate-900/50 rounded-lg p-3 space-y-2">
+                <div className="flex items-start gap-2">
+                  <Info className="w-4 h-4 text-cyan-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-slate-400 text-xs">
+                    Generated images may occasionally contain text errors, visual inconsistencies, or graphic artifacts.
+                  </p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Info className="w-4 h-4 text-cyan-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-slate-400 text-xs">
+                    We recommend reviewing the infographic for accuracy before sharing.
+                  </p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Info className="w-4 h-4 text-cyan-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-slate-400 text-xs">
+                    If you're not satisfied with the result, try generating again for a different output.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-700">
+              <button
+                onClick={() => setShowExperimentalInfo(false)}
+                className="w-full py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium transition-colors"
+              >
+                Got it
+              </button>
+            </div>
           </div>
         </div>
       )}

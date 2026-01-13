@@ -36,17 +36,7 @@ interface TeamPulseData {
 }
 
 interface AnalysisResult {
-  health_score: number;
-  health_explanation: string;
-  health_factors: {
-    strategic_alignment: number;
-    project_momentum: number;
-    financial_health: number;
-    team_collaboration: number;
-    operational_efficiency: number;
-    risk_management: number;
-  };
-  factor_explanations: Record<string, string>;
+  team_snapshot: string;
   key_metrics: {
     active_projects: string;
     recent_decisions: string;
@@ -102,39 +92,22 @@ ${data.team_discussions.map(t => `${t.user_name}: ${t.message}`).join('\n') || '
 ${data.recent_reports.map(r => `Q: ${r.prompt}\nA: ${r.response}`).join('\n\n') || 'No reports'}
 
 === PREVIOUS PULSE ===
-${data.previous_snapshot.health_score ? `Previous Score: ${data.previous_snapshot.health_score}` : 'First snapshot'}
+${data.previous_snapshot.generated_at ? `Previous pulse generated: ${data.previous_snapshot.generated_at}` : 'First snapshot'}
 
 Provide JSON response:
 {
-  "health_score": <0-100>,
-  "health_explanation": "<2-3 sentences about CURRENT team health>",
-  "health_factors": {
-    "strategic_alignment": <0-100>,
-    "project_momentum": <0-100>,
-    "financial_health": <0-100>,
-    "team_collaboration": <0-100>,
-    "operational_efficiency": <0-100>,
-    "risk_management": <0-100>
-  },
-  "factor_explanations": {
-    "strategic_alignment": "<explain using CURRENT mission/goals only>",
-    "project_momentum": "<explain using projects from LAST 30 DAYS only>",
-    "financial_health": "<explain using CURRENT financial data only>",
-    "team_collaboration": "<explain using RECENT meetings/discussions only>",
-    "operational_efficiency": "<explain using RECENT operations data only>",
-    "risk_management": "<explain using CURRENT risks only>"
-  },
+  "team_snapshot": "<DETAILED 4-5 sentence comprehensive overview of the team's current state. Include: what the team is working on, key accomplishments from the past 30 days, current priorities, notable team dynamics or collaboration patterns, and any significant milestones or progress. Be specific and reference actual projects, decisions, and activities from the data. This should paint a complete picture of where the team stands today.>",
   "key_metrics": {
-    "active_projects": "<CURRENT projects only>",
-    "recent_decisions": "<decisions from LAST 30 DAYS only>",
+    "active_projects": "<CURRENT projects only - be specific with names and status>",
+    "recent_decisions": "<decisions from LAST 30 DAYS only - be specific>",
     "upcoming_deadlines": "<deadlines in the next 30-60 days>",
-    "financial_status": "<CURRENT financial status>",
-    "team_focus_areas": "<what the team is focused on RIGHT NOW>"
+    "financial_status": "<CURRENT financial status or 'Not specified' if no data>",
+    "team_focus_areas": "<what the team is focused on RIGHT NOW - be specific>"
   },
   "highlights": ["<insight 1: pattern or theme observed across ALL 30-day data>", "<insight 2: another pattern or theme>", "<insight 3: key observation about team dynamics>"],
   "recommendations": ["<trend 1: high-level business trend from 30-day data>", "<trend 2: emerging pattern or shift>", "<trend 3: notable direction or trajectory>"],
-  "trends_vs_previous": "<comparison to last pulse>",
-  "short_highlights": ["<3-5 word COMPLETE phrase summarizing team health, e.g. 'Strong strategic alignment'>", "<3-5 word phrase, e.g. 'High team momentum'>", "<3-5 word phrase, e.g. 'Solid financial foundation'>"],
+  "trends_vs_previous": "<comparison to last pulse or 'First snapshot' if none>",
+  "short_highlights": ["<3-5 word COMPLETE phrase, e.g. 'Strong strategic alignment'>", "<3-5 word phrase, e.g. 'High team momentum'>", "<3-5 word phrase, e.g. 'Active project pipeline'>"],
   "short_insights": ["<3-5 word COMPLETE observation, e.g. 'Active project development'>", "<3-5 word observation, e.g. 'Growing team collaboration'>", "<3-5 word observation, e.g. 'Clear goal alignment'>"],
   "short_trends": ["<3-5 word COMPLETE trend, e.g. 'Increasing operational efficiency'>", "<3-5 word trend, e.g. 'Rising customer focus'>", "<3-5 word trend, e.g. 'Expanding market presence'>"]
 }
@@ -142,13 +115,12 @@ Provide JSON response:
 STRICT RULES:
 1. IGNORE any product/project that was completed more than 30 days ago
 2. IGNORE any pricing/subscription models from old products
-3. For Strategic Alignment: Reference CURRENT Mission and Long-Term Targets from foundational documents
-4. For "highlights" (INSIGHTS): Analyze ALL data from the last 30 days and identify patterns, themes, and observations across the entire dataset. DO NOT pick specific individual items - synthesize high-level insights about what the data collectively shows.
-5. For "recommendations" (TRENDS): Identify high-level business trends, emerging patterns, and directional shifts observed across all 30-day data. Focus on trajectories and patterns, NOT specific action items.
+3. For "team_snapshot": Write a DETAILED 4-5 sentence summary that covers what the team is working on, recent accomplishments, current priorities, and notable team dynamics. Be specific and reference actual data.
+4. For "highlights" (INSIGHTS): Analyze ALL data from the last 30 days and identify patterns, themes, and observations across the entire dataset. DO NOT pick specific individual items - synthesize high-level insights.
+5. For "recommendations" (TRENDS): Identify high-level business trends, emerging patterns, and directional shifts. Focus on trajectories and patterns, NOT specific action items.
 6. If a date in the content is before ${cutoffStr}, SKIP that information entirely
-7. Factor explanations must reference ONLY recent data - if you can't find recent data for a factor, say "Based on limited recent data"
-8. PRIORITIZE the most recent data (last 7-14 days) when analyzing, but consider the full 30-day context for trends
-9. CRITICAL FOR SHORT PHRASES (short_highlights, short_insights, short_trends): Each phrase MUST be a COMPLETE thought in 3-5 words. Examples of GOOD phrases: "Strong strategic execution", "High team momentum", "Solid financial position", "Active project pipeline". Examples of BAD phrases (DO NOT USE): "The team is maintaining", "While financial reserves", "There is a clear". The phrase must make sense as a standalone label.
+7. PRIORITIZE the most recent data (last 7-14 days) when analyzing
+8. CRITICAL FOR SHORT PHRASES: Each phrase MUST be a COMPLETE thought in 3-5 words. Examples of GOOD phrases: "Strong strategic execution", "High team momentum". Examples of BAD phrases (DO NOT USE): "The team is maintaining", "While financial reserves".
 
 Respond ONLY with valid JSON.`;
 
@@ -227,24 +199,7 @@ Respond ONLY with valid JSON.`;
   } catch (error) {
     console.error('Error in Flash analysis:', error);
     return {
-      health_score: 50,
-      health_explanation: 'Unable to fully analyze team data. Review available documents for insights.',
-      health_factors: {
-        strategic_alignment: 50,
-        project_momentum: 50,
-        financial_health: 50,
-        team_collaboration: 50,
-        operational_efficiency: 50,
-        risk_management: 50
-      },
-      factor_explanations: {
-        strategic_alignment: 'Insufficient data for detailed analysis',
-        project_momentum: 'Insufficient data for detailed analysis',
-        financial_health: 'Insufficient data for detailed analysis',
-        team_collaboration: 'Insufficient data for detailed analysis',
-        operational_efficiency: 'Insufficient data for detailed analysis',
-        risk_management: 'Insufficient data for detailed analysis'
-      },
+      team_snapshot: 'The team is building its knowledge base and establishing documentation practices. Activity patterns are emerging as the team develops its operational foundation. Review available documents for specific insights into current projects and priorities.',
       key_metrics: {
         active_projects: 'Not specified in data',
         recent_decisions: 'Not specified in data',
@@ -290,122 +245,107 @@ async function generateInfographic(
   const focusAreas = analysis.key_metrics.team_focus_areas || '';
   const activeProjects = analysis.key_metrics.active_projects || '';
   const financialStatus = analysis.key_metrics.financial_status || '';
+  const recentDecisions = analysis.key_metrics.recent_decisions || '';
+  const upcomingDeadlines = analysis.key_metrics.upcoming_deadlines || '';
+  const teamSnapshot = analysis.team_snapshot || '';
 
   const businessContext = `${focusAreas} ${activeProjects} ${financialStatus}`.toLowerCase();
 
   let themeContext = 'technology and innovation';
-  let accentStyle = 'electric blue, cyan, and dark slate with gradient accents';
+  let accentStyle = 'electric blue (#3B82F6), cyan (#06B6D4), and dark slate (#1E293B) with gradient accents';
 
   if (businessContext.includes('health') || businessContext.includes('medical') || businessContext.includes('wellness')) {
     themeContext = 'healthcare and wellness';
-    accentStyle = 'calming teal and green with clean white and soft gradients';
+    accentStyle = 'calming teal (#14B8A6), green (#22C55E), clean white, and soft gradients';
   } else if (businessContext.includes('financ') || businessContext.includes('invest') || businessContext.includes('banking')) {
     themeContext = 'finance and investment';
-    accentStyle = 'deep navy and gold with professional gray and metallic accents';
+    accentStyle = 'deep navy (#1E3A5F), gold (#F59E0B), professional gray, and metallic accents';
   } else if (businessContext.includes('market') || businessContext.includes('brand') || businessContext.includes('creative')) {
     themeContext = 'marketing and creative';
-    accentStyle = 'vibrant coral and warm orange with charcoal and dynamic gradients';
-  } else if (businessContext.includes('retail') || businessContext.includes('commerce') || businessContext.includes('sales')) {
-    themeContext = 'retail and commerce';
-    accentStyle = 'warm amber and forest green with neutral gray and earthy tones';
+    accentStyle = 'vibrant coral (#F97316), warm orange, charcoal (#374151), and dynamic gradients';
+  } else if (businessContext.includes('real estate') || businessContext.includes('property') || businessContext.includes('homes')) {
+    themeContext = 'real estate and property';
+    accentStyle = 'warm terracotta (#C2410C), sage green (#84CC16), cream, and earthy professional tones';
   } else if (businessContext.includes('consult') || businessContext.includes('service') || businessContext.includes('client')) {
     themeContext = 'professional services';
-    accentStyle = 'sophisticated slate and copper with cream and elegant highlights';
+    accentStyle = 'sophisticated slate (#475569), copper (#EA580C), cream (#FEF3C7), and elegant highlights';
   }
-
-  const scoreColor = analysis.health_score >= 70 ? 'vibrant green/emerald with glow effect' :
-                     analysis.health_score >= 40 ? 'warm amber/orange with glow effect' : 'alert coral/red with glow effect';
 
   const shortHighlights = analysis.short_highlights || ['Strong team momentum', 'Solid execution focus', 'Building foundation'];
   const shortInsights = analysis.short_insights || ['Active project development', 'Growing collaboration', 'Clear goal alignment'];
   const shortTrends = analysis.short_trends || ['Increasing efficiency', 'Rising engagement', 'Expanding capabilities'];
+  const fullHighlights = analysis.highlights || [];
+  const fullRecommendations = analysis.recommendations || [];
 
-  const visualStyles = [
-    'futuristic holographic dashboard with glowing neon data visualizations and 3D floating elements',
-    'premium glass-morphism design with frosted panels, glowing metrics, and depth layers',
-    'cinematic data visualization with dramatic lighting, radial gauges, and particle effects',
-    'high-tech command center aesthetic with hexagonal grids, pulsing indicators, and tech patterns',
-    'sleek aerospace mission control with circular gauges, status lights, and grid overlays'
-  ];
-  const randomStyle = visualStyles[Math.floor(Math.random() * visualStyles.length)];
+  const prompt = `Create an infographic for "${teamName}" Team Pulse report. Focus on VISUAL STORYTELLING with MINIMAL TEXT.
 
-  const prompt = `Create a VISUALLY STUNNING, DATA-RICH infographic for "${teamName}" Team Pulse report.
-
-VISUAL STYLE: ${randomStyle}
 INDUSTRY: ${themeContext}
-COLOR SCHEME: ${accentStyle}
+COLORS: ${accentStyle}. Light background (#F8FAFC or white).
 
-=== TECHNICAL SPECS ===
-- LANDSCAPE 1920x1080 pixels (16:9 aspect ratio)
-- 60% rich graphics and data visualizations, 40% text
-- Premium, modern tech aesthetic
-- NO human faces, avatars, or photographs of people
+=== SPECS ===
+- Landscape 1920x1080 (16:9)
+- Mostly graphics/icons with minimal text
+- NO photographs or human faces
+- Clean, modern, professional
 
-=== REQUIRED VISUAL ELEMENTS (make these prominent and creative) ===
+=== LAYOUT ===
+Two main sections side by side: Team Snapshot on the left (larger), Insights & Trends on the right (smaller).
+DO NOT display any percentage numbers or labels like "60%" or "40%" in the design.
 
-1. HERO HEALTH SCORE GAUGE (center-right, LARGE and dramatic):
-   - Score: ${analysis.health_score}/100
-   - Style: Circular radial gauge with ${scoreColor}
-   - Add: Glowing ring effect, tick marks, digital readout
-   - Size: Make this the visual focal point
+=== HEADER (compact) ===
+"${teamName}: Team Pulse" | ${new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} | Rocket icon
 
-2. SIX METRIC MINI-GAUGES (arranged around or below the hero gauge):
-   Create VISUAL circular progress indicators for each:
-   - Strategy: ${analysis.health_factors.strategic_alignment}% (icon: target/bullseye)
-   - Momentum: ${analysis.health_factors.project_momentum}% (icon: rocket/arrow up)
-   - Financial: ${analysis.health_factors.financial_health}% (icon: chart/coins)
-   - Teamwork: ${analysis.health_factors.team_collaboration}% (icon: connected nodes/people)
-   - Operations: ${analysis.health_factors.operational_efficiency}% (icon: gears/cogs)
-   - Risk Mgmt: ${analysis.health_factors.risk_management}% (icon: shield/checkmark)
+=== SECTION 1: TEAM SNAPSHOT (LEFT/CENTER - main focus) ===
+The primary section. Show current state visually:
 
-3. KEY HIGHLIGHTS PANEL (left side, with icons):
-   Display each as a SHORT label with a distinctive icon:
-   - ${shortHighlights[0]}
-   - ${shortHighlights[1]}
-   - ${shortHighlights[2]}
-   Use: Checkmarks, stars, or upward arrows as bullet icons
+**Overview (use icons, minimal text):**
+- ${memberCount} members
+- Focus: ${focusAreas || 'Building and growing'}
+- Projects: ${activeProjects || 'Multiple initiatives'}
 
-4. INSIGHTS SECTION (bottom-left):
-   Short phrases with visual indicators:
-   - ${shortInsights[0]}
-   - ${shortInsights[1]}
-   - ${shortInsights[2]}
-   Use: Lightbulb, magnifying glass, or graph icons
+**Key Details (icons with short labels):**
+- Decisions: ${recentDecisions || 'Strategic planning'}
+- Upcoming: ${upcomingDeadlines || 'Milestones tracked'}
+${financialStatus && financialStatus !== 'Not specified' ? `- Financial: ${financialStatus}` : ''}
 
-5. TRENDS SECTION (bottom-right):
-   Short phrases with trend indicators:
-   - ${shortTrends[0]}
-   - ${shortTrends[1]}
-   - ${shortTrends[2]}
-   Use: Trending arrows, wave patterns, or growth charts
+**Snapshot Summary:**
+${teamSnapshot}
 
-=== HEADER ===
-Top banner: "${teamName}" - TEAM PULSE
-Date: ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-Include: Small rocket icon as brand element
+**Use visuals:** Timeline, milestone markers, status dots, workflow arrows, team diagram icon
 
-=== FOOTER ===
-"Powered by AI Rocket" with subtle branding
+=== SECTION 2: INSIGHTS & TRENDS (RIGHT - secondary) ===
 
-=== DESIGN REQUIREMENTS ===
-1. RICH GRAPHICS: Include decorative tech elements - circuit patterns, grid lines, glowing nodes, data flow lines
-2. DEPTH AND DIMENSION: Use layered panels, shadows, gradients to create visual depth
-3. ICONS: Every text item should have an associated icon or visual indicator
-4. CONTRAST: Ensure all text is highly readable with proper contrast
-5. PREMIUM FEEL: This should look like a high-end analytics dashboard, not a basic template
-6. ANIMATION SUGGESTION: Design as if elements could pulse or glow (static image but suggest motion)
-7. DATA VISUALIZATION: The 6 metric gauges should be VISUAL (circular progress, not just numbers)
-8. BALANCE: Even distribution of visual weight across the composition
+**Insights (lightbulb icons):**
+${fullHighlights.slice(0, 2).map((h, i) => `${i + 1}. ${h}`).join('\n') || '1. Building momentum\n2. Growing collaboration'}
 
-=== CRITICAL: DO NOT ===
-- Do NOT use plain text lists without icons
-- Do NOT create a basic template look
-- Do NOT include human faces or photographs
-- Do NOT make text too small to read
-- Do NOT use incomplete sentences or cut-off text
-- Do NOT create a cluttered or overwhelming design`;
+**Trends (arrow icons):**
+${fullRecommendations.slice(0, 2).map((r, i) => `${i + 1}. ${r}`).join('\n') || '1. Positive trajectory\n2. Operations maturing'}
 
-  console.log('[Image Gen] Creative direction:', { themeContext, accentStyle, randomStyle });
+**Quick Tags (pill/badge style):**
+${shortHighlights.slice(0, 2).map(h => `• ${h}`).join('\n')}
+${shortTrends.slice(0, 2).map(t => `• ${t}`).join('\n')}
+
+**Use visuals:** Trend arrows, mini charts, connecting nodes, flowchart elements
+
+=== FOOTER (small) ===
+"Powered by AI Rocket"
+
+=== DESIGN RULES ===
+1. LESS TEXT - use icons and visuals to convey meaning
+2. Clear hierarchy: Header > Snapshot > Insights
+3. Lots of white space
+4. Every icon serves a purpose
+5. Premium, clean aesthetic
+6. DO NOT include any percentage labels or numbers like "60%" or "40%" anywhere in the design
+
+=== DO NOT ===
+- NO human faces
+- NO walls of text - keep it visual
+- NO purple/indigo colors
+- NO cluttered layouts
+- NO percentage labels (like "60%" or "40%") in section headers`;
+
+  console.log('[Image Gen] Creative direction:', { themeContext, accentStyle });
 
   try {
     console.log('[Image Gen] Starting infographic generation for team:', teamName);
@@ -532,7 +472,7 @@ Deno.serve(async (req: Request) => {
 
     console.log('Step 1: Analyzing with Flash model (gemini-3-flash-preview)...');
     const analysis = await analyzeWithFlash(teamData, geminiApiKey);
-    console.log(`Analysis complete. Health score: ${analysis.health_score}`);
+    console.log('Analysis complete. Team snapshot generated.');
 
     console.log('Step 2: Generating infographic with gemini-3-pro-image-preview...');
     const infographicResult = await generateInfographic(
@@ -587,22 +527,13 @@ Deno.serve(async (req: Request) => {
       .eq('team_id', team_id)
       .eq('is_current', true);
 
-    const healthFactors = {
-      data_richness: analysis.health_factors.strategic_alignment,
-      goal_progress: analysis.health_factors.project_momentum,
-      meeting_cadence: analysis.health_factors.team_collaboration,
-      team_engagement: analysis.health_factors.operational_efficiency,
-      risk_indicators: analysis.health_factors.risk_management,
-      financial_health: analysis.health_factors.financial_health
-    };
-
     const { data: snapshot, error: snapshotError } = await supabase
       .from('team_pulse_snapshots')
       .insert({
         team_id,
-        health_score: analysis.health_score,
-        health_explanation: analysis.health_explanation,
-        health_factors: healthFactors,
+        health_score: 0,
+        health_explanation: analysis.team_snapshot,
+        health_factors: {},
         infographic_url: infographicUrl,
         infographic_base64: infographicBase64,
         source_data_summary: {
@@ -615,18 +546,11 @@ Deno.serve(async (req: Request) => {
             team_name: teamData.team_info.team_name,
             members: teamData.member_info.total_members
           },
-          key_metrics: analysis.key_metrics,
-          factor_explanations: analysis.factor_explanations
+          key_metrics: analysis.key_metrics
         },
         insights_and_trends: {
-          score_trend: teamData.previous_snapshot.health_score 
-            ? (analysis.health_score > teamData.previous_snapshot.health_score + 5 ? 'up' 
-               : analysis.health_score < teamData.previous_snapshot.health_score - 5 ? 'down' 
-               : 'stable')
-            : 'stable',
-          score_change: teamData.previous_snapshot.health_score 
-            ? analysis.health_score - teamData.previous_snapshot.health_score 
-            : 0,
+          score_trend: 'stable',
+          score_change: 0,
           factor_trends: {},
           highlights: analysis.highlights,
           recommendations: analysis.recommendations,
@@ -647,14 +571,18 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const nextGeneration = new Date();
-    nextGeneration.setDate(nextGeneration.getDate() + 7);
-    
+    const now = new Date();
+    const nextMonday = new Date(now);
+    const dayOfWeek = now.getUTCDay();
+    const daysUntilMonday = dayOfWeek === 0 ? 1 : dayOfWeek === 1 ? 7 : (8 - dayOfWeek);
+    nextMonday.setUTCDate(now.getUTCDate() + daysUntilMonday);
+    nextMonday.setUTCHours(8, 0, 0, 0);
+
     await supabase
       .from('team_pulse_settings')
       .update({
         last_generated_at: new Date().toISOString(),
-        next_generation_at: nextGeneration.toISOString(),
+        next_generation_at: nextMonday.toISOString(),
         updated_at: new Date().toISOString()
       })
       .eq('team_id', team_id);
@@ -666,7 +594,7 @@ Deno.serve(async (req: Request) => {
         success: true,
         snapshot: {
           id: snapshot.id,
-          health_score: snapshot.health_score,
+          team_snapshot: analysis.team_snapshot,
           infographic_url: snapshot.infographic_url,
           has_infographic: !!(snapshot.infographic_url || snapshot.infographic_base64),
           infographic_error: infographicError,
