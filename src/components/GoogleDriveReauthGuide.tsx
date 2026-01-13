@@ -209,10 +209,10 @@ export const GoogleDriveReauthGuide: React.FC<GoogleDriveReauthGuideProps> = ({
                 <div className="text-sm text-gray-300 space-y-2">
                   <p><strong className="text-white">Common reasons for expiration:</strong></p>
                   <ul className="list-disc list-inside space-y-1 text-gray-400 ml-2">
-                    <li>Extended period of inactivity (tokens expire after ~7 days without use)</li>
                     <li>Google account password was changed</li>
                     <li>Two-factor authentication was updated</li>
                     <li>Access was manually revoked from Google settings</li>
+                    <li>Extended period of inactivity</li>
                     <li>Google's periodic security refresh cycle</li>
                   </ul>
                 </div>

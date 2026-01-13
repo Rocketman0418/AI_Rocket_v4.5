@@ -102,43 +102,18 @@ export function GoogleDriveTroubleshootGuide({ compact = false }: GoogleDriveTro
               <p className="text-xs text-yellow-200/90">
                 <strong>Common connection issues:</strong>
               </p>
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-3">
-                <p className="text-xs text-blue-200 font-medium mb-2">
-                  Testing Mode Requirements
-                </p>
-                <p className="text-xs text-blue-100/90 mb-2">
-                  We're currently in secure testing mode. Google requires one of these email types:
-                </p>
-                <ul className="text-xs text-blue-100/80 space-y-1.5 ml-3">
-                  <li className="flex items-start gap-1.5">
-                    <span className="text-blue-400 mt-0.5">1.</span>
-                    <span>A standard <strong>@gmail.com</strong> address</span>
-                  </li>
-                  <li className="flex items-start gap-1.5">
-                    <span className="text-blue-400 mt-0.5">2.</span>
-                    <span>A work/school email using <strong>Google Workspace</strong></span>
-                  </li>
-                  <li className="flex items-start gap-1.5">
-                    <span className="text-blue-400 mt-0.5">3.</span>
-                    <span>An existing email <strong>linked to a Google Account</strong></span>
-                  </li>
-                </ul>
-                <p className="text-xs text-blue-200 mt-2 font-medium">
-                  ✓ Quick check: If you can sign in to Google Drive with that email, it will work!
-                </p>
-              </div>
               <ol className="text-xs text-yellow-200/80 space-y-2 ml-4 list-decimal">
                 <li>
-                  <strong>Email doesn't meet testing requirements:</strong> Your email needs to be authorized for Google testing mode.
-                  <span className="block mt-1 text-yellow-200/70">
-                    Fix: Use a Gmail account, Google Workspace email, or create a free Google Account linked to your current email.
-                  </span>
+                  <strong>Browser blocked the popup:</strong> Make sure your browser allows popups for this site.
                 </li>
                 <li>
-                  <strong>Want to use a different email?</strong> The email for Google Drive connection doesn't need to match your AI Rocket account email.
-                  <span className="block mt-1 text-yellow-200/70">
-                    You can use any authorized Google email for the connection.
-                  </span>
+                  <strong>Wrong Google account:</strong> If you have multiple Google accounts, make sure you select the correct one.
+                </li>
+                <li>
+                  <strong>Permissions not granted:</strong> You need to allow all requested permissions for Astra to access your Drive.
+                </li>
+                <li>
+                  <strong>Using a different email:</strong> The email for Google Drive connection doesn't need to match your RocketHub account email.
                 </li>
               </ol>
               <div className="pt-2">
@@ -150,7 +125,7 @@ export function GoogleDriveTroubleshootGuide({ compact = false }: GoogleDriveTro
                   Contact Support for Help
                 </button>
                 <p className="text-xs text-yellow-200/70 mt-1">
-                  If your connection fails or you'd like to use a different email, contact us and we'll help you get set up.
+                  If your connection fails, contact us and we'll help you get set up.
                 </p>
               </div>
             </div>
@@ -215,7 +190,7 @@ export function GoogleDriveTroubleshootGuide({ compact = false }: GoogleDriveTro
                     id="description"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Please include:&#10;- The email address you're trying to connect with&#10;- The email address for your RocketHub account&#10;- Any error messages you're seeing"
+                    placeholder="Please include:&#10;- The email address you're trying to connect with&#10;- Any error messages you're seeing"
                     rows={8}
                     className="w-full px-4 py-2 bg-[#0f0f1e] border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
                     disabled={isSubmitting || success}
@@ -268,57 +243,41 @@ export function GoogleDriveTroubleshootGuide({ compact = false }: GoogleDriveTro
               Troubleshooting Google Drive Connection
             </h3>
             <p className="text-sm text-yellow-200/90 mb-3">
-              If you're having trouble connecting your Google Drive, here's what you need to know:
+              If you're having trouble connecting your Google Drive, here are some common solutions:
             </p>
             <div className="space-y-3">
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                <p className="text-sm font-medium text-blue-200 mb-2">
-                  Testing Mode Requirements
-                </p>
-                <p className="text-xs text-blue-100/90 mb-2">
-                  We're currently in secure testing mode. Google requires all testers to use a Google-authorized email address:
-                </p>
-                <ul className="text-xs text-blue-100/80 space-y-2 ml-4">
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-400 mt-0.5">1.</span>
-                    <span>A standard <strong className="text-white">@gmail.com</strong> address</span>
+              <div className="bg-gray-800/50 rounded-lg p-3 space-y-2">
+                <p className="text-sm font-medium text-white">Common Issues:</p>
+                <ol className="text-xs text-gray-300 space-y-2 ml-4 list-decimal">
+                  <li>
+                    <strong className="text-white">Browser blocked the popup:</strong> Make sure your browser allows popups for this site, or try a different browser.
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-400 mt-0.5">2.</span>
-                    <span>A work/school email that uses <strong className="text-white">Google Workspace</strong> (e.g., you use Google Drive or Gmail for your business mail)</span>
+                  <li>
+                    <strong className="text-white">Wrong Google account:</strong> If you have multiple Google accounts, ensure you're selecting the correct one during sign-in.
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-400 mt-0.5">3.</span>
-                    <span>An existing email (like Yahoo or Outlook) that you have manually <strong className="text-white">linked to a Google Account</strong></span>
+                  <li>
+                    <strong className="text-white">Permissions not granted:</strong> You need to allow all requested permissions for Astra to access your Drive folders.
                   </li>
-                </ul>
-                <div className="mt-3 pt-3 border-t border-blue-500/30">
-                  <p className="text-xs text-blue-200 font-medium mb-1">
-                    ✓ How to check if your email works:
-                  </p>
-                  <p className="text-xs text-blue-100/80">
-                    If you can sign in to Google Drive with that email, it will work for our test!
-                  </p>
-                </div>
-                <p className="text-xs text-blue-100/70 mt-2">
-                  Don't have one? You can create a free Google Account linked to your current email.
-                </p>
+                  <li>
+                    <strong className="text-white">Connection interrupted:</strong> If the connection process was interrupted, try again from the beginning.
+                  </li>
+                </ol>
               </div>
-              <div className="bg-yellow-500/10 rounded-lg p-3">
-                <p className="text-sm font-medium text-yellow-200 mb-1">
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                <p className="text-sm font-medium text-blue-200 mb-1">
                   Using a Different Email
                 </p>
-                <p className="text-xs text-yellow-200/80">
-                  The email for Google Drive connection doesn't need to match your AI Rocket account email. You can use any authorized Google email for the connection.
+                <p className="text-xs text-blue-100/80">
+                  The email for Google Drive connection doesn't need to match your RocketHub account email. You can use any Google account for the connection.
                 </p>
               </div>
             </div>
             <div className="mt-4 pt-4 border-t border-yellow-500/20">
               <p className="text-sm font-medium text-yellow-200 mb-2">
-                Connection Failed or Need Help?
+                Still Having Issues?
               </p>
               <p className="text-xs text-yellow-200/80 mb-3">
-                If your connection attempt fails or you'd like to use a different email address for connections, contact our support team and we'll help you get set up.
+                If your connection attempt fails, contact our support team and we'll help you get set up.
               </p>
               <button
                 onClick={handleOpenModal}
@@ -390,7 +349,7 @@ export function GoogleDriveTroubleshootGuide({ compact = false }: GoogleDriveTro
                   id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Please include:&#10;- The email address you're trying to connect with&#10;- The email address for your RocketHub account&#10;- Any error messages you're seeing"
+                  placeholder="Please include:&#10;- The email address you're trying to connect with&#10;- Any error messages you're seeing"
                   rows={8}
                   className="w-full px-4 py-2 bg-[#0f0f1e] border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
                   disabled={isSubmitting || success}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Shield, ChevronRight, AlertTriangle, ExternalLink } from 'lucide-react';
+import { X, Shield, ChevronRight, ExternalLink } from 'lucide-react';
 
 interface GoogleOAuthInfoModalProps {
   isOpen: boolean;
@@ -19,10 +19,10 @@ export const GoogleOAuthInfoModal: React.FC<GoogleOAuthInfoModalProps> = ({
       <div className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg border border-gray-700 overflow-hidden max-h-[90vh] flex flex-col">
         <div className="px-6 py-4 border-b border-gray-700 flex items-center justify-between bg-gray-900/50 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-yellow-400" />
+            <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-blue-400" />
             </div>
-            <h2 className="text-lg font-semibold text-white">Before You Connect</h2>
+            <h2 className="text-lg font-semibold text-white">Connect Google Drive</h2>
           </div>
           <button
             onClick={onClose}
@@ -38,57 +38,18 @@ export const GoogleOAuthInfoModal: React.FC<GoogleOAuthInfoModalProps> = ({
               <Shield className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
               <div>
                 <h3 className="text-blue-300 font-medium mb-2">
-                  Testing Mode Requirements
-                </h3>
-                <p className="text-sm text-gray-300 mb-3">
-                  We're currently in secure testing mode. Google requires all testers to use a Google-authorized email address:
-                </p>
-                <ul className="text-sm text-gray-300 space-y-2 ml-4">
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-400 mt-0.5">1.</span>
-                    <span>A standard <strong className="text-white">@gmail.com</strong> address</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-400 mt-0.5">2.</span>
-                    <span>A work/school email that uses <strong className="text-white">Google Workspace</strong> (e.g., you use Google Drive or Gmail for your business mail)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-400 mt-0.5">3.</span>
-                    <span>An existing email (like Yahoo or Outlook) that you have manually <strong className="text-white">linked to a Google Account</strong></span>
-                  </li>
-                </ul>
-                <div className="mt-3 pt-3 border-t border-blue-500/30">
-                  <p className="text-sm text-blue-200 font-medium mb-1">
-                    ✓ How to check if your email works:
-                  </p>
-                  <p className="text-sm text-gray-300">
-                    If you can sign in to Google Drive with that email, it will work for our test!
-                  </p>
-                </div>
-                <div className="mt-2 text-xs text-gray-400">
-                  Don't have one? You can create a free Google Account linked to your current email.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="text-yellow-300 font-medium mb-1">
-                  You'll See a Google Warning Screen
+                  Secure Connection
                 </h3>
                 <p className="text-sm text-gray-300">
-                  Google will show a message saying "Google hasn't verified this app."
-                  This is expected while our app completes Google's verification process.
+                  You'll be redirected to Google to sign in and authorize Astra to access your Google Drive folders.
+                  This is a secure OAuth connection verified by Google.
                 </p>
               </div>
             </div>
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-white font-medium">How to proceed:</h4>
+            <h4 className="text-white font-medium">What happens next:</h4>
 
             <div className="space-y-3">
               <div className="flex items-start gap-3 bg-gray-700/50 rounded-lg p-3">
@@ -96,9 +57,9 @@ export const GoogleOAuthInfoModal: React.FC<GoogleOAuthInfoModalProps> = ({
                   1
                 </div>
                 <div>
-                  <p className="text-white text-sm font-medium">Click "Continue"</p>
+                  <p className="text-white text-sm font-medium">Sign in to Google</p>
                   <p className="text-gray-400 text-xs mt-0.5">
-                    On the warning screen, click the "Continue" button to proceed
+                    Select the Google account you want to connect
                   </p>
                 </div>
               </div>
@@ -110,29 +71,41 @@ export const GoogleOAuthInfoModal: React.FC<GoogleOAuthInfoModalProps> = ({
                 <div>
                   <p className="text-white text-sm font-medium">Review & Allow Permissions</p>
                   <p className="text-gray-400 text-xs mt-0.5">
-                    Select "Allow" to grant Astra access to your Google Drive folders
+                    Grant Astra access to your Google Drive folders
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 bg-gray-700/50 rounded-lg p-3">
+                <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                  3
+                </div>
+                <div>
+                  <p className="text-white text-sm font-medium">Choose Your Folders</p>
+                  <p className="text-gray-400 text-xs mt-0.5">
+                    Select which folders you want Astra to sync and analyze
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-            <h4 className="text-blue-300 font-medium text-sm mb-2 flex items-center gap-2">
+          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+            <h4 className="text-green-300 font-medium text-sm mb-2 flex items-center gap-2">
               <Shield className="w-4 h-4" />
-              Why is this safe?
+              Your Data is Protected
             </h4>
             <ul className="text-sm text-gray-300 space-y-1.5">
               <li className="flex items-start gap-2">
-                <ChevronRight className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                <ChevronRight className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
                 <span>We only access folders you explicitly select</span>
               </li>
               <li className="flex items-start gap-2">
-                <ChevronRight className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                <ChevronRight className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
                 <span>Your data is never shared or sold</span>
               </li>
               <li className="flex items-start gap-2">
-                <ChevronRight className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                <ChevronRight className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
                 <span>You can revoke access anytime in Google settings</span>
               </li>
             </ul>
@@ -160,7 +133,7 @@ export const GoogleOAuthInfoModal: React.FC<GoogleOAuthInfoModalProps> = ({
             onClick={onProceed}
             className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2 min-h-[44px]"
           >
-            <span>Proceed to Google</span>
+            <span>Connect to Google</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>

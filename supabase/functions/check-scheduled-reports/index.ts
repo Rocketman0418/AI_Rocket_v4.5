@@ -30,9 +30,9 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('🔍 Checking for scheduled reports that need to run...');
+    console.log('Checking for scheduled reports that need to run...');
     const now = new Date();
-    console.log('⏰ Current time (UTC):', now.toISOString());
+    console.log('Current time (UTC):', now.toISOString());
 
     // Find all active scheduled reports where next_run_at is in the past
     const { data: reportsToRun, error: fetchError } = await supabase
@@ -45,12 +45,12 @@ Deno.serve(async (req: Request) => {
       .order('next_run_at', { ascending: true });
 
     if (fetchError) {
-      console.error('❌ Error fetching scheduled reports:', fetchError);
+      console.error('Error fetching scheduled reports:', fetchError);
       throw new Error(`Failed to fetch scheduled reports: ${fetchError.message}`);
     }
 
     if (!reportsToRun || reportsToRun.length === 0) {
-      console.log('✅ No reports need to run at this time');
+      console.log('No reports need to run at this time');
       return new Response(
         JSON.stringify({
           success: true,
@@ -66,31 +66,39 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`📊 Found ${reportsToRun.length} report(s) to run:`,
+    console.log(`Found ${reportsToRun.length} report(s) to run:`,
       reportsToRun.map(r => ({ id: r.id, title: r.title, next_run_at: r.next_run_at }))
     );
 
     const results = [];
-    const STAGGER_DELAY_MS = 60000; // 60 seconds between reports to avoid TPM rate limits
+    const STAGGER_DELAY_MS = 5000; // 5 seconds between reports (reduced from 60s to prevent timeouts)
+    const MAX_REPORTS_PER_RUN = 10; // Limit reports per run to prevent timeout
+
+    // Limit the number of reports to process in a single run
+    const reportsToProcess = reportsToRun.slice(0, MAX_REPORTS_PER_RUN);
+
+    if (reportsToRun.length > MAX_REPORTS_PER_RUN) {
+      console.log(`Found ${reportsToRun.length} reports due, processing first ${MAX_REPORTS_PER_RUN}. Remaining will be processed in next cron run.`);
+    }
 
     // Process each report with staggering
-    for (let i = 0; i < reportsToRun.length; i++) {
-      const report = reportsToRun[i];
+    for (let i = 0; i < reportsToProcess.length; i++) {
+      const report = reportsToProcess[i];
 
       // Add delay between reports (skip delay for first report)
       if (i > 0) {
-        console.log(`⏳ Waiting ${STAGGER_DELAY_MS / 1000} seconds before next report to avoid rate limits...`);
+        console.log(`Waiting ${STAGGER_DELAY_MS / 1000} seconds before next report to avoid rate limits...`);
         await new Promise(resolve => setTimeout(resolve, STAGGER_DELAY_MS));
       }
 
       try {
-        console.log(`\n🚀 Running report: ${report.title} (${report.id})`);
+        console.log(`\nRunning report: ${report.title} (${report.id})`);
 
         // Fetch user details
         const { data: userData, error: userError } = await supabase.auth.admin.getUserById(report.user_id);
 
         if (userError || !userData?.user?.email) {
-          console.error(`❌ User not found for report ${report.id}:`, userError);
+          console.error(`User not found for report ${report.id}:`, userError);
           results.push({
             reportId: report.id,
             reportTitle: report.title,
@@ -107,7 +115,7 @@ Deno.serve(async (req: Request) => {
         let viewFinancial = true;
         let userName = userData.user.user_metadata?.full_name || userData.user.email || '';
 
-        console.log(`🔍 Fetching team info for user ${report.user_id}...`);
+        console.log(`Fetching team info for user ${report.user_id}...`);
 
         // Query public.users table directly (service role bypasses RLS)
         const { data: userRecord, error: userRecordError } = await supabase
@@ -117,29 +125,29 @@ Deno.serve(async (req: Request) => {
           .single();
 
         if (userRecordError) {
-          console.error(`❌ Error fetching user record:`, userRecordError);
-          console.log(`⚠️ Falling back to user_metadata`);
+          console.error(`Error fetching user record:`, userRecordError);
+          console.log(`Falling back to user_metadata`);
           teamId = userData.user.user_metadata?.team_id || null;
           role = userData.user.user_metadata?.role || 'member';
           viewFinancial = userData.user.user_metadata?.view_financial !== false;
         } else if (!userRecord) {
-          console.warn(`⚠️ User record not found in public.users table`);
+          console.warn(`User record not found in public.users table`);
           teamId = userData.user.user_metadata?.team_id || null;
           role = userData.user.user_metadata?.role || 'member';
           viewFinancial = userData.user.user_metadata?.view_financial !== false;
         } else {
-          console.log(`✅ User record fetched:`, JSON.stringify(userRecord, null, 2));
+          console.log(`User record fetched:`, JSON.stringify(userRecord, null, 2));
           teamId = userRecord.team_id;
           teamName = userRecord.teams?.name || '';
           role = userRecord.role || 'member';
           viewFinancial = userRecord.view_financial !== false;
           userName = userRecord.name || userName;
-          console.log(`📋 Extracted values: teamId=${teamId}, teamName=${teamName}, role=${role}, userName=${userName}`);
+          console.log(`Extracted values: teamId=${teamId}, teamName=${teamName}, role=${role}, userName=${userName}`);
         }
 
         // Call n8n webhook to generate report
-        console.log('🌐 Calling n8n webhook...');
-        console.log(`📋 Payload preview: user=${userData.user.email}, team=${teamName} (${teamId}), role=${role}`);
+        console.log('Calling n8n webhook...');
+        console.log(`Payload preview: user=${userData.user.email}, team=${teamName} (${teamId}), role=${role}`);
 
         const webhookPayload = {
           chatInput: report.prompt,
@@ -163,7 +171,7 @@ Deno.serve(async (req: Request) => {
           executed_at: new Date().toISOString()
         };
 
-        console.log('📦 Full webhook payload:', JSON.stringify(webhookPayload, null, 2));
+        console.log('Full webhook payload:', JSON.stringify(webhookPayload, null, 2));
 
         const webhookResponse = await fetch(n8nWebhookUrl, {
           method: 'POST',
@@ -175,7 +183,7 @@ Deno.serve(async (req: Request) => {
 
         if (!webhookResponse.ok) {
           const errorText = await webhookResponse.text();
-          console.error('❌ n8n webhook failed:', webhookResponse.status, errorText);
+          console.error('n8n webhook failed:', webhookResponse.status, errorText);
           results.push({
             reportId: report.id,
             reportTitle: report.title,
@@ -198,13 +206,13 @@ Deno.serve(async (req: Request) => {
           // Use raw text if not JSON
         }
 
-        console.log('✅ Report generated successfully from n8n webhook');
+        console.log('Report generated successfully from n8n webhook');
 
         // Determine recipients based on whether this is a team report
         const recipients: Array<{ user_id: string; user_email: string; user_name: string }> = [];
 
         if (report.is_team_report && teamId) {
-          console.log(`📤 Team report detected - sending to all members of team: ${teamId}`);
+          console.log(`Team report detected - sending to all members of team: ${teamId}`);
 
           // Fetch all team members
           const { data: teamMembers, error: membersError } = await supabase
@@ -213,14 +221,14 @@ Deno.serve(async (req: Request) => {
             .eq('team_id', teamId);
 
           if (membersError) {
-            console.error('❌ Error fetching team members:', membersError);
+            console.error('Error fetching team members:', membersError);
             recipients.push({
               user_id: report.user_id,
               user_email: userData.user.email,
               user_name: userName
             });
           } else if (teamMembers && teamMembers.length > 0) {
-            console.log(`✅ Found ${teamMembers.length} team members`);
+            console.log(`Found ${teamMembers.length} team members`);
             for (const member of teamMembers) {
               const { data: memberAuth } = await supabase.auth.admin.getUserById(member.id);
               if (memberAuth?.user?.email) {
@@ -240,7 +248,7 @@ Deno.serve(async (req: Request) => {
           });
         }
 
-        console.log(`📬 Sending report to ${recipients.length} recipient(s)`);
+        console.log(`Sending report to ${recipients.length} recipient(s)`);
 
         // Save report message for each recipient and collect inserted IDs
         const insertedMessages: Array<{ chatMessageId: string; userId: string; userEmail: string; userName: string }> = [];
@@ -271,7 +279,7 @@ Deno.serve(async (req: Request) => {
             .single();
 
           if (insertError) {
-            console.error(`❌ Failed to insert chat for ${recipient.user_email}:`, insertError);
+            console.error(`Failed to insert chat for ${recipient.user_email}:`, insertError);
           } else if (insertedChat) {
             insertedMessages.push({
               chatMessageId: insertedChat.id,
@@ -282,7 +290,7 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        console.log(`✅ Report delivered to ${insertedMessages.length} recipient(s)`);
+        console.log(`Report delivered to ${insertedMessages.length} recipient(s)`);
 
         // Calculate next run time
         const nextRunAt = calculateNextRunTime(
@@ -291,7 +299,7 @@ Deno.serve(async (req: Request) => {
           report.schedule_day
         );
 
-        console.log('📅 Next run calculated:', nextRunAt);
+        console.log('Next run calculated:', nextRunAt);
 
         // Update last_run_at and next_run_at timestamps
         await supabase
@@ -304,12 +312,12 @@ Deno.serve(async (req: Request) => {
 
         // Send email notifications if enabled for this report
         if (report.send_email !== false && insertedMessages.length > 0) {
-          console.log('📧 Report has email notifications enabled, triggering emails...');
+          console.log('Report has email notifications enabled, triggering emails...');
           
           const emailPromise = (async () => {
             for (const msg of insertedMessages) {
               try {
-                console.log(`📧 Sending report email to ${msg.userEmail}...`);
+                console.log(`Sending report email to ${msg.userEmail}...`);
                 
                 const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-report-email`, {
                   method: 'POST',
@@ -332,25 +340,25 @@ Deno.serve(async (req: Request) => {
                 if (emailResponse.ok) {
                   const result = await emailResponse.json();
                   if (result.skipped) {
-                    console.log(`⏭️ Email skipped for ${msg.userEmail}: ${result.reason}`);
+                    console.log(`Email skipped for ${msg.userEmail}: ${result.reason}`);
                   } else {
-                    console.log(`✅ Email sent to ${msg.userEmail}`);
+                    console.log(`Email sent to ${msg.userEmail}`);
                   }
                 } else {
-                  console.error(`❌ Failed to send email to ${msg.userEmail}:`, await emailResponse.text());
+                  console.error(`Failed to send email to ${msg.userEmail}:`, await emailResponse.text());
                 }
               } catch (emailError) {
-                console.error(`❌ Error sending email to ${msg.userEmail}:`, emailError);
+                console.error(`Error sending email to ${msg.userEmail}:`, emailError);
               }
             }
           })();
 
           EdgeRuntime.waitUntil(emailPromise);
         } else {
-          console.log('📧 Report has email notifications disabled, skipping emails');
+          console.log('Report has email notifications disabled, skipping emails');
         }
 
-        console.log(`✅ Report ${report.title} completed successfully`);
+        console.log(`Report ${report.title} completed successfully`);
 
         results.push({
           reportId: report.id,
@@ -360,7 +368,7 @@ Deno.serve(async (req: Request) => {
         });
 
       } catch (error) {
-        console.error(`❌ Error processing report ${report.id}:`, error);
+        console.error(`Error processing report ${report.id}:`, error);
         results.push({
           reportId: report.id,
           reportTitle: report.title,
@@ -372,15 +380,17 @@ Deno.serve(async (req: Request) => {
 
     const successCount = results.filter(r => r.success).length;
     const failureCount = results.filter(r => !r.success).length;
+    const skippedCount = reportsToRun.length - reportsToProcess.length;
 
-    console.log(`\n📊 Summary: ${successCount} succeeded, ${failureCount} failed`);
+    console.log(`\nSummary: ${successCount} succeeded, ${failureCount} failed, ${skippedCount} deferred to next run`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Processed ${reportsToRun.length} report(s)`,
+        message: `Processed ${reportsToProcess.length} of ${reportsToRun.length} report(s)`,
         successCount,
         failureCount,
+        skippedCount,
         results,
         checkedAt: now.toISOString()
       }),
@@ -393,7 +403,7 @@ Deno.serve(async (req: Request) => {
     );
 
   } catch (error) {
-    console.error('❌ Error in check-scheduled-reports:', error);
+    console.error('Error in check-scheduled-reports:', error);
     return new Response(
       JSON.stringify({
         success: false,
@@ -497,8 +507,8 @@ function calculateNextRunTime(
   const isEDT = isEasternDaylightTime(testDate);
   const offsetHours = isEDT ? 4 : 5;
 
-  console.log(`📅 Calculating next run: ${hours}:${minutes} Eastern -> UTC`);
-  console.log(`📅 Is EDT: ${isEDT}, Offset: ${offsetHours} hours`);
+  console.log(`Calculating next run: ${hours}:${minutes} Eastern -> UTC`);
+  console.log(`Is EDT: ${isEDT}, Offset: ${offsetHours} hours`);
 
   const utcTime = new Date(Date.UTC(
     targetYear,
@@ -510,7 +520,7 @@ function calculateNextRunTime(
     0
   ));
 
-  console.log(`📅 Calculated UTC time: ${utcTime.toISOString()}`);
+  console.log(`Calculated UTC time: ${utcTime.toISOString()}`);
   return utcTime.toISOString();
 }
 
