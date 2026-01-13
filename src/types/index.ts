@@ -60,7 +60,7 @@ export interface FavoriteMessage {
 export type ChatMode = 'reports' | 'private' | 'team';
 
 export type CoreTabType = 'mission-control' | 'private' | 'reports';
-export type FeatureTabType = 'team' | 'visualizations' | 'ai-specialists' | 'team-agents' | 'team-guidance' | 'team-dashboard';
+export type FeatureTabType = 'team' | 'visualizations' | 'ai-specialists' | 'team-agents' | 'team-guidance' | 'team-dashboard' | 'team-pulse';
 export type TabType = CoreTabType | FeatureTabType;
 
 export interface TabConfig {
@@ -161,4 +161,91 @@ export interface TeamSettings {
   news_preferences: NewsPreferences;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface TeamPulseHealthFactors {
+  data_richness: number;
+  goal_progress: number;
+  meeting_cadence: number;
+  team_engagement: number;
+  risk_indicators: number;
+  financial_health: number;
+}
+
+export interface TeamPulseInsights {
+  score_trend: 'up' | 'down' | 'stable';
+  score_change: number;
+  factor_trends: Record<string, {
+    current: number;
+    previous: number;
+    change: number;
+    trend: 'up' | 'down' | 'stable';
+  }>;
+  highlights: string[];
+  recommendations: string[];
+}
+
+export interface TeamPulseFactorExplanations {
+  strategic_alignment?: string;
+  project_momentum?: string;
+  financial_health?: string;
+  team_collaboration?: string;
+  operational_efficiency?: string;
+  risk_management?: string;
+}
+
+export interface TeamPulseSections {
+  mission: {
+    team_name: string;
+    launch_points?: number;
+    members: number;
+  };
+  data_overview?: {
+    total_documents: number;
+    categories: Array<{ category: string; count: number }>;
+    fuel_level: number;
+  };
+  activity?: {
+    new_docs_this_week: number;
+    chat_messages: number;
+    reports_generated: number;
+    active_members: number;
+  };
+  key_metrics?: {
+    active_projects?: string;
+    recent_decisions?: string;
+    upcoming_deadlines?: string;
+    financial_status?: string;
+    team_focus_areas?: string;
+  };
+  factor_explanations?: TeamPulseFactorExplanations;
+}
+
+export interface TeamPulseSnapshot {
+  id: string;
+  team_id: string;
+  generated_at: string;
+  health_score: number;
+  health_explanation: string | null;
+  health_factors: TeamPulseHealthFactors;
+  infographic_url: string | null;
+  infographic_base64: string | null;
+  source_data_summary: Record<string, any>;
+  sections: TeamPulseSections;
+  insights_and_trends: TeamPulseInsights;
+  generated_by_user_id: string | null;
+  generation_type: 'scheduled' | 'manual';
+  is_current: boolean;
+  created_at: string;
+}
+
+export interface TeamPulseSettings {
+  team_id: string;
+  is_enabled: boolean;
+  generation_day: number;
+  generation_hour: number;
+  last_generated_at: string | null;
+  next_generation_at: string | null;
+  created_at: string;
+  updated_at: string;
 }

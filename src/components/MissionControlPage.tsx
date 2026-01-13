@@ -25,7 +25,8 @@ import {
   Folder,
   HelpCircle,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Activity
 } from 'lucide-react';
 import { useLaunchPreparation } from '../hooks/useLaunchPreparation';
 import { useFuelLevel } from '../hooks/useFuelLevel';
@@ -65,7 +66,8 @@ const featureIconMap: Record<string, React.ComponentType<{ className?: string }>
   Brain,
   Bot,
   Compass,
-  LayoutDashboard
+  LayoutDashboard,
+  Activity
 };
 
 const colorClasses: Record<string, { bg: string; border: string; text: string; gradient: string }> = {
@@ -320,11 +322,13 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
     color: 'orange'
   };
 
-  const nonCoreFeatures = TAB_CONFIGS.filter(t => !t.isCore);
+  const nonCoreFeatures = TAB_CONFIGS.filter(t => !t.isCore && t.id !== 'team-pulse');
+  const teamPulseFeature = TAB_CONFIGS.find(t => t.id === 'team-pulse');
   const visualizationsIndex = nonCoreFeatures.findIndex(t => t.id === 'visualizations');
   const featureTabs = [
     ...coreFeatureTabs,
     ...nonCoreFeatures.slice(0, visualizationsIndex + 1),
+    ...(teamPulseFeature ? [teamPulseFeature] : []),
     moonshotFeature,
     ...nonCoreFeatures.slice(visualizationsIndex + 1)
   ];
@@ -360,6 +364,7 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
                     const IconComponent = featureIconMap[feature.icon];
                     const colors = colorClasses[feature.color] || colorClasses.emerald;
                     const isMoonshot = feature.id === 'moonshot-challenge';
+                    const isTeamPulse = feature.id === 'team-pulse';
 
                     if (isMoonshot) {
                       return (
@@ -407,6 +412,11 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
                           }
                         `}
                       >
+                        {isTeamPulse && (
+                          <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-bold rounded-md uppercase tracking-wide">
+                            New
+                          </span>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

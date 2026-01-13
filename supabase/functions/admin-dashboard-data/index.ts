@@ -29,8 +29,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_URL') || '',
+      Deno.env.get('SUPABASE_ANON_KEY') || '',
       {
         global: {
           headers: { Authorization: authHeader },
@@ -61,16 +61,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Now use service role to bypass RLS and get all data
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_URL') || '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
     );
 
     const url = new URL(req.url);
     const timeFilter = url.searchParams.get('timeFilter') || '30days';
 
-    // Calculate date range
     let dateThreshold = new Date();
     if (timeFilter === '7days') {
       dateThreshold.setDate(dateThreshold.getDate() - 7);
@@ -82,12 +80,36 @@ Deno.serve(async (req: Request) => {
       dateThreshold = new Date('2000-01-01');
     }
 
-    // Calculate today's date at midnight
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayISO = today.toISOString();
+    const now = new Date();
+    const estFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    const estDateParts = estFormatter.formatToParts(now);
+    const estYear = estDateParts.find(p => p.type === 'year')?.value;
+    const estMonth = estDateParts.find(p => p.type === 'month')?.value;
+    const estDay = estDateParts.find(p => p.type === 'day')?.value;
 
-    // Use database function to efficiently aggregate document stats
+    const testDate = new Date(`${estYear}-${estMonth}-${estDay}T12:00:00Z`);
+    const utcHour = testDate.getUTCHours();
+    const estHourStr = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: '2-digit',
+      hour12: false
+    }).format(testDate);
+    const estHour = parseInt(estHourStr);
+    const offsetHours = utcHour - estHour;
+    const offsetStr = offsetHours >= 0 ? `-${String(offsetHours).padStart(2, '0')}:00` : `+${String(-offsetHours).padStart(2, '0')}:00`;
+
+    const estMidnightString = `${estYear}-${estMonth}-${estDay}T00:00:00${offsetStr}`;
+    const todayISO = new Date(estMidnightString).toISOString();
+    console.log('Today (Eastern midnight) ISO:', todayISO, 'Offset:', offsetStr);
+
     console.log('Fetching document stats using database aggregation');
     const [documentStatsResult, teamStatsResult] = await Promise.all([
       supabaseAdmin.rpc('get_admin_document_stats'),
@@ -116,8 +138,6 @@ Deno.serve(async (req: Request) => {
     const totalDocs = documentStats?.reduce((sum: number, stat: any) => sum + parseInt(stat.doc_count), 0) || 0;
     console.log(`Retrieved ${totalDocs} unique documents across ${documentStats?.length || 0} team/category combinations`);
 
-    // Fetch all other data directly using service role
-    // Note: Using .range() to override Supabase's default 1000 row limit
     const [
       usersResult,
       teamsResult,
@@ -155,13 +175,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Log chats result for debugging
     if (chatsResult.error) {
       console.error('Error fetching chats:', chatsResult.error);
     }
     console.log('Chats fetched:', chatsResult.data?.length || 0);
 
-    // Calculate active users today
     const todayChats = todayChatsResult.data || [];
     const activeUsersToday = new Map();
 
@@ -176,18 +194,15 @@ Deno.serve(async (req: Request) => {
       }
 
       const userStats = activeUsersToday.get(chat.user_id);
-      // Only count user messages for private and team modes
       if (chat.mode === 'private' && chat.message_type === 'user') {
         userStats.private_messages++;
       } else if (chat.mode === 'team' && chat.message_type === 'user') {
         userStats.team_messages++;
       } else if (chat.mode === 'reports') {
-        // Reports count all messages (Astra sends on behalf of users)
         userStats.reports++;
       }
     });
 
-    // Convert to array with user details
     const activeUsersList = Array.from(activeUsersToday.values()).map((stats: any) => {
       const user = (usersResult.data || []).find((u: any) => u.id === stats.user_id);
       const team = (teamsResult.data || []).find((t: any) => t.id === user?.team_id);
@@ -204,13 +219,11 @@ Deno.serve(async (req: Request) => {
       };
     });
 
-    // Process document stats into documents array for frontend
     const documents: any[] = [];
     const docStatsArray = documentStats || [];
 
     docStatsArray.forEach((stat: any) => {
       const count = parseInt(stat.doc_count);
-      // Create one entry per unique document (expand the count)
       for (let i = 0; i < count; i++) {
         documents.push({
           teamId: stat.team_id,
@@ -220,7 +233,6 @@ Deno.serve(async (req: Request) => {
       }
     });
 
-    // Return feedback as a single array - the frontend will split it by support_type
     const responseData = {
       users: usersResult.data || [],
       teams: teamsResult.data || [],

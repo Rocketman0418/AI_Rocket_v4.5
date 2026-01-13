@@ -74,33 +74,61 @@ Your data is encrypted and secure. Control who sees what with team-based permiss
 - **Icon**: Lock
 - **Color**: Cyan
 
+### 11. Team Pulse (NEW)
+A weekly snapshot of team health, progress, and insights. AI-generated infographic showing your team's overall health score, recent activity across all data categories, document freshness, and key metrics at a glance.
+- **Icon**: Activity
+- **Color**: Teal
+- **Status**: Active (v1.4)
+- **Features**:
+  - Overall Team Health Score calculated from multiple factors
+  - Document freshness analysis (how recently updated)
+  - Category breakdown showing activity across Strategy, Meetings, Financial, Projects
+  - Recent document activity feed
+  - AI-generated insights and recommendations
+  - Visual infographic format for easy sharing
+  - Weekly refresh schedule
+
+### 12. Category Data Access (NEW)
+Control which data categories team members can access when chatting with Astra. Admins can grant or restrict access to Strategy, Meetings, Financial, and Projects data on a per-user basis for enhanced data security.
+- **Icon**: Shield
+- **Color**: Blue
+- **Status**: Active (v1.5)
+- **Features**:
+  - Per-user category access controls
+  - Granular permissions for Strategy, Meetings, Financial, and Projects data
+  - Admin-only management through User Settings
+  - Astra automatically filters responses based on user permissions
+  - Default access granted for all categories on new team members
+  - Visual indicators showing which categories users can access
+  - Invite codes can include pre-configured category access
+
 ## Coming Soon Features
 
-### 11. Agent Builder
+### 13. Agent Builder
 Design and deploy custom AI Agents to complete tasks autonomously. Unlocks at Boosters Level 5 in Launch Preparation.
 - **Icon**: Bot
 - **Color**: Pink
 - **Status**: In Development
 
-### 12. Team Dashboard
+### 14. Team Dashboard
 Real-time AI updated team info & insights on the metrics that matter most.
 - **Icon**: LayoutDashboard
 - **Color**: Cyan
 - **Status**: Coming Soon
 
-### 13. AI Specialists
+### 15. AI Specialists
 Create specialized AI team members like Business Coach, Finance Director, Marketing Manager and more to handle tasks 24/7. Unlocks at Boosters Level 5 in Launch Preparation.
 - **Icon**: UserCircle
 - **Color**: Teal
 - **Status**: Coming Soon
 
-### 14. Team SOPs
+### 16. Team SOPs
 Create guidance documents and playbooks that help your team stay aligned and make better decisions. Standard Operating Procedures ensure consistency across your organization.
 - **Icon**: Compass
 - **Color**: Orange
 - **Status**: Coming Soon
 
-### 15. Team Agents
+### 17. Team Agents
 Deploy task-specific AI agents that handle specific workflows like meeting summarization, document processing, or data extraction. Unlike AI Specialists (role-based), Team Agents are workflow-focused.
 - **Icon**: Bot
 - **Color**: Cyan

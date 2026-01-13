@@ -267,6 +267,45 @@ This guided experience helps teams understand the value of each data type and en
 
 ## Recent Features to Add
 
+### January 2026 Updates
+
+#### 1. Team Pulse - Weekly Team Health Snapshot (v1.4.0)
+**Type:** New Feature
+**Description:**
+Introducing Team Pulse - a weekly snapshot of your team's health, progress, and AI-generated insights! Get a visual infographic showing everything happening across your business data at a glance.
+
+Key features:
+- Overall Team Health Score calculated from document freshness, activity, and engagement
+- Category breakdown showing recent activity across Strategy, Meetings, Financial, and Projects
+- Document freshness analysis - see how recently your data has been updated
+- Recent document activity feed showing the latest changes
+- AI-generated insights and recommendations based on your data patterns
+- Beautiful infographic format perfect for sharing with stakeholders
+
+Team Pulse helps you understand the pulse of your business by analyzing all your synced documents and presenting key metrics in an easy-to-digest visual format.
+
+**Display Order:** 1400
+
+#### 2. Category Data Access - Granular Data Permissions (v1.5.0)
+**Type:** New Feature
+**Description:**
+Introducing Category Data Access - control exactly which data categories each team member can access when chatting with Astra! Admins can now grant or restrict access to Strategy, Meetings, Financial, and Projects data on a per-user basis.
+
+Key features:
+- Per-user category access controls managed by admins
+- Granular permissions for Strategy, Meetings, Financial, and Projects data
+- Astra automatically filters AI responses based on user permissions
+- New team members get full access by default (admins can customize)
+- Visual indicators in User Settings showing category access status
+- Invite codes can include pre-configured category access for new users
+- Seamless integration - users only see data they're authorized to access
+
+This feature is perfect for teams that need to restrict sensitive financial data or strategic documents to specific team members while still allowing everyone to benefit from AI insights on their authorized data.
+
+**Display Order:** 1350
+
+---
+
 ### December 2025 Updates
 
 #### 1. Local File Sync - Unlimited Data from Any Source (v1.3.0)
@@ -348,6 +387,69 @@ Fixed an issue where meeting documents weren't appearing during Astra Guided Cha
 The "What's New" feature provides a professional, user-friendly way to keep the team informed about platform updates. It's easily accessible, well-organized, and designed to highlight the continuous improvement of Astra Intelligence.
 
 ### Quick Add SQL Snippets
+
+**Category Data Access - Granular Data Permissions:**
+```sql
+INSERT INTO whats_new (
+  title,
+  description,
+  version,
+  feature_type,
+  date_added,
+  is_published,
+  display_order
+) VALUES (
+  'Category Data Access - Granular Data Permissions',
+  'Control exactly which data categories each team member can access when chatting with Astra! Admins can now grant or restrict access to Strategy, Meetings, Financial, and Projects data on a per-user basis.
+
+Key features:
+- Per-user category access controls managed by admins
+- Granular permissions for Strategy, Meetings, Financial, and Projects data
+- Astra automatically filters AI responses based on user permissions
+- New team members get full access by default (admins can customize)
+- Visual indicators in User Settings showing category access status
+- Invite codes can include pre-configured category access for new users
+- Seamless integration - users only see data they''re authorized to access
+
+This feature is perfect for teams that need to restrict sensitive financial data or strategic documents to specific team members while still allowing everyone to benefit from AI insights on their authorized data.',
+  '1.5.0',
+  'new_feature',
+  '2026-01-13',
+  true,
+  1350
+);
+```
+
+**Team Pulse - Weekly Team Health Snapshot:**
+```sql
+INSERT INTO whats_new (
+  title,
+  description,
+  version,
+  feature_type,
+  date_added,
+  is_published,
+  display_order
+) VALUES (
+  'Team Pulse - Weekly Team Health Snapshot',
+  'Introducing Team Pulse - a weekly snapshot of your team''s health, progress, and AI-generated insights! Get a visual infographic showing everything happening across your business data at a glance.
+
+Key features:
+- Overall Team Health Score calculated from document freshness, activity, and engagement
+- Category breakdown showing recent activity across Strategy, Meetings, Financial, and Projects
+- Document freshness analysis - see how recently your data has been updated
+- Recent document activity feed showing the latest changes
+- AI-generated insights and recommendations based on your data patterns
+- Beautiful infographic format perfect for sharing with stakeholders
+
+Team Pulse helps you understand the pulse of your business by analyzing all your synced documents and presenting key metrics in an easy-to-digest visual format.',
+  '1.4.0',
+  'new_feature',
+  '2026-01-12',
+  true,
+  1400
+);
+```
 
 **Local File Sync - Unlimited Data:**
 ```sql

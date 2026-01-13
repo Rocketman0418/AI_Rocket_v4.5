@@ -214,6 +214,34 @@ export const PRODUCT_FEATURES = {
         "Automate repetitive business processes",
         "Scale your operations without scaling headcount"
       ]
+    },
+    {
+      name: "Team Pulse (NEW)",
+      description: "A weekly snapshot of team health, progress, and AI-generated insights with visual infographics",
+      icon: "📊",
+      benefits: [
+        "Overall Team Health Score calculated from document freshness, activity, and engagement",
+        "Category breakdown showing activity across Strategy, Meetings, Financial, and Projects",
+        "Document freshness analysis showing how recently your data has been updated",
+        "Recent document activity feed with the latest changes across all categories",
+        "AI-generated insights and recommendations based on your data patterns",
+        "Beautiful infographic format perfect for sharing with stakeholders",
+        "Weekly refresh to keep you informed about team activity"
+      ]
+    },
+    {
+      name: "Category Data Access (NEW)",
+      description: "Control which data categories team members can access when chatting with Astra - granular permissions for enhanced data security",
+      icon: "🛡️",
+      benefits: [
+        "Per-user category access controls managed by team admins",
+        "Granular permissions for Strategy, Meetings, Financial, and Projects data",
+        "Astra automatically filters AI responses based on user permissions",
+        "New team members get full access by default (admins can customize)",
+        "Visual indicators showing which categories each user can access",
+        "Invite codes can include pre-configured category access for new users",
+        "Seamless integration - users only see data they are authorized to access"
+      ]
     }
   ],
 
@@ -239,7 +267,8 @@ export const PRODUCT_FEATURES = {
     security: [
       "Enterprise-grade security for your sensitive data",
       "Row-level security ensures proper data access",
-      "Your data never leaves your controlled environment"
+      "Your data never leaves your controlled environment",
+      "Category-level access control lets admins restrict sensitive data by user"
     ],
     dataSync: [
       "Sync unlimited data from Google Drive AND local file uploads",
@@ -310,6 +339,14 @@ export const PRODUCT_FEATURES = {
     {
       title: "Progress Tracking",
       description: "Monitor team engagement and individual progress through Mission Control with Launch Points and achievements"
+    },
+    {
+      title: "Team Pulse Health Check",
+      description: "Get a weekly AI-generated infographic showing team health score, document freshness, category activity breakdown, and actionable insights"
+    },
+    {
+      title: "Granular Data Access Control",
+      description: "Control which team members can access sensitive data categories like Financial or Strategy documents, while still giving everyone AI insights on their authorized data"
     }
   ],
 

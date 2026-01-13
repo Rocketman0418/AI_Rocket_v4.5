@@ -144,11 +144,6 @@ export function WhatsNewSection() {
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <h3 className="font-semibold text-white text-sm leading-tight">
                     {item.title}
-                    {isNewest && (
-                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-500 text-white">
-                        Latest
-                      </span>
-                    )}
                   </h3>
                 </div>
 

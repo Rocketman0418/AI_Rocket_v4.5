@@ -8,6 +8,7 @@ import { ChatModeToggle } from './ChatModeToggle';
 import DynamicTabBar from './DynamicTabBar';
 import MissionControlPage from './MissionControlPage';
 import { SavedVisualizationsList } from './SavedVisualizationsList';
+import TeamPulseView from './TeamPulseView';
 import { ErrorBoundary } from './ErrorBoundary';
 import { UserSettingsModal } from './UserSettingsModal';
 import { TeamSettingsModal } from './TeamSettingsModal';
@@ -716,6 +717,11 @@ export const MainContainer: React.FC<MainContainerProps> = ({ onOpenAdminDashboa
                     onDelete={handleDeleteVisualization}
                     loading={savedVisualizationsLoading}
                   />
+                </ErrorBoundary>
+              )}
+              {activeTab === 'team-pulse' && (
+                <ErrorBoundary fallbackMessage="Unable to load Team Pulse. Please try again.">
+                  <TeamPulseView />
                 </ErrorBoundary>
               )}
             </>

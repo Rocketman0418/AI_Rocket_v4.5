@@ -101,6 +101,17 @@ export const TAB_CONFIGS: TabConfig[] = [
     order: 8,
     description: 'Daily AI-powered insights on your team\'s metrics, goals, tasks, and accomplishments. Astra reviews your data and delivers fresh updates each day.',
     color: 'sky'
+  },
+  {
+    id: 'team-pulse',
+    label: 'Team Pulse',
+    shortLabel: 'Pulse',
+    icon: 'Activity',
+    isCore: false,
+    isComingSoon: false,
+    order: 9,
+    description: 'A Weekly Snapshot of Team Health, Progress and Insights. AI-generated infographic showing your team\'s overall health score and key metrics.',
+    color: 'teal'
   }
 ];
 
