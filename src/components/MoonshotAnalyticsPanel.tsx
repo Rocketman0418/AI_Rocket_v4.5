@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import {
   Rocket, Users, BarChart3, Download, Search,
   ChevronDown, ChevronUp, CheckCircle, Clock, XCircle,
-  TrendingUp, Calendar, ArrowRight, UserPlus, Target, PieChart as PieChartIcon
+  TrendingUp, Calendar, ArrowRight, UserPlus, Target, PieChart as PieChartIcon,
+  Trophy, Star, AlertCircle, Minus, RefreshCw, Play
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
+
+type TabView = 'registrations' | 'metrics';
 
 interface Registration {
   id: string;
@@ -67,6 +70,36 @@ interface MoonshotStats {
   registrationsBySource: Record<string, number>;
   registrationsByMastermindGroups: Record<string, number>;
   surveyResponseCount: number;
+}
+
+interface ChallengeStanding {
+  team_id: string;
+  team_name: string;
+  industry: string | null;
+  current_astra_score: number;
+  run_indicator: string;
+  build_indicator: string;
+  grow_indicator: string;
+  launch_points_indicator: string;
+  overall_indicator: string;
+  percentile_rank: number;
+  is_top_25_percent: boolean;
+  last_calculated_at: string | null;
+}
+
+interface ChallengeMetrics {
+  totalParticipants: number;
+  top25Count: number;
+  averageScore: number;
+  scoreDistribution: { range: string; count: number }[];
+  indicatorBreakdown: {
+    run: { strong: number; moderate: number; needsImprovement: number };
+    build: { strong: number; moderate: number; needsImprovement: number };
+    grow: { strong: number; moderate: number; needsImprovement: number };
+    launchPoints: { strong: number; moderate: number; needsImprovement: number };
+  };
+  standings: ChallengeStanding[];
+  lastCalculatedAt: string | null;
 }
 
 const PIE_COLORS = [
@@ -164,6 +197,7 @@ const SimplePieChart: React.FC<PieChartProps> = ({ data, labels = {}, size = 160
 };
 
 export const MoonshotAnalyticsPanel: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<TabView>('registrations');
   const [loading, setLoading] = useState(true);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [stats, setStats] = useState<MoonshotStats | null>(null);
@@ -171,9 +205,13 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [sortField, setSortField] = useState<'created_at' | 'name' | 'email' | 'industry'>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [challengeMetrics, setChallengeMetrics] = useState<ChallengeMetrics | null>(null);
+  const [loadingMetrics, setLoadingMetrics] = useState(false);
+  const [calculatingScores, setCalculatingScores] = useState(false);
 
   useEffect(() => {
     fetchData();
+    fetchChallengeMetrics();
   }, []);
 
   const fetchData = async () => {
@@ -363,6 +401,120 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
     }
   };
 
+  const fetchChallengeMetrics = async () => {
+    setLoadingMetrics(true);
+    try {
+      const { data: standings, error } = await supabase
+        .from('moonshot_challenge_standings')
+        .select('*')
+        .order('current_astra_score', { ascending: false });
+
+      if (error) throw error;
+
+      if (!standings || standings.length === 0) {
+        setChallengeMetrics({
+          totalParticipants: 0,
+          top25Count: 0,
+          averageScore: 0,
+          scoreDistribution: [],
+          indicatorBreakdown: {
+            run: { strong: 0, moderate: 0, needsImprovement: 0 },
+            build: { strong: 0, moderate: 0, needsImprovement: 0 },
+            grow: { strong: 0, moderate: 0, needsImprovement: 0 },
+            launchPoints: { strong: 0, moderate: 0, needsImprovement: 0 },
+          },
+          standings: [],
+          lastCalculatedAt: null,
+        });
+        return;
+      }
+
+      const top25Count = standings.filter(s => s.is_top_25_percent).length;
+      const avgScore = standings.reduce((sum, s) => sum + (s.current_astra_score || 0), 0) / standings.length;
+
+      const distribution = [
+        { range: '80-100', count: 0 },
+        { range: '60-79', count: 0 },
+        { range: '40-59', count: 0 },
+        { range: '20-39', count: 0 },
+        { range: '0-19', count: 0 },
+      ];
+
+      const indicatorBreakdown = {
+        run: { strong: 0, moderate: 0, needsImprovement: 0 },
+        build: { strong: 0, moderate: 0, needsImprovement: 0 },
+        grow: { strong: 0, moderate: 0, needsImprovement: 0 },
+        launchPoints: { strong: 0, moderate: 0, needsImprovement: 0 },
+      };
+
+      let lastCalc: string | null = null;
+
+      standings.forEach(s => {
+        const score = s.current_astra_score || 0;
+        if (score >= 80) distribution[0].count++;
+        else if (score >= 60) distribution[1].count++;
+        else if (score >= 40) distribution[2].count++;
+        else if (score >= 20) distribution[3].count++;
+        else distribution[4].count++;
+
+        const countIndicator = (indicator: string, target: { strong: number; moderate: number; needsImprovement: number }) => {
+          if (indicator === 'Strong') target.strong++;
+          else if (indicator === 'Moderate') target.moderate++;
+          else target.needsImprovement++;
+        };
+
+        countIndicator(s.run_indicator || 'Needs Improvement', indicatorBreakdown.run);
+        countIndicator(s.build_indicator || 'Needs Improvement', indicatorBreakdown.build);
+        countIndicator(s.grow_indicator || 'Needs Improvement', indicatorBreakdown.grow);
+        countIndicator(s.launch_points_indicator || 'Needs Improvement', indicatorBreakdown.launchPoints);
+
+        if (s.last_calculated_at && (!lastCalc || s.last_calculated_at > lastCalc)) {
+          lastCalc = s.last_calculated_at;
+        }
+      });
+
+      setChallengeMetrics({
+        totalParticipants: standings.length,
+        top25Count,
+        averageScore: Math.round(avgScore * 100) / 100,
+        scoreDistribution: distribution,
+        indicatorBreakdown,
+        standings: standings as ChallengeStanding[],
+        lastCalculatedAt: lastCalc,
+      });
+    } catch (err) {
+      console.error('Error fetching challenge metrics:', err);
+    } finally {
+      setLoadingMetrics(false);
+    }
+  };
+
+  const calculateScores = async () => {
+    setCalculatingScores(true);
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/calculate-moonshot-rbg-scores`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        await fetchChallengeMetrics();
+      } else {
+        console.error('Error calculating scores:', result.error);
+      }
+    } catch (err) {
+      console.error('Error calling score calculation:', err);
+    } finally {
+      setCalculatingScores(false);
+    }
+  };
+
   const handleSort = (field: typeof sortField) => {
     if (field === sortField) {
       setSortDirection(d => d === 'asc' ? 'desc' : 'asc');
@@ -479,7 +631,23 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
     other: 'Other'
   };
 
-  if (loading) {
+  const getIndicatorIcon = (indicator: string) => {
+    switch (indicator) {
+      case 'Strong': return <CheckCircle className="w-4 h-4 text-emerald-400" />;
+      case 'Moderate': return <Minus className="w-4 h-4 text-amber-400" />;
+      default: return <AlertCircle className="w-4 h-4 text-orange-400" />;
+    }
+  };
+
+  const getIndicatorColor = (indicator: string) => {
+    switch (indicator) {
+      case 'Strong': return 'text-emerald-400';
+      case 'Moderate': return 'text-amber-400';
+      default: return 'text-orange-400';
+    }
+  };
+
+  if (loading && activeTab === 'registrations') {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="w-8 h-8 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
@@ -492,26 +660,260 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 className="text-xl font-semibold text-white flex items-center gap-2">
           <Rocket className="w-6 h-6 text-orange-400" />
-          Moonshot Challenge Registrations
+          $5M AI Moonshot Challenge
         </h2>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={fetchData}
-            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
-          >
-            Refresh
-          </button>
-          <button
-            onClick={exportToCSV}
-            className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm"
-          >
-            <Download className="w-4 h-4" />
-            Export CSV
-          </button>
-        </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="flex gap-2 border-b border-gray-700 pb-2">
+        <button
+          onClick={() => setActiveTab('registrations')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === 'registrations'
+              ? 'bg-orange-600 text-white'
+              : 'bg-gray-700 text-gray-400 hover:text-white'
+          }`}
+        >
+          Challenge Registrations
+        </button>
+        <button
+          onClick={() => setActiveTab('metrics')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === 'metrics'
+              ? 'bg-orange-600 text-white'
+              : 'bg-gray-700 text-gray-400 hover:text-white'
+          }`}
+        >
+          Challenge Metrics
+        </button>
+      </div>
+
+      {activeTab === 'metrics' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={fetchChallengeMetrics}
+                disabled={loadingMetrics}
+                className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm flex items-center gap-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${loadingMetrics ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+              <button
+                onClick={calculateScores}
+                disabled={calculatingScores}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors text-sm flex items-center gap-2"
+              >
+                <Play className={`w-4 h-4 ${calculatingScores ? 'animate-pulse' : ''}`} />
+                {calculatingScores ? 'Calculating...' : 'Calculate Scores Now'}
+              </button>
+            </div>
+            {challengeMetrics?.lastCalculatedAt && (
+              <span className="text-xs text-gray-500">
+                Last calculated: {format(new Date(challengeMetrics.lastCalculatedAt), 'MMM d, yyyy h:mm a')}
+              </span>
+            )}
+          </div>
+
+          {loadingMetrics ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-8 h-8 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
+            </div>
+          ) : challengeMetrics ? (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                  <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
+                    <Users className="w-4 h-4" />
+                    Participating Teams
+                  </div>
+                  <div className="text-3xl font-bold text-white">{challengeMetrics.totalParticipants}</div>
+                </div>
+                <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                  <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
+                    <Trophy className="w-4 h-4" />
+                    Top 25% Teams
+                  </div>
+                  <div className="text-3xl font-bold text-amber-400">{challengeMetrics.top25Count}</div>
+                </div>
+                <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                  <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
+                    <TrendingUp className="w-4 h-4" />
+                    Average Astra Score
+                  </div>
+                  <div className="text-3xl font-bold text-emerald-400">{challengeMetrics.averageScore}</div>
+                </div>
+                <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                  <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
+                    <Star className="w-4 h-4" />
+                    Qualification Rate
+                  </div>
+                  <div className="text-3xl font-bold text-orange-400">
+                    {challengeMetrics.totalParticipants > 0
+                      ? `${Math.round((challengeMetrics.top25Count / challengeMetrics.totalParticipants) * 100)}%`
+                      : '0%'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                  <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4" />
+                    Score Distribution
+                  </h3>
+                  <div className="space-y-3">
+                    {challengeMetrics.scoreDistribution.map(({ range, count }) => {
+                      const maxCount = Math.max(...challengeMetrics.scoreDistribution.map(d => d.count), 1);
+                      const percentage = (count / maxCount) * 100;
+                      return (
+                        <div key={range}>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-gray-400">{range}</span>
+                            <span className="text-white font-medium">{count} teams</span>
+                          </div>
+                          <div className="h-2 bg-gray-600 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full transition-all"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                  <h3 className="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
+                    <Target className="w-4 h-4" />
+                    RBG Dimension Breakdown
+                  </h3>
+                  <div className="space-y-4">
+                    {[
+                      { label: 'RUN (Operations)', data: challengeMetrics.indicatorBreakdown.run },
+                      { label: 'BUILD (Capabilities)', data: challengeMetrics.indicatorBreakdown.build },
+                      { label: 'GROW (Alignment)', data: challengeMetrics.indicatorBreakdown.grow },
+                      { label: 'Launch Points', data: challengeMetrics.indicatorBreakdown.launchPoints },
+                    ].map(({ label, data }) => (
+                      <div key={label}>
+                        <div className="text-xs text-gray-400 mb-1">{label}</div>
+                        <div className="flex gap-2">
+                          <div className="flex-1 bg-emerald-500/20 rounded px-2 py-1 text-center">
+                            <span className="text-emerald-400 text-xs font-medium">{data.strong} Strong</span>
+                          </div>
+                          <div className="flex-1 bg-amber-500/20 rounded px-2 py-1 text-center">
+                            <span className="text-amber-400 text-xs font-medium">{data.moderate} Moderate</span>
+                          </div>
+                          <div className="flex-1 bg-orange-500/20 rounded px-2 py-1 text-center">
+                            <span className="text-orange-400 text-xs font-medium">{data.needsImprovement} Needs Work</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-700/50 rounded-xl border border-gray-600">
+                <div className="p-4 border-b border-gray-600">
+                  <h3 className="text-sm font-semibold text-gray-300">
+                    All Teams Standings ({challengeMetrics.standings.length})
+                  </h3>
+                </div>
+                <div className="overflow-x-auto max-h-96">
+                  <table className="w-full">
+                    <thead className="sticky top-0 bg-gray-800">
+                      <tr className="border-b border-gray-600">
+                        <th className="text-left py-2 px-4 text-xs font-semibold text-gray-400">#</th>
+                        <th className="text-left py-2 px-4 text-xs font-semibold text-gray-400">Team</th>
+                        <th className="text-left py-2 px-4 text-xs font-semibold text-gray-400">Industry</th>
+                        <th className="text-left py-2 px-4 text-xs font-semibold text-gray-400">Score</th>
+                        <th className="text-left py-2 px-4 text-xs font-semibold text-gray-400">RUN</th>
+                        <th className="text-left py-2 px-4 text-xs font-semibold text-gray-400">BUILD</th>
+                        <th className="text-left py-2 px-4 text-xs font-semibold text-gray-400">GROW</th>
+                        <th className="text-left py-2 px-4 text-xs font-semibold text-gray-400">Points</th>
+                        <th className="text-left py-2 px-4 text-xs font-semibold text-gray-400">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {challengeMetrics.standings.map((team, idx) => (
+                        <tr key={team.team_id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
+                          <td className="py-2 px-4 text-sm text-gray-500">{idx + 1}</td>
+                          <td className="py-2 px-4 text-sm text-white font-medium">{team.team_name}</td>
+                          <td className="py-2 px-4 text-sm text-gray-400">{team.industry || '-'}</td>
+                          <td className="py-2 px-4 text-sm font-semibold text-orange-400">{team.current_astra_score}</td>
+                          <td className="py-2 px-4">
+                            <span className={`flex items-center gap-1 text-xs ${getIndicatorColor(team.run_indicator)}`}>
+                              {getIndicatorIcon(team.run_indicator)}
+                            </span>
+                          </td>
+                          <td className="py-2 px-4">
+                            <span className={`flex items-center gap-1 text-xs ${getIndicatorColor(team.build_indicator)}`}>
+                              {getIndicatorIcon(team.build_indicator)}
+                            </span>
+                          </td>
+                          <td className="py-2 px-4">
+                            <span className={`flex items-center gap-1 text-xs ${getIndicatorColor(team.grow_indicator)}`}>
+                              {getIndicatorIcon(team.grow_indicator)}
+                            </span>
+                          </td>
+                          <td className="py-2 px-4">
+                            <span className={`flex items-center gap-1 text-xs ${getIndicatorColor(team.launch_points_indicator)}`}>
+                              {getIndicatorIcon(team.launch_points_indicator)}
+                            </span>
+                          </td>
+                          <td className="py-2 px-4">
+                            {team.is_top_25_percent ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded text-xs">
+                                <Star className="w-3 h-3" />
+                                Top 25%
+                              </span>
+                            ) : (
+                              <span className="text-gray-500 text-xs">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                      {challengeMetrics.standings.length === 0 && (
+                        <tr>
+                          <td colSpan={9} className="py-8 text-center text-gray-400">
+                            No teams in standings yet. Click "Calculate Scores Now" to populate.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-12 text-gray-400">
+              No challenge metrics data available
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'registrations' && (
+        <>
+          <div className="flex items-center justify-end gap-3">
+            <button
+              onClick={fetchData}
+              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
+            >
+              Refresh
+            </button>
+            <button
+              onClick={exportToCSV}
+              className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
           <div className="flex items-center gap-2 text-gray-400 text-sm mb-2">
             <Users className="w-4 h-4" />
@@ -1109,6 +1511,8 @@ export const MoonshotAnalyticsPanel: React.FC = () => {
           </table>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 };

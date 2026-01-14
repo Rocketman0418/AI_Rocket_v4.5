@@ -27,6 +27,7 @@ import { PrivacyPolicyPage } from './components/PrivacyPolicyPage';
 import { TermsOfServicePage } from './components/TermsOfServicePage';
 import { MoonshotChallengePage } from './components/MoonshotChallengePage';
 import { MoonshotRegistrationPage } from './components/MoonshotRegistrationPage';
+import { MoonshotProgressPage } from './components/MoonshotProgressPage';
 import { UpdatesPage } from './components/UpdatesPage';
 import { DemoPage } from './pages/DemoPage';
 import { UnsubscribeResultPage } from './components/UnsubscribeResultPage';
@@ -321,6 +322,18 @@ const AppContent: React.FC = () => {
       {/* Moonshot Challenge - Public Routes */}
       <Route path="/moonshot" element={<MoonshotChallengePage />} />
       <Route path="/moonshot/register" element={<MoonshotRegistrationPage />} />
+
+      {/* Moonshot Progress - Protected Route */}
+      <Route
+        path="/moonshot-progress"
+        element={
+          user ? (
+            <MoonshotProgressPage />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      />
 
       {/* Updates Page - Public Route */}
       <Route path="/updates" element={<UpdatesPage />} />

@@ -60,7 +60,7 @@ export interface FavoriteMessage {
 export type ChatMode = 'reports' | 'private' | 'team';
 
 export type CoreTabType = 'mission-control' | 'private' | 'reports';
-export type FeatureTabType = 'team' | 'visualizations' | 'ai-specialists' | 'team-agents' | 'team-guidance' | 'team-dashboard' | 'team-pulse';
+export type FeatureTabType = 'team' | 'visualizations' | 'ai-specialists' | 'team-agents' | 'team-guidance' | 'team-dashboard' | 'team-pulse' | 'challenge' | 'moonshot-details';
 export type TabType = CoreTabType | FeatureTabType;
 
 export interface TabConfig {

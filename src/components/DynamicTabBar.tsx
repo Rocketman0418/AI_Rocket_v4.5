@@ -7,6 +7,9 @@ import {
   Brain,
   Bot,
   Compass,
+  Activity,
+  LayoutDashboard,
+  Trophy,
   X
 } from 'lucide-react';
 import { TabType, TabConfig } from '../types';
@@ -19,7 +22,10 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   BarChart3,
   Brain,
   Bot,
-  Compass
+  Compass,
+  Activity,
+  LayoutDashboard,
+  Trophy
 };
 
 interface DynamicTabBarProps {
@@ -82,7 +88,7 @@ export default function DynamicTabBar({
             className={`
               group relative flex items-center ${currentSize.gap} ${currentSize.padding}
               rounded-md transition-all duration-200 touch-manipulation select-none
-              min-h-[44px]
+              min-h-[44px] border border-slate-600/60
               ${isActive
                 ? 'bg-slate-700 text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 active:bg-slate-700/70'

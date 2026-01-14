@@ -10,6 +10,8 @@ import MissionControlPage from './MissionControlPage';
 import { SavedVisualizationsList } from './SavedVisualizationsList';
 import TeamPulseView from './TeamPulseView';
 import TeamDashboardView from './TeamDashboardView';
+import { MoonshotChallengeView } from './MoonshotChallengeView';
+import { MoonshotChallengePage } from './MoonshotChallengePage';
 import { ErrorBoundary } from './ErrorBoundary';
 import { UserSettingsModal } from './UserSettingsModal';
 import { TeamSettingsModal } from './TeamSettingsModal';
@@ -734,6 +736,18 @@ export const MainContainer: React.FC<MainContainerProps> = ({ onOpenAdminDashboa
               {activeTab === 'team-dashboard' && (
                 <ErrorBoundary fallbackMessage="Unable to load Team Dashboard. Please try again.">
                   <TeamDashboardView />
+                </ErrorBoundary>
+              )}
+              {activeTab === 'challenge' && (
+                <ErrorBoundary fallbackMessage="Unable to load Moonshot Challenge. Please try again.">
+                  <MoonshotChallengeView onOpenDetails={() => openTab('moonshot-details')} />
+                </ErrorBoundary>
+              )}
+              {activeTab === 'moonshot-details' && (
+                <ErrorBoundary fallbackMessage="Unable to load Challenge Details. Please try again.">
+                  <div className="h-full overflow-y-auto">
+                    <MoonshotChallengePage />
+                  </div>
                 </ErrorBoundary>
               )}
             </>

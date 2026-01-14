@@ -112,6 +112,28 @@ export const TAB_CONFIGS: TabConfig[] = [
     order: 9,
     description: 'A Weekly Snapshot of Team Health, Progress and Insights. AI-generated infographic showing your team\'s overall health score and key metrics.',
     color: 'teal'
+  },
+  {
+    id: 'challenge',
+    label: 'Moonshot Challenge',
+    shortLabel: 'Challenge',
+    icon: 'Trophy',
+    isCore: false,
+    isComingSoon: false,
+    order: 10,
+    description: 'Track your team\'s progress in the $5M AI Moonshot Challenge. View standings, RBG scores, and your path to the top 25%.',
+    color: 'amber'
+  },
+  {
+    id: 'moonshot-details',
+    label: 'Challenge Details',
+    shortLabel: 'Details',
+    icon: 'Rocket',
+    isCore: false,
+    isComingSoon: false,
+    order: 11,
+    description: 'Full details about the $5M AI Moonshot Challenge including prizes, timeline, eligibility, and terms.',
+    color: 'orange'
   }
 ];
 

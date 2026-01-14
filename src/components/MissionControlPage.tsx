@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Rocket,
   Fuel,
@@ -26,7 +27,8 @@ import {
   HelpCircle,
   Sparkles,
   ArrowRight,
-  Activity
+  Activity,
+  Eye
 } from 'lucide-react';
 import { useLaunchPreparation } from '../hooks/useLaunchPreparation';
 import { useFuelLevel } from '../hooks/useFuelLevel';
@@ -38,7 +40,6 @@ import ComingSoonModal from './ComingSoonModal';
 import FeatureInfoModal from './FeatureInfoModal';
 import { DocumentsListModal } from './launch-stages/DocumentsListModal';
 import { CategoriesDetailModal } from './launch-stages/CategoriesDetailModal';
-import { MoonshotChallengeModal } from './launch-stages/MoonshotChallengeModal';
 import { TeamMembersPanel } from './TeamMembersPanel';
 import { calculateStageProgress } from '../lib/launch-preparation-utils';
 import { incrementalSyncAllFolders } from '../lib/manual-folder-sync';
@@ -109,6 +110,7 @@ interface TeamMemberLeaderboard {
 
 export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpenAdminSettings, onOpenFolderManager, onOpenHelpCenter }: MissionControlPageProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { stageProgress, loading: launchLoading } = useLaunchPreparation();
   const { fuelData, loading: fuelLoading, refresh: refreshFuelLevel } = useFuelLevel();
 
@@ -131,7 +133,6 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
   const [loadingPointsLog, setLoadingPointsLog] = useState(false);
   const [showSyncInfoModal, setShowSyncInfoModal] = useState(false);
   const [showTeamMembersPanel, setShowTeamMembersPanel] = useState(false);
-  const [showMoonshotModal, setShowMoonshotModal] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -334,7 +335,7 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
     color: 'orange'
   };
 
-  const nonCoreFeatures = TAB_CONFIGS.filter(t => !t.isCore && t.id !== 'team-pulse' && t.id !== 'team-dashboard');
+  const nonCoreFeatures = TAB_CONFIGS.filter(t => !t.isCore && t.id !== 'team-pulse' && t.id !== 'team-dashboard' && t.id !== 'challenge' && t.id !== 'moonshot-details');
   const teamDashboardFeature = TAB_CONFIGS.find(t => t.id === 'team-dashboard');
   const teamPulseFeature = TAB_CONFIGS.find(t => t.id === 'team-pulse');
   const visualizationsIndex = nonCoreFeatures.findIndex(t => t.id === 'visualizations');
@@ -385,7 +386,7 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
                       return (
                         <button
                           key={feature.id}
-                          onClick={() => setShowMoonshotModal(true)}
+                          onClick={() => onOpenTab('challenge')}
                           className="group relative p-4 rounded-xl border transition-all text-left bg-gradient-to-br from-orange-500/20 to-amber-500/20 border-orange-500/40 hover:border-orange-400 hover:scale-[1.02]"
                         >
                           <button
@@ -407,8 +408,8 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
                               <span className="md:hidden">{feature.shortLabel}</span>
                             </span>
                             <span className="flex items-center gap-0.5 text-[10px] text-orange-300/80 mt-1">
-                              <Star className="w-2.5 h-2.5" />
-                              Active
+                              <Eye className="w-2.5 h-2.5" />
+                              View Progress
                             </span>
                           </div>
                         </button>
@@ -1008,11 +1009,6 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
           </div>
         </div>
       )}
-
-      <MoonshotChallengeModal
-        isOpen={showMoonshotModal}
-        onClose={() => setShowMoonshotModal(false)}
-      />
 
       {showPointsInfoModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
