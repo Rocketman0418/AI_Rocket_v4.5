@@ -257,7 +257,9 @@ export const MoonshotRegistrationPage: React.FC = () => {
         console.error('Error checking existing registration:', regCheckError);
       }
 
-      if (existingReg) {
+      const hasRealAccount = existingReg?.user_id != null;
+
+      if (existingReg && hasRealAccount) {
         setSubmittedAsExistingUser({
           teamId: existingReg.team_id || '',
           teamName: existingReg.team_name,
@@ -284,6 +286,36 @@ export const MoonshotRegistrationPage: React.FC = () => {
         if (updateError) {
           console.error('Error updating registration:', updateError);
         }
+      } else if (existingReg && !hasRealAccount) {
+        registrationId = existingReg.id;
+
+        const { data: existingCode } = await supabase
+          .from('moonshot_invite_codes')
+          .select('code')
+          .eq('registration_id', registrationId)
+          .maybeSingle();
+
+        code = existingCode?.code || generateInviteCode();
+
+        if (!existingCode?.code) {
+          await supabase
+            .from('moonshot_invite_codes')
+            .insert({
+              registration_id: registrationId,
+              code: code,
+              valid_from: '2026-01-15T00:00:00+00:00',
+              expires_at: '2026-04-15T23:59:59+00:00'
+            });
+        }
+
+        await supabase
+          .from('moonshot_registrations')
+          .update({
+            name: formData.name,
+            industry: finalIndustry,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', registrationId);
       } else {
         code = generateInviteCode();
 
@@ -408,13 +440,14 @@ export const MoonshotRegistrationPage: React.FC = () => {
       }
 
       try {
+        const isActualExistingUser = !!existingUserInfo || (existingReg && hasRealAccount);
         await supabase.functions.invoke('moonshot-send-confirmation', {
           body: {
             registrationId,
             email: formData.email,
             name: formData.name,
             inviteCode: code,
-            isExistingUser: !!existingReg
+            isExistingUser: isActualExistingUser
           }
         });
       } catch {
