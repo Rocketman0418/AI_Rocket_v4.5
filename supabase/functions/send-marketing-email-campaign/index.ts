@@ -18,6 +18,9 @@ interface CampaignRequest {
     types?: ('all_users' | 'specific' | 'preview_requests' | 'marketing_contacts' | 'moonshot_registrations')[];
     emails?: string[];
   };
+  fromAddress?: string;
+  fromName?: string;
+  replyTo?: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -48,7 +51,12 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-    const { marketingEmailId, recipientFilter }: CampaignRequest = await req.json();
+    const { marketingEmailId, recipientFilter, fromAddress, fromName, replyTo }: CampaignRequest = await req.json();
+
+    const defaultFrom = "AI Rocket <astra@airocket.app>";
+    const emailFrom = fromAddress
+      ? (fromName ? `${fromName} <${fromAddress}>` : fromAddress)
+      : defaultFrom;
 
     const { data: emailData, error: emailError } = await supabaseAdmin
       .from('marketing_emails')
@@ -223,10 +231,11 @@ Deno.serve(async (req: Request) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "AI Rocket <astra@airocket.app>",
+            from: emailFrom,
             to: recipient.email,
             subject: emailData.subject,
             html: emailHtml,
+            ...(replyTo && { reply_to: replyTo }),
           }),
         });
 

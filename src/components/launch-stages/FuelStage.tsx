@@ -6,6 +6,7 @@ import { useFuelLevel, FUEL_LEVEL_THRESHOLDS } from '../../hooks/useFuelLevel';
 import { useDataSyncProgress } from '../../hooks/useDataSyncProgress';
 import { formatPoints } from '../../lib/launch-preparation-utils';
 import { getGoogleDriveConnection, isTokenExpired, initiateGoogleDriveOAuth } from '../../lib/google-drive-oauth';
+import { getActiveConnection } from '../../lib/unified-drive-utils';
 import { useAuth } from '../../contexts/AuthContext';
 import { ConnectDriveStep } from '../setup-steps/ConnectDriveStep';
 import { ChooseFolderStep } from '../setup-steps/ChooseFolderStep';
@@ -55,7 +56,8 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
   const [folderData, setFolderData] = useState<any>(null);
   const [placeFilesForFolder, setPlaceFilesForFolder] = useState<'strategy' | 'meetings' | 'financial' | 'projects' | null>(null);
   const [checkingLevel, setCheckingLevel] = useState(false);
-  const [hasGoogleDrive, setHasGoogleDrive] = useState(false);
+  const [hasCloudDrive, setHasCloudDrive] = useState(false);
+  const [cloudProvider, setCloudProvider] = useState<'google' | 'microsoft' | null>(null);
   const [tokenExpired, setTokenExpired] = useState(false);
   const [checkingDrive, setCheckingDrive] = useState(true);
   const [userClosedModal, setUserClosedModal] = useState(false);
@@ -163,6 +165,12 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
         if (data?.drive_flow_step) {
           const step = data.drive_flow_step as typeof driveFlowStep;
 
+          if (step === 'connect' || step === 'status') {
+            console.log('🧹 Clearing transient flow state:', step);
+            await clearFlowState();
+            return;
+          }
+
           if (step === 'sync-data' || step === 'place-files') {
             const connection = await getGoogleDriveConnection();
             const hasAnyFolder = connection?.strategy_folder_id || connection?.meetings_folder_id ||
@@ -190,13 +198,14 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
     loadPersistedState();
   }, [user]);
 
-  // Check if user has Google Drive connected
+  // Check if user has any cloud drive connected (Google Drive or Microsoft OneDrive)
   useEffect(() => {
     const checkDriveConnection = async () => {
       try {
-        const connection = await getGoogleDriveConnection();
+        const connection = await getActiveConnection();
         const isConnected = !!connection && connection.is_active;
-        setHasGoogleDrive(isConnected);
+        setHasCloudDrive(isConnected);
+        setCloudProvider(connection?.provider === 'google' || connection?.provider === 'microsoft' ? connection.provider : null);
         setCheckingDrive(false);
 
         const isExpired = connection?.token_expires_at ? isTokenExpired(connection.token_expires_at) : false;
@@ -204,8 +213,10 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
 
         console.log('🔍 [FuelStage] Drive connection check:', {
           isConnected,
+          provider: connection?.provider,
           tokenExpired: isExpired,
           tokenExpiresAt: connection?.token_expires_at,
+          hasRootFolder: connection?.root_folder_id,
           hasStrategyFolder: connection?.strategy_folder_id,
           hasMeetingsFolder: connection?.meetings_folder_id,
           hasFinancialFolder: connection?.financial_folder_id,
@@ -451,16 +462,16 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
         )}
 
         {/* Expired Token Banner */}
-        {tokenExpired && hasGoogleDrive && (
+        {tokenExpired && hasCloudDrive && (
           <div className="bg-gradient-to-r from-orange-500/10 via-yellow-500/10 to-red-500/10 border border-orange-500/30 rounded-lg p-4 mb-4">
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-semibold text-white mb-1">
-                  Google Drive Authorization Expired
+                  {cloudProvider === 'microsoft' ? 'Microsoft OneDrive' : 'Google Drive'} Authorization Expired
                 </h3>
                 <p className="text-sm text-gray-300 mb-3">
-                  Your Google Drive connection has expired and needs to be refreshed.
+                  Your {cloudProvider === 'microsoft' ? 'Microsoft OneDrive' : 'Google Drive'} connection has expired and needs to be refreshed.
                   Click below to re-authorize and continue syncing your documents.
                 </p>
                 <button
@@ -647,7 +658,7 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
         <div className="mb-3">
           <div className="flex items-center justify-between mb-1.5">
             <h2 className="text-xs font-semibold text-gray-300">Your Data</h2>
-            {isAdmin && hasGoogleDrive && !tokenExpired && (
+            {isAdmin && hasCloudDrive && !tokenExpired && (
               <button
                 onClick={handleSyncDocuments}
                 disabled={syncing}
@@ -720,12 +731,16 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
         {/* Folder Management Section */}
         <FolderManagementSection
           key={folderSectionKey}
-          onOpenFolderManager={() => {
-            setShowDriveFlow(true);
+          onOpenFolderManager={async (provider) => {
+            await clearFlowState();
             setDriveFlowStep('status');
+            setShowDriveFlow(true);
           }}
-          hasGoogleDrive={hasGoogleDrive}
-          tokenExpired={tokenExpired}
+          onConnectProvider={async (provider) => {
+            await clearFlowState();
+            setDriveFlowStep('connect');
+            setShowDriveFlow(true);
+          }}
           userRole={userRole}
           onLocalUploadComplete={async () => {
             await refreshCounts();
@@ -736,8 +751,8 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
           }}
         />
 
-        {/* Connect Google Drive - Only show if not connected */}
-        {!hasGoogleDrive && (
+        {/* Connect Cloud Drive - Only show if not connected */}
+        {!hasCloudDrive && (
           <>
             <button
               onClick={async () => {
@@ -755,7 +770,7 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
               ) : (
                 <>
                   <Folder className="w-4 h-4" />
-                  <span>Connect Google Drive</span>
+                  <span>Connect Cloud Drive</span>
                 </>
               )}
             </button>
@@ -776,7 +791,7 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
           </button>
         )}
 
-        {currentLevel < 1 && hasGoogleDrive && (
+        {currentLevel < 1 && hasCloudDrive && (
           <p className="text-center text-gray-400 text-[10px] mt-2">
             Reach Level 1 to unlock Boosters Stage
           </p>
@@ -839,7 +854,8 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
                     }
                   }}
                   onDisconnected={async () => {
-                    setHasGoogleDrive(false);
+                    setHasCloudDrive(false);
+                    setCloudProvider(null);
                     await clearFlowState();
                     setShowDriveFlow(false);
                     await refreshCounts();
@@ -855,9 +871,10 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
               )}
               {driveFlowStep === 'connect' && (
                 <ConnectDriveStep
-                  onComplete={async () => {
+                  onComplete={async (provider?: 'google' | 'microsoft') => {
                     setDriveFlowStep('choose-folder');
-                    setHasGoogleDrive(true);
+                    setHasCloudDrive(true);
+                    setCloudProvider(provider || 'google');
                     await persistFlowState('choose-folder');
                   }}
                   progress={null}
@@ -1081,7 +1098,7 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
                               isCompleted ? 'text-green-300' : 'text-gray-400'
                             }`}
                           >
-                            Connect Google Drive
+                            Connect cloud drive
                           </p>
                         </div>
                       )}
@@ -1092,7 +1109,7 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
 
               <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4 mt-4">
                 <p className="text-sm text-blue-300">
-                  Tip: Sync more documents from your Google Drive folders or upload local files to progress faster. Higher levels unlock more Launch Points and enhanced AI capabilities!
+                  Tip: Sync more documents from your cloud drive folders or upload local files to progress faster. Higher levels unlock more Launch Points and enhanced AI capabilities!
                 </p>
               </div>
 

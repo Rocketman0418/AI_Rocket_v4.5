@@ -5,6 +5,7 @@ import { ReportsProvider } from './contexts/ReportsContext';
 import { AuthScreen } from './components/AuthScreen';
 import { MainContainer } from './components/MainContainer';
 import { GoogleDriveCallback } from './components/GoogleDriveCallback';
+import { MicrosoftGraphCallback } from './components/MicrosoftGraphCallback';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { FeedbackModal } from './components/FeedbackModal';
@@ -244,6 +245,7 @@ const AppContent: React.FC = () => {
       {FEATURES.GOOGLE_DRIVE_SYNC_ENABLED && (
         <Route path="/auth/google-drive/callback" element={<GoogleDriveCallback />} />
       )}
+      <Route path="/auth/microsoft/callback" element={<MicrosoftGraphCallback />} />
 
       {/* Admin Dashboard - Protected Route */}
       <Route

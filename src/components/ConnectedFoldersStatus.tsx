@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, CheckCircle, Loader2, FolderPlus, RefreshCw, Trash2, Edit2, X, Search, FolderOpen, User, Plus, FilePlus, Unlink, AlertTriangle } from 'lucide-react';
+import { Folder, CheckCircle, Loader2, FolderPlus, RefreshCw, Trash2, Edit2, X, Search, FolderOpen, User, Plus, FilePlus, Unlink, AlertTriangle, HardDrive, Cloud } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { syncAllFolders } from '../lib/manual-folder-sync';
 import { PlaceFilesStep } from './setup-steps/PlaceFilesStep';
 import { GoogleDriveTroubleshootGuide } from './GoogleDriveTroubleshootGuide';
+import { initiateGoogleDriveOAuth } from '../lib/google-drive-oauth';
+import { initiateMicrosoftOAuth } from '../lib/microsoft-graph-oauth';
+import { getBothConnections, isTokenExpired, DualConnectionStatus, UnifiedDriveConnection } from '../lib/unified-drive-utils';
 
 interface ConnectedFoldersStatusProps {
   onConnectMore: () => void;
   onClose: () => void;
   onDisconnected?: () => void;
+  onOpenLocalUpload?: () => void;
 }
 
 interface UnifiedFolder {
@@ -19,6 +23,12 @@ interface UnifiedFolder {
   isRoot: boolean;
   connectedBy: string | null;
   connectedByEmail: string | null;
+}
+
+interface ProviderData {
+  connection: UnifiedDriveConnection | null;
+  folders: UnifiedFolder[];
+  isExpired: boolean;
 }
 
 const FOLDER_COLORS = [
@@ -31,28 +41,80 @@ const FOLDER_COLORS = [
   { bg: 'bg-teal-500/20', text: 'text-teal-400', border: 'border-teal-500/50' },
 ];
 
-export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ onConnectMore, onClose, onDisconnected }) => {
+export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ onConnectMore, onClose, onDisconnected, onOpenLocalUpload }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [folders, setFolders] = useState<UnifiedFolder[]>([]);
+  const [googleData, setGoogleData] = useState<ProviderData | null>(null);
+  const [microsoftData, setMicrosoftData] = useState<ProviderData | null>(null);
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [syncCompleted, setSyncCompleted] = useState(false);
-  const [removingFolder, setRemovingFolder] = useState<number | null>(null);
-  const [changingMainFolder, setChangingMainFolder] = useState(false);
-  const [availableFolders, setAvailableFolders] = useState<{ id: string; name: string }[]>([]);
-  const [loadingFolders, setLoadingFolders] = useState(false);
-  const [folderSearchTerm, setFolderSearchTerm] = useState('');
-  const [savingMainFolder, setSavingMainFolder] = useState(false);
-  const [showFolderChooser, setShowFolderChooser] = useState(false);
-  const [chooserMode, setChooserMode] = useState<'initial' | 'select-existing' | 'place-files'>('initial');
-  const [creatingFolder, setCreatingFolder] = useState(false);
-  const [createdFolderData, setCreatedFolderData] = useState<{ id: string; name: string } | null>(null);
-  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
+  const [removingFolder, setRemovingFolder] = useState<{ provider: 'google' | 'microsoft'; index: number } | null>(null);
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState<'google' | 'microsoft' | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
   const [showAddFilesModal, setShowAddFilesModal] = useState(false);
-  const [addFilesFolder, setAddFilesFolder] = useState<UnifiedFolder | null>(null);
+  const [addFilesFolder, setAddFilesFolder] = useState<{ folder: UnifiedFolder; provider: 'google' | 'microsoft' } | null>(null);
+
+  const extractFolders = async (connection: UnifiedDriveConnection | null): Promise<UnifiedFolder[]> => {
+    if (!connection) return [];
+
+    const connectedByIds: string[] = [];
+    if (connection.root_folder_id) {
+      const connectedBy = (connection as any).root_folder_connected_by;
+      if (connectedBy) connectedByIds.push(connectedBy);
+    }
+    for (let i = 1; i <= 6; i++) {
+      const connectedBy = (connection as any)[`folder_${i}_connected_by`];
+      if (connectedBy) connectedByIds.push(connectedBy);
+    }
+
+    let userEmails: Record<string, string> = {};
+    if (connectedByIds.length > 0) {
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('id, email')
+        .in('id', connectedByIds);
+      if (usersData) {
+        usersData.forEach(u => {
+          userEmails[u.id] = u.email;
+        });
+      }
+    }
+
+    const folders: UnifiedFolder[] = [];
+
+    if (connection.root_folder_id && connection.root_folder_name) {
+      const connectedById = (connection as any).root_folder_connected_by;
+      folders.push({
+        index: 0,
+        folderId: connection.root_folder_id,
+        folderName: connection.root_folder_name,
+        isRoot: true,
+        connectedBy: connectedById || null,
+        connectedByEmail: connectedById ? userEmails[connectedById] || null : null
+      });
+    }
+
+    for (let i = 1; i <= 6; i++) {
+      const folderId = (connection as any)[`folder_${i}_id`];
+      const folderName = (connection as any)[`folder_${i}_name`];
+      const connectedById = (connection as any)[`folder_${i}_connected_by`];
+
+      if (folderId && folderName) {
+        folders.push({
+          index: i,
+          folderId,
+          folderName,
+          isRoot: false,
+          connectedBy: connectedById || null,
+          connectedByEmail: connectedById ? userEmails[connectedById] || null : null
+        });
+      }
+    }
+
+    return folders;
+  };
 
   useEffect(() => {
     loadFolderStatus();
@@ -82,66 +144,22 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
         return;
       }
 
-      const { data: driveConnection, error: driveError } = await supabase
-        .from('user_drive_connections')
-        .select('*')
-        .eq('team_id', teamId)
-        .maybeSingle();
+      const connections = await getBothConnections(teamId);
 
-      if (driveError) throw driveError;
+      const googleFolders = await extractFolders(connections.google);
+      const microsoftFolders = await extractFolders(connections.microsoft);
 
-      const connectedByIds: string[] = [];
-      if (driveConnection?.root_folder_connected_by) connectedByIds.push(driveConnection.root_folder_connected_by);
-      for (let i = 1; i <= 6; i++) {
-        const connectedBy = driveConnection?.[`folder_${i}_connected_by`];
-        if (connectedBy) connectedByIds.push(connectedBy);
-      }
+      setGoogleData({
+        connection: connections.google,
+        folders: googleFolders,
+        isExpired: connections.google ? isTokenExpired(connections.google.token_expires_at) : false
+      });
 
-      let userEmails: Record<string, string> = {};
-      if (connectedByIds.length > 0) {
-        const { data: usersData } = await supabase
-          .from('users')
-          .select('id, email')
-          .in('id', connectedByIds);
-        if (usersData) {
-          usersData.forEach(u => {
-            userEmails[u.id] = u.email;
-          });
-        }
-      }
-
-      const unifiedFolders: UnifiedFolder[] = [];
-
-      if (driveConnection?.root_folder_id && driveConnection?.root_folder_name) {
-        const connectedById = driveConnection.root_folder_connected_by;
-        unifiedFolders.push({
-          index: 0,
-          folderId: driveConnection.root_folder_id,
-          folderName: driveConnection.root_folder_name,
-          isRoot: true,
-          connectedBy: connectedById || null,
-          connectedByEmail: connectedById ? userEmails[connectedById] || null : null
-        });
-      }
-
-      for (let i = 1; i <= 6; i++) {
-        const folderId = driveConnection?.[`folder_${i}_id`];
-        const folderName = driveConnection?.[`folder_${i}_name`];
-        const connectedById = driveConnection?.[`folder_${i}_connected_by`];
-
-        if (folderId && folderName) {
-          unifiedFolders.push({
-            index: i,
-            folderId,
-            folderName,
-            isRoot: false,
-            connectedBy: connectedById || null,
-            connectedByEmail: connectedById ? userEmails[connectedById] || null : null
-          });
-        }
-      }
-
-      setFolders(unifiedFolders);
+      setMicrosoftData({
+        connection: connections.microsoft,
+        folders: microsoftFolders,
+        isExpired: connections.microsoft ? isTokenExpired(connections.microsoft.token_expires_at) : false
+      });
     } catch (err) {
       console.error('Error loading folder status:', err);
       setError('Failed to load folder information');
@@ -194,8 +212,8 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
     } catch (error: any) {
       console.error('Sync error:', error);
       setSyncing(false);
-      if (error.message === 'GOOGLE_TOKEN_EXPIRED') {
-        setSyncMessage({ type: 'error', text: 'Google Drive connection expired. Please reconnect.' });
+      if (error.message === 'GOOGLE_TOKEN_EXPIRED' || error.message === 'TOKEN_EXPIRED') {
+        setSyncMessage({ type: 'error', text: 'Cloud connection expired. Please reconnect.' });
       } else {
         setSyncMessage({ type: 'error', text: 'Failed to sync. Please try again.' });
       }
@@ -203,10 +221,10 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
     }
   };
 
-  const handleRemoveFolder = async (folderIndex: number) => {
+  const handleRemoveFolder = async (provider: 'google' | 'microsoft', folderIndex: number) => {
     if (!user || folderIndex === 0) return;
 
-    setRemovingFolder(folderIndex);
+    setRemovingFolder({ provider, index: folderIndex });
 
     try {
       let teamId = user.user_metadata?.team_id;
@@ -231,7 +249,8 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
       const { error } = await supabase
         .from('user_drive_connections')
         .update(updates)
-        .eq('team_id', teamId);
+        .eq('team_id', teamId)
+        .eq('provider', provider);
 
       if (error) throw error;
 
@@ -244,164 +263,7 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
     }
   };
 
-  const handleChangeMainFolder = async () => {
-    setChangingMainFolder(true);
-    setLoadingFolders(true);
-    setFolderSearchTerm('');
-    setAvailableFolders([]);
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError('No active session');
-        setChangingMainFolder(false);
-        return;
-      }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-google-drive-folders`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch folders');
-      }
-
-      const data = await response.json();
-      setAvailableFolders(data.folders || []);
-    } catch (err) {
-      console.error('Error loading folders:', err);
-      setError('Failed to load folders from Google Drive');
-      setChangingMainFolder(false);
-    } finally {
-      setLoadingFolders(false);
-    }
-  };
-
-  const handleSelectMainFolder = async (newFolder: { id: string; name: string }) => {
-    if (!user) return;
-
-    setSavingMainFolder(true);
-
-    try {
-      let teamId = user.user_metadata?.team_id;
-      if (!teamId) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('team_id')
-          .eq('id', user.id)
-          .maybeSingle();
-        teamId = userData?.team_id;
-      }
-
-      if (!teamId) return;
-
-      const { error } = await supabase
-        .from('user_drive_connections')
-        .update({
-          root_folder_id: newFolder.id,
-          root_folder_name: newFolder.name,
-          root_folder_connected_by: user.id
-        })
-        .eq('team_id', teamId);
-
-      if (error) throw error;
-
-      setChangingMainFolder(false);
-      setShowFolderChooser(false);
-      setChooserMode('initial');
-      await loadFolderStatus();
-    } catch (err) {
-      console.error('Error updating main folder:', err);
-      setError('Failed to update main folder');
-    } finally {
-      setSavingMainFolder(false);
-    }
-  };
-
-  const handleCreateNewFolder = async () => {
-    if (creatingFolder || !user) return;
-
-    setCreatingFolder(true);
-    setError('');
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError('Not authenticated');
-        setCreatingFolder(false);
-        return;
-      }
-
-      let teamId = user.user_metadata?.team_id;
-      if (!teamId) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('team_id')
-          .eq('id', user.id)
-          .maybeSingle();
-        teamId = userData?.team_id;
-      }
-
-      if (!teamId) {
-        setError('No team found');
-        setCreatingFolder(false);
-        return;
-      }
-
-      const createResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-google-drive-folder`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ folderName: 'Astra Team Folder' }),
-        }
-      );
-
-      if (!createResponse.ok) {
-        const errorData = await createResponse.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to create folder');
-      }
-
-      const { folder } = await createResponse.json();
-
-      const { error: updateError } = await supabase
-        .from('user_drive_connections')
-        .update({
-          root_folder_id: folder.id,
-          root_folder_name: folder.name,
-          root_folder_connected_by: user.id
-        })
-        .eq('team_id', teamId);
-
-      if (updateError) throw updateError;
-
-      setCreatedFolderData({ id: folder.id, name: folder.name });
-      setChooserMode('place-files');
-      await loadFolderStatus();
-    } catch (err: any) {
-      console.error('Error creating folder:', err);
-      setError(err.message || 'Failed to create folder');
-    } finally {
-      setCreatingFolder(false);
-    }
-  };
-
-  const handlePlaceFilesComplete = () => {
-    setShowFolderChooser(false);
-    setChooserMode('initial');
-    setCreatedFolderData(null);
-  };
-
-  const handleDisconnectGoogleDrive = async () => {
+  const handleDisconnectProvider = async (provider: 'google' | 'microsoft') => {
     if (!user || disconnecting) return;
 
     setDisconnecting(true);
@@ -429,25 +291,28 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
           is_active: false,
           connection_status: 'disconnected'
         })
-        .eq('team_id', teamId);
+        .eq('team_id', teamId)
+        .eq('provider', provider);
 
       if (updateError) throw updateError;
 
-      setShowDisconnectConfirm(false);
-      if (onDisconnected) {
+      setShowDisconnectConfirm(null);
+      await loadFolderStatus();
+
+      const hasOtherConnection = provider === 'google' ? microsoftData?.connection : googleData?.connection;
+      if (!hasOtherConnection && onDisconnected) {
         onDisconnected();
       }
-      onClose();
     } catch (err) {
-      console.error('Error disconnecting Google Drive:', err);
-      setError('Failed to disconnect Google Drive');
+      console.error('Error disconnecting drive:', err);
+      setError(`Failed to disconnect ${provider === 'google' ? 'Google Drive' : 'Microsoft OneDrive'}`);
     } finally {
       setDisconnecting(false);
     }
   };
 
-  const handleOpenAddFiles = (folder: UnifiedFolder) => {
-    setAddFilesFolder(folder);
+  const handleOpenAddFiles = (folder: UnifiedFolder, provider: 'google' | 'microsoft') => {
+    setAddFilesFolder({ folder, provider });
     setShowAddFilesModal(true);
   };
 
@@ -456,48 +321,148 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
     setAddFilesFolder(null);
   };
 
-  const handleOpenFolderChooser = () => {
-    setShowFolderChooser(true);
-    setChooserMode('initial');
-  };
+  const renderProviderSection = (data: ProviderData | null, provider: 'google' | 'microsoft') => {
+    const isGoogle = provider === 'google';
+    const providerName = isGoogle ? 'Google Drive' : 'Microsoft OneDrive / SharePoint';
+    const Icon = isGoogle ? HardDrive : Cloud;
+    const colorClass = isGoogle ? 'blue' : 'cyan';
+    const isConnected = !!data?.connection;
+    const isExpired = data?.isExpired ?? false;
+    const folders = data?.folders ?? [];
 
-  const handleSelectExistingFolder = async () => {
-    setChooserMode('select-existing');
-    setLoadingFolders(true);
-    setFolderSearchTerm('');
-    setAvailableFolders([]);
+    return (
+      <div className={`border rounded-lg p-4 ${isConnected ? `border-${colorClass}-600/50 bg-${colorClass}-900/10` : 'border-gray-700 bg-gray-800/30'}`}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-lg ${isConnected ? `bg-${colorClass}-600/20` : 'bg-gray-700/50'} flex items-center justify-center`}>
+              <Icon className={`w-5 h-5 ${isConnected ? `text-${colorClass}-400` : 'text-gray-500'}`} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold text-white">{providerName}</h3>
+                {isConnected && !isExpired && (
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                )}
+                {isExpired && (
+                  <AlertTriangle className="w-4 h-4 text-orange-400" />
+                )}
+              </div>
+              {isConnected ? (
+                <p className="text-xs text-gray-400">
+                  {isExpired ? (
+                    <span className="text-orange-400">Authorization expired - reconnect required</span>
+                  ) : (
+                    `${folders.length} folder${folders.length !== 1 ? 's' : ''} connected`
+                  )}
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500">Not connected</p>
+              )}
+            </div>
+          </div>
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError('No active session');
-        setChooserMode('initial');
-        return;
-      }
+          {!isConnected && (
+            <button
+              onClick={() => isGoogle ? initiateGoogleDriveOAuth(false, true) : initiateMicrosoftOAuth(false, true)}
+              className={`px-3 py-2 ${isGoogle ? 'bg-blue-600 hover:bg-blue-700' : 'bg-cyan-600 hover:bg-cyan-700'} text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2`}
+            >
+              <Plus className="w-4 h-4" />
+              Connect
+            </button>
+          )}
+        </div>
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-google-drive-folders`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+        {isConnected && folders.length > 0 && !isExpired && (
+          <div className="space-y-2 mt-3">
+            {folders.map((folder, idx) => {
+              const colors = FOLDER_COLORS[idx % FOLDER_COLORS.length];
+              const isRemoving = removingFolder?.provider === provider && removingFolder?.index === folder.index;
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch folders');
-      }
+              return (
+                <div
+                  key={folder.index}
+                  className={`${colors.bg} border ${colors.border} rounded-lg p-3`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <div className={`w-8 h-8 rounded-lg ${colors.bg} flex items-center justify-center flex-shrink-0`}>
+                        <Folder className={`w-4 h-4 ${colors.text}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-medium truncate text-sm">{folder.folderName}</p>
+                        <p className="text-[10px] text-gray-400">
+                          {folder.isRoot ? 'Main Team Folder' : 'Additional Folder'}
+                        </p>
+                        {folder.connectedByEmail && (
+                          <p className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
+                            <User className="w-3 h-3" />
+                            {folder.connectedByEmail === user?.email ? 'Connected by you' : folder.connectedByEmail}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleOpenAddFiles(folder, provider)}
+                        className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-600/20 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+                        title="Add files to folder"
+                      >
+                        <FilePlus className="w-4 h-4" />
+                      </button>
+                      {!folder.isRoot && (
+                        <button
+                          onClick={() => handleRemoveFolder(provider, folder.index)}
+                          disabled={isRemoving}
+                          className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-600/20 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center disabled:opacity-50"
+                          title="Remove folder"
+                        >
+                          {isRemoving ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
-      const data = await response.json();
-      setAvailableFolders(data.folders || []);
-    } catch (err) {
-      console.error('Error loading folders:', err);
-      setError('Failed to load folders from Google Drive');
-      setChooserMode('initial');
-    } finally {
-      setLoadingFolders(false);
-    }
+        {isConnected && isExpired && (
+          <div className="mt-3">
+            <button
+              onClick={() => isGoogle ? initiateGoogleDriveOAuth(false, true) : initiateMicrosoftOAuth(false, true)}
+              className={`w-full px-3 py-2 ${isGoogle ? 'bg-orange-600 hover:bg-orange-700' : 'bg-orange-600 hover:bg-orange-700'} text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2`}
+            >
+              <RefreshCw className="w-4 h-4" />
+              Reconnect {isGoogle ? 'Google Drive' : 'Microsoft'}
+            </button>
+          </div>
+        )}
+
+        {isConnected && !isExpired && (
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-700/50">
+            <button
+              onClick={onConnectMore}
+              className="flex-1 px-3 py-2 bg-gray-700/50 hover:bg-gray-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+            >
+              <FolderPlus className="w-3.5 h-3.5" />
+              Add Folders
+            </button>
+            <button
+              onClick={() => setShowDisconnectConfirm(provider)}
+              className="px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Unlink className="w-3.5 h-3.5" />
+              Disconnect
+            </button>
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (loading) {
@@ -511,7 +476,7 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
     );
   }
 
-  if (error && !changingMainFolder) {
+  if (error) {
     return (
       <div className="space-y-6">
         <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
@@ -529,7 +494,8 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
     );
   }
 
-  const canAddMoreFolders = folders.length < 7;
+  const hasAnyConnection = !!googleData?.connection || !!microsoftData?.connection;
+  const totalFolders = (googleData?.folders?.length ?? 0) + (microsoftData?.folders?.length ?? 0);
 
   return (
     <div className="space-y-6">
@@ -546,91 +512,20 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-600/20 mb-4">
           <CheckCircle className="w-8 h-8 text-green-400" />
         </div>
-        <h2 className="text-2xl font-bold text-white mb-3">Your Connected Folders</h2>
+        <h2 className="text-2xl font-bold text-white mb-3">AI Data Sync</h2>
         <p className="text-gray-300">
-          {folders.length} folder{folders.length !== 1 ? 's' : ''} connected
+          {hasAnyConnection
+            ? `${totalFolders} folder${totalFolders !== 1 ? 's' : ''} connected across ${(googleData?.connection ? 1 : 0) + (microsoftData?.connection ? 1 : 0)} provider${((googleData?.connection ? 1 : 0) + (microsoftData?.connection ? 1 : 0)) !== 1 ? 's' : ''}`
+            : 'Connect your cloud storage to sync documents'}
         </p>
       </div>
 
       <GoogleDriveTroubleshootGuide compact />
 
-      {folders.length > 0 ? (
-        <div className="space-y-3">
-          {folders.map((folder, idx) => {
-            const colors = FOLDER_COLORS[idx % FOLDER_COLORS.length];
-
-            return (
-              <div
-                key={folder.index}
-                className={`${colors.bg} border ${colors.border} rounded-lg p-4`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3 flex-1 min-w-0">
-                    <div className={`w-10 h-10 rounded-lg ${colors.bg} flex items-center justify-center flex-shrink-0`}>
-                      <Folder className={`w-5 h-5 ${colors.text}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white font-medium truncate">{folder.folderName}</p>
-                      <p className="text-xs text-gray-400">
-                        {folder.isRoot ? 'Main Team Folder' : 'Additional Folder'}
-                      </p>
-                      {folder.connectedByEmail && (
-                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                          <User className="w-3 h-3" />
-                          Connected by {folder.connectedByEmail === user?.email ? 'you' : folder.connectedByEmail}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleOpenAddFiles(folder)}
-                      className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-600/20 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-                      title="Add files to folder"
-                    >
-                      <FilePlus className="w-4 h-4" />
-                    </button>
-                    {folder.isRoot ? (
-                      <button
-                        onClick={handleChangeMainFolder}
-                        className="p-2 text-gray-400 hover:text-orange-400 hover:bg-orange-600/20 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-                        title="Change main folder"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleRemoveFolder(folder.index)}
-                        disabled={removingFolder === folder.index}
-                        className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-600/20 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center disabled:opacity-50"
-                        title="Remove folder"
-                      >
-                        {removingFolder === folder.index ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="text-center py-6 text-gray-400">
-          <Folder className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p className="mb-4">No folders connected yet</p>
-          <button
-            onClick={handleOpenFolderChooser}
-            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors inline-flex items-center gap-2"
-          >
-            <FolderOpen className="w-4 h-4" />
-            Select Main Team Folder
-          </button>
-        </div>
-      )}
+      <div className="space-y-4">
+        {renderProviderSection(googleData, 'google')}
+        {renderProviderSection(microsoftData, 'microsoft')}
+      </div>
 
       {syncMessage && !syncCompleted && (
         <div className={`p-3 rounded-lg ${
@@ -645,24 +540,14 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
       )}
 
       <div className="flex flex-col space-y-3 pt-4">
-        {canAddMoreFolders && (
-          <button
-            onClick={onConnectMore}
-            className="w-full px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
-          >
-            <FolderPlus className="w-5 h-5" />
-            <span>Add More Folders</span>
-          </button>
-        )}
-
-        {folders.length > 0 && (
+        {hasAnyConnection && totalFolders > 0 && (
           <button
             onClick={handleSyncDocuments}
             disabled={syncing}
-            className="w-full px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 disabled:opacity-50"
+            className="w-full px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 disabled:opacity-50"
           >
             <RefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
-            <span>{syncing ? 'Syncing...' : 'Sync Folder'}</span>
+            <span>{syncing ? 'Syncing...' : 'Sync All Folders'}</span>
           </button>
         )}
 
@@ -672,301 +557,7 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
         >
           Done
         </button>
-
-        {folders.length > 0 && (
-          <button
-            onClick={() => setShowDisconnectConfirm(true)}
-            className="w-full px-6 py-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 text-sm"
-          >
-            <Unlink className="w-4 h-4" />
-            <span>Disconnect Google Drive</span>
-          </button>
-        )}
       </div>
-
-      {changingMainFolder && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[70] p-4">
-          <div className="bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
-            <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between z-10">
-              <h3 className="text-xl font-bold text-white">
-                {folders.find(f => f.isRoot) ? 'Change Main Team Folder' : 'Select Main Team Folder'}
-              </h3>
-              <button
-                onClick={() => setChangingMainFolder(false)}
-                disabled={savingMainFolder}
-                className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-700 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center disabled:opacity-50"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6">
-              {savingMainFolder ? (
-                <div className="text-center py-12">
-                  <Loader2 className="w-8 h-8 text-orange-400 animate-spin mx-auto mb-4" />
-                  <p className="text-gray-300">Updating folder...</p>
-                </div>
-              ) : loadingFolders ? (
-                <div className="text-center py-12">
-                  <Loader2 className="w-8 h-8 text-orange-400 animate-spin mx-auto mb-4" />
-                  <p className="text-gray-300">Loading folders from Google Drive...</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <p className="text-sm text-gray-300">
-                    {folders.find(f => f.isRoot)
-                      ? 'Select a new folder to use as your Main Team Folder.'
-                      : 'Choose a folder from your Google Drive to use as your Main Team Folder. This folder will be synced with Astra.'}
-                  </p>
-
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search folders..."
-                      value={folderSearchTerm}
-                      onChange={(e) => setFolderSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all"
-                    />
-                    {folderSearchTerm && (
-                      <button
-                        onClick={() => setFolderSearchTerm('')}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="max-h-[400px] overflow-y-auto bg-gray-700/30 border border-gray-600 rounded-lg">
-                    {availableFolders.length === 0 ? (
-                      <p className="text-gray-400 text-sm text-center py-8">
-                        No folders available
-                      </p>
-                    ) : (
-                      availableFolders
-                        .filter(f => f.name.toLowerCase().includes(folderSearchTerm.toLowerCase()))
-                        .map((folder) => {
-                          const currentRootFolder = folders.find(f => f.isRoot);
-                          const isCurrentlyConnected = currentRootFolder?.folderId === folder.id;
-
-                          return (
-                            <button
-                              key={folder.id}
-                              onClick={() => handleSelectMainFolder(folder)}
-                              disabled={isCurrentlyConnected}
-                              className={`w-full text-left px-4 py-3 text-sm transition-colors border-b border-gray-600/50 last:border-b-0 flex items-center justify-between ${
-                                isCurrentlyConnected
-                                  ? 'bg-green-600/20 text-green-300 cursor-not-allowed'
-                                  : 'text-white hover:bg-gray-700/50'
-                              }`}
-                            >
-                              <span className="flex items-center">
-                                <FolderOpen className="w-4 h-4 inline mr-2 flex-shrink-0" />
-                                <span className="truncate">{folder.name}</span>
-                              </span>
-                              {isCurrentlyConnected && (
-                                <span className="flex items-center text-xs text-green-400 ml-2 flex-shrink-0">
-                                  <CheckCircle className="w-4 h-4 mr-1" />
-                                  Current
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })
-                    )}
-                    {availableFolders.length > 0 &&
-                      availableFolders.filter(f => f.name.toLowerCase().includes(folderSearchTerm.toLowerCase())).length === 0 && (
-                      <p className="text-gray-400 text-sm text-center py-8">
-                        No folders match "{folderSearchTerm}"
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showFolderChooser && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[70] p-4">
-          <div className="bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
-            <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between z-10">
-              <h3 className="text-xl font-bold text-white">
-                {chooserMode === 'place-files' ? 'Place Your Files' : 'Choose Your Folder'}
-              </h3>
-              {chooserMode !== 'place-files' && (
-                <button
-                  onClick={() => {
-                    setShowFolderChooser(false);
-                    setChooserMode('initial');
-                  }}
-                  disabled={creatingFolder || savingMainFolder}
-                  className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-700 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center disabled:opacity-50"
-                  aria-label="Close"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              )}
-            </div>
-            <div className="p-6">
-              {chooserMode === 'initial' && (
-                <div className="space-y-6">
-                  <div className="text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-600/20 mb-4">
-                      <FolderPlus className="w-8 h-8 text-orange-400" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-white mb-3">Choose Your Team Folder</h2>
-                    <p className="text-gray-300">
-                      Select an existing folder or let Astra create one for you
-                    </p>
-                  </div>
-
-                  {error && (
-                    <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
-                      <p className="text-sm text-red-300">{error}</p>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <button
-                      onClick={handleSelectExistingFolder}
-                      className="bg-gray-700/50 hover:bg-gray-700 border-2 border-gray-600 hover:border-orange-500 rounded-lg p-6 transition-all text-left group min-h-[180px] flex flex-col items-center justify-center"
-                    >
-                      <div className="w-16 h-16 rounded-full bg-orange-600/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <FolderOpen className="w-8 h-8 text-orange-400" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-white mb-2 text-center">
-                        Select Existing Folder
-                      </h3>
-                      <p className="text-sm text-gray-400 text-center">
-                        Browse and choose a folder from your Google Drive
-                      </p>
-                    </button>
-
-                    <button
-                      onClick={handleCreateNewFolder}
-                      disabled={creatingFolder}
-                      className="bg-gray-700/50 hover:bg-gray-700 border-2 border-gray-600 hover:border-blue-500 rounded-lg p-6 transition-all text-left group min-h-[180px] flex flex-col items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <div className="w-16 h-16 rounded-full bg-blue-600/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        {creatingFolder ? (
-                          <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
-                        ) : (
-                          <Plus className="w-8 h-8 text-blue-400" />
-                        )}
-                      </div>
-                      <h3 className="text-lg font-semibold text-white mb-2 text-center">
-                        {creatingFolder ? 'Creating Folder...' : 'Create "Astra Team Folder"'}
-                      </h3>
-                      <p className="text-sm text-gray-400 text-center">
-                        {creatingFolder ? 'Please wait...' : 'Let Astra create a new folder for your team documents'}
-                      </p>
-                    </button>
-                  </div>
-
-                  <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
-                    <p className="text-sm text-blue-300">
-                      <span className="font-medium">About Team Folders:</span> This folder will contain documents about your team's mission, goals, strategic plans, and business data. Astra will read these to better understand your team.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {chooserMode === 'select-existing' && (
-                <div className="space-y-4">
-                  {loadingFolders ? (
-                    <div className="text-center py-12">
-                      <Loader2 className="w-8 h-8 text-orange-400 animate-spin mx-auto mb-4" />
-                      <p className="text-gray-300">Loading folders from Google Drive...</p>
-                    </div>
-                  ) : savingMainFolder ? (
-                    <div className="text-center py-12">
-                      <Loader2 className="w-8 h-8 text-orange-400 animate-spin mx-auto mb-4" />
-                      <p className="text-gray-300">Saving folder selection...</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-center mb-4">
-                        <h2 className="text-xl font-bold text-white mb-2">Select a Folder</h2>
-                        <p className="text-gray-400 text-sm">
-                          Choose a folder from your Google Drive for your team documents
-                        </p>
-                      </div>
-
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input
-                          type="text"
-                          placeholder="Search folders..."
-                          value={folderSearchTerm}
-                          onChange={(e) => setFolderSearchTerm(e.target.value)}
-                          className="w-full pl-10 pr-4 py-2.5 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all"
-                        />
-                        {folderSearchTerm && (
-                          <button
-                            onClick={() => setFolderSearchTerm('')}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="max-h-[350px] overflow-y-auto bg-gray-700/30 border border-gray-600 rounded-lg">
-                        {availableFolders.length === 0 ? (
-                          <p className="text-gray-400 text-sm text-center py-8">
-                            No folders available
-                          </p>
-                        ) : (
-                          availableFolders
-                            .filter(f => f.name.toLowerCase().includes(folderSearchTerm.toLowerCase()))
-                            .map((folder) => (
-                              <button
-                                key={folder.id}
-                                onClick={() => handleSelectMainFolder(folder)}
-                                className="w-full text-left px-4 py-3 text-sm transition-colors border-b border-gray-600/50 last:border-b-0 flex items-center text-white hover:bg-gray-700/50"
-                              >
-                                <FolderOpen className="w-4 h-4 inline mr-2 flex-shrink-0 text-orange-400" />
-                                <span className="truncate">{folder.name}</span>
-                              </button>
-                            ))
-                        )}
-                        {availableFolders.length > 0 &&
-                          availableFolders.filter(f => f.name.toLowerCase().includes(folderSearchTerm.toLowerCase())).length === 0 && (
-                          <p className="text-gray-400 text-sm text-center py-8">
-                            No folders match "{folderSearchTerm}"
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="flex justify-center pt-2">
-                        <button
-                          onClick={() => setChooserMode('initial')}
-                          className="px-6 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
-                        >
-                          Back
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {chooserMode === 'place-files' && createdFolderData && (
-                <PlaceFilesStep
-                  onComplete={handlePlaceFilesComplete}
-                  progress={null}
-                  folderData={{ selectedFolder: createdFolderData }}
-                  folderType="strategy"
-                  forceChooseOption={true}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {showDisconnectConfirm && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[80] p-4">
@@ -977,27 +568,29 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
                   <AlertTriangle className="w-6 h-6 text-red-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Disconnect Google Drive?</h3>
+                  <h3 className="text-lg font-semibold text-white">
+                    Disconnect {showDisconnectConfirm === 'google' ? 'Google Drive' : 'Microsoft OneDrive'}?
+                  </h3>
                   <p className="text-sm text-gray-400">This action can be undone by reconnecting</p>
                 </div>
               </div>
 
               <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
                 <p className="text-sm text-red-300">
-                  Disconnecting will pause document syncing. Your existing synced documents will remain, but new changes won't be detected until you reconnect.
+                  Disconnecting will pause document syncing from this provider. Your existing synced documents will remain, but new changes won't be detected until you reconnect.
                 </p>
               </div>
 
               <div className="flex gap-3 pt-2">
                 <button
-                  onClick={() => setShowDisconnectConfirm(false)}
+                  onClick={() => setShowDisconnectConfirm(null)}
                   disabled={disconnecting}
                   className="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleDisconnectGoogleDrive}
+                  onClick={() => handleDisconnectProvider(showDisconnectConfirm)}
                   disabled={disconnecting}
                   className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                 >
@@ -1024,7 +617,7 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
           <div className="bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
             <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between z-10">
               <h3 className="text-xl font-bold text-white">
-                Add Files to {addFilesFolder.folderName}
+                Add Files to {addFilesFolder.folder.folderName}
               </h3>
               <button
                 onClick={handleAddFilesComplete}
@@ -1038,8 +631,8 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
               <PlaceFilesStep
                 onComplete={handleAddFilesComplete}
                 progress={null}
-                folderData={{ selectedFolder: { id: addFilesFolder.folderId, name: addFilesFolder.folderName } }}
-                folderType={addFilesFolder.isRoot ? 'strategy' : 'projects'}
+                folderData={{ selectedFolder: { id: addFilesFolder.folder.folderId, name: addFilesFolder.folder.folderName } }}
+                folderType={addFilesFolder.folder.isRoot ? 'strategy' : 'projects'}
                 forceChooseOption={true}
                 isAddFilesMode={true}
               />

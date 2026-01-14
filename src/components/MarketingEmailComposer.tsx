@@ -87,6 +87,7 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
   const [moonshotRegistrationCount, setMoonshotRegistrationCount] = useState(0);
   const [activeTemplate, setActiveTemplate] = useState<EmailTemplate | null>(template || null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [usePersonalSender, setUsePersonalSender] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -493,7 +494,12 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
             recipientEmails: [user.email],
             subject: testSubject,
             htmlContent: testHtmlContent,
-            isTestEmail: true
+            isTestEmail: true,
+            ...(usePersonalSender && {
+              fromAddress: 'clay@rockethub.ai',
+              fromName: 'Clay Speakman',
+              replyTo: 'clay@rockethub.ai'
+            })
           }),
         }
       );
@@ -586,7 +592,12 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
           },
           body: JSON.stringify({
             marketingEmailId: finalEmailId,
-            recipientFilter: emailData.recipient_filter
+            recipientFilter: emailData.recipient_filter,
+            ...(usePersonalSender && {
+              fromAddress: 'clay@rockethub.ai',
+              fromName: 'Clay Speakman',
+              replyTo: 'clay@rockethub.ai'
+            })
           }),
         }
       );
@@ -1271,6 +1282,26 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
                 )}
               </div>
 
+              <div className="bg-slate-800 rounded-lg p-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={usePersonalSender}
+                    onChange={(e) => setUsePersonalSender(e.target.checked)}
+                    className="w-5 h-5 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500"
+                  />
+                  <div className="flex-1">
+                    <div className="text-white font-medium flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-blue-400" />
+                      Send from personal email
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      Send as "Clay Speakman &lt;clay@rockethub.ai&gt;" instead of "AI Rocket &lt;astra@airocket.app&gt;"
+                    </div>
+                  </div>
+                </label>
+              </div>
+
               <div className="bg-slate-800 rounded-lg p-6 space-y-3">
                 <h4 className="font-semibold text-white">Campaign Summary</h4>
                 <div className="space-y-2 text-sm">
@@ -1284,6 +1315,12 @@ export function MarketingEmailComposer({ emailId, template, onClose }: Marketing
                           {emailData.subject && <span className="text-gray-500 text-xs ml-1">(hints: {emailData.subject})</span>}
                         </span>
                       ) : emailData.subject}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">From:</span>
+                    <span className="text-white font-medium">
+                      {usePersonalSender ? 'Clay Speakman <clay@rockethub.ai>' : 'AI Rocket <astra@airocket.app>'}
                     </span>
                   </div>
                   <div className="flex justify-between">

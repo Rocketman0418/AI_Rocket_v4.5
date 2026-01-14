@@ -24,7 +24,7 @@ interface AstraGuidedSetupProps {
 
 const STEP_TITLES = [
   'Welcome to Astra',
-  'Connect Google Drive',
+  'Connect Your Data',
   'Choose Your Folder',
   'Place Your Files',
   'Sync Your Data',

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, Edit2, Loader2, Lightbulb, HelpCircle, Upload } from 'lucide-react';
+import { Folder, Edit2, Loader2, Lightbulb, HelpCircle, Upload, HardDrive, Cloud, Plus, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import LocalFileUpload from '../LocalFileUpload';
+import { getBothConnections, DualConnectionStatus, isTokenExpired } from '../../lib/unified-drive-utils';
 
 interface UnifiedFolder {
   index: number;
@@ -12,9 +13,8 @@ interface UnifiedFolder {
 }
 
 interface FolderManagementSectionProps {
-  onOpenFolderManager: () => void;
-  hasGoogleDrive: boolean;
-  tokenExpired: boolean;
+  onOpenFolderManager: (provider?: 'google' | 'microsoft') => void;
+  onConnectProvider: (provider: 'google' | 'microsoft') => void;
   userRole?: string;
   onLocalUploadComplete?: () => void;
 }
@@ -28,23 +28,62 @@ const FOLDER_COLORS = [
   { bg: 'bg-pink-500/20', text: 'text-pink-400', border: 'border-pink-500/30' },
 ];
 
+interface ProviderFolders {
+  provider: 'google' | 'microsoft';
+  folders: UnifiedFolder[];
+  isConnected: boolean;
+  isExpired: boolean;
+  accountEmail: string | null;
+}
+
 export const FolderManagementSection: React.FC<FolderManagementSectionProps> = ({
   onOpenFolderManager,
-  hasGoogleDrive,
-  tokenExpired,
+  onConnectProvider,
   userRole = 'admin',
   onLocalUploadComplete
 }) => {
   const isAdmin = userRole === 'admin';
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [folders, setFolders] = useState<UnifiedFolder[]>([]);
+  const [googleData, setGoogleData] = useState<ProviderFolders | null>(null);
+  const [microsoftData, setMicrosoftData] = useState<ProviderFolders | null>(null);
   const [showEducation, setShowEducation] = useState(false);
   const [showLocalUpload, setShowLocalUpload] = useState(false);
 
   useEffect(() => {
     loadFolderStatus();
   }, [user]);
+
+  const extractFolders = (connection: any): UnifiedFolder[] => {
+    if (!connection) return [];
+
+    const folders: UnifiedFolder[] = [];
+
+    if (connection.root_folder_id && connection.root_folder_name) {
+      folders.push({
+        index: 0,
+        folderId: connection.root_folder_id,
+        folderName: connection.root_folder_name,
+        isRoot: true
+      });
+    }
+
+    for (let i = 1; i <= 6; i++) {
+      const folderId = connection[`folder_${i}_id`];
+      const folderName = connection[`folder_${i}_name`];
+
+      if (folderId && folderName) {
+        folders.push({
+          index: i,
+          folderId,
+          folderName,
+          isRoot: false
+        });
+      }
+    }
+
+    return folders;
+  };
 
   const loadFolderStatus = async () => {
     if (!user) return;
@@ -68,43 +107,23 @@ export const FolderManagementSection: React.FC<FolderManagementSectionProps> = (
         return;
       }
 
-      const { data: driveConnection } = await supabase
-        .from('user_drive_connections')
-        .select('*')
-        .eq('team_id', teamId)
-        .maybeSingle();
+      const connections = await getBothConnections(teamId);
 
-      if (!driveConnection) {
-        setLoading(false);
-        return;
-      }
+      setGoogleData({
+        provider: 'google',
+        folders: extractFolders(connections.google),
+        isConnected: !!connections.google,
+        isExpired: connections.google ? isTokenExpired(connections.google.token_expires_at) : false,
+        accountEmail: connections.google?.account_email || null
+      });
 
-      const unifiedFolders: UnifiedFolder[] = [];
-
-      if (driveConnection.root_folder_id && driveConnection.root_folder_name) {
-        unifiedFolders.push({
-          index: 0,
-          folderId: driveConnection.root_folder_id,
-          folderName: driveConnection.root_folder_name,
-          isRoot: true
-        });
-      }
-
-      for (let i = 1; i <= 6; i++) {
-        const folderId = driveConnection[`folder_${i}_id`];
-        const folderName = driveConnection[`folder_${i}_name`];
-
-        if (folderId && folderName) {
-          unifiedFolders.push({
-            index: i,
-            folderId,
-            folderName,
-            isRoot: false
-          });
-        }
-      }
-
-      setFolders(unifiedFolders);
+      setMicrosoftData({
+        provider: 'microsoft',
+        folders: extractFolders(connections.microsoft),
+        isConnected: !!connections.microsoft,
+        isExpired: connections.microsoft ? isTokenExpired(connections.microsoft.token_expires_at) : false,
+        accountEmail: connections.microsoft?.account_email || null
+      });
     } catch (err) {
       console.error('Error loading folder status:', err);
     } finally {
@@ -112,18 +131,122 @@ export const FolderManagementSection: React.FC<FolderManagementSectionProps> = (
     }
   };
 
-  const connectedFolders = folders.filter(f => f.folderId);
+  const renderProviderSection = (data: ProviderFolders | null, providerType: 'google' | 'microsoft') => {
+    const isGoogle = providerType === 'google';
+    const providerName = isGoogle ? 'Google Drive' : 'Microsoft OneDrive / SharePoint';
+    const Icon = isGoogle ? HardDrive : Cloud;
+    const colorClass = isGoogle ? 'blue' : 'cyan';
 
-  if (!hasGoogleDrive) {
-    return null;
-  }
+    if (!data) {
+      return (
+        <div className={`bg-gray-800/30 border border-gray-700 rounded-lg p-3`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`w-7 h-7 bg-${colorClass}-600/20 rounded-lg flex items-center justify-center`}>
+                <Icon className={`w-4 h-4 text-${colorClass}-400`} />
+              </div>
+              <div>
+                <h4 className="text-xs font-medium text-white">{providerName}</h4>
+                <p className="text-[10px] text-gray-500">Loading...</p>
+              </div>
+            </div>
+            <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+          </div>
+        </div>
+      );
+    }
+
+    const connectedFolders = data.folders.filter(f => f.folderId);
+
+    return (
+      <div className={`bg-gray-800/30 border ${data.isConnected ? `border-${colorClass}-600/30` : 'border-gray-700'} rounded-lg p-3`}>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div className={`w-7 h-7 ${data.isConnected ? `bg-${colorClass}-600/20` : 'bg-gray-700/50'} rounded-lg flex items-center justify-center`}>
+              <Icon className={`w-4 h-4 ${data.isConnected ? `text-${colorClass}-400` : 'text-gray-500'}`} />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h4 className="text-xs font-medium text-white">{providerName}</h4>
+                {data.isConnected && !data.isExpired && (
+                  <CheckCircle className="w-3 h-3 text-green-400" />
+                )}
+              </div>
+              {data.isConnected ? (
+                <p className="text-[10px] text-gray-400">
+                  {data.isExpired ? (
+                    <span className="text-red-400">Authorization expired</span>
+                  ) : (
+                    `${connectedFolders.length} folder${connectedFolders.length !== 1 ? 's' : ''} synced`
+                  )}
+                </p>
+              ) : (
+                <p className="text-[10px] text-gray-500">Not connected</p>
+              )}
+            </div>
+          </div>
+
+          {isAdmin && (
+            data.isConnected ? (
+              <button
+                onClick={() => onOpenFolderManager(providerType)}
+                disabled={data.isExpired}
+                className={`flex items-center gap-1 px-2 py-1 ${isGoogle ? 'bg-blue-600/80 hover:bg-blue-600' : 'bg-cyan-600/80 hover:bg-cyan-600'} text-white rounded text-[10px] font-medium transition-all disabled:opacity-50 min-h-[28px]`}
+              >
+                <Edit2 className="w-3 h-3" />
+                <span>Add or Manage</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => onConnectProvider(providerType)}
+                className={`flex items-center gap-1 px-2 py-1 ${isGoogle ? 'bg-blue-600/80 hover:bg-blue-600' : 'bg-cyan-600/80 hover:bg-cyan-600'} text-white rounded text-[10px] font-medium transition-all min-h-[28px]`}
+              >
+                <Plus className="w-3 h-3" />
+                <span>Connect</span>
+              </button>
+            )
+          )}
+        </div>
+
+        {data.isConnected && connectedFolders.length > 0 && !data.isExpired && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {connectedFolders.slice(0, 3).map((folder, idx) => {
+              const colors = FOLDER_COLORS[idx % FOLDER_COLORS.length];
+              return (
+                <div
+                  key={folder.index}
+                  className={`flex items-center gap-1 px-2 py-1 rounded ${colors.bg} border ${colors.border}`}
+                >
+                  <Folder className={`w-3 h-3 ${colors.text}`} />
+                  <span className="text-[10px] text-white truncate max-w-[80px]" title={folder.folderName || ''}>
+                    {folder.folderName}
+                  </span>
+                </div>
+              );
+            })}
+            {connectedFolders.length > 3 && (
+              <span className="text-[10px] text-gray-400 px-2 py-1">
+                +{connectedFolders.length - 3} more
+              </span>
+            )}
+          </div>
+        )}
+
+        {data.isExpired && (
+          <p className="text-[10px] text-red-400 mt-2">
+            Re-authorize to manage folders
+          </p>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-3 mb-3">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <Folder className="w-4 h-4 text-orange-400" />
-          <h3 className="text-xs font-semibold text-white">Synced Folders (Google Drive)</h3>
+          <h3 className="text-xs font-semibold text-white">Synced Folders</h3>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -134,23 +257,13 @@ export const FolderManagementSection: React.FC<FolderManagementSectionProps> = (
             <HelpCircle className="w-3.5 h-3.5" />
           </button>
           {isAdmin && (
-            <>
-              <button
-                onClick={onOpenFolderManager}
-                disabled={tokenExpired}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600/80 hover:bg-orange-600 text-white rounded text-xs font-medium transition-all disabled:opacity-50 min-h-[32px]"
-              >
-                <Edit2 className="w-3 h-3" />
-                <span>{connectedFolders.length > 0 ? 'Manage' : 'Connect'}</span>
-              </button>
-              <button
-                onClick={() => setShowLocalUpload(true)}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-green-600/80 hover:bg-green-600 text-white rounded text-xs font-medium transition-all min-h-[32px]"
-              >
-                <Upload className="w-3 h-3" />
-                <span>Add Local Files</span>
-              </button>
-            </>
+            <button
+              onClick={() => setShowLocalUpload(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-green-600/80 hover:bg-green-600 text-white rounded text-xs font-medium transition-all min-h-[32px]"
+            >
+              <Upload className="w-3 h-3" />
+              <span>Add Local Files</span>
+            </button>
           )}
         </div>
       </div>
@@ -161,10 +274,10 @@ export const FolderManagementSection: React.FC<FolderManagementSectionProps> = (
             <Lightbulb className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
             <div className="space-y-1.5">
               <p className="text-xs text-gray-300">
-                Sync documents from Google Drive folders or upload files directly from your computer.
+                Sync documents from Google Drive, Microsoft OneDrive/SharePoint, or upload files directly from your computer.
               </p>
               <p className="text-[10px] text-gray-400">
-                Astra will automatically categorize and index your documents for intelligent search and analysis, regardless of source.
+                You can connect both Google Drive and Microsoft at the same time. Astra will automatically categorize and index your documents for intelligent search and analysis.
               </p>
             </div>
           </div>
@@ -172,51 +285,16 @@ export const FolderManagementSection: React.FC<FolderManagementSectionProps> = (
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-3">
-          <Loader2 className="w-4 h-4 text-orange-400 animate-spin" />
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="w-5 h-5 text-orange-400 animate-spin" />
         </div>
       ) : (
-        <>
-          {connectedFolders.length > 0 ? (
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-1.5">
-              {connectedFolders.map((folder, idx) => {
-                const colors = FOLDER_COLORS[idx % FOLDER_COLORS.length];
-
-                return (
-                  <div
-                    key={folder.index}
-                    className={`flex items-center gap-2 p-2 rounded-lg bg-gray-900/50 border ${colors.border}`}
-                  >
-                    <div className={`w-6 h-6 ${colors.bg} rounded flex items-center justify-center flex-shrink-0`}>
-                      <Folder className={`w-3 h-3 ${colors.text}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-xs font-medium text-white truncate block" title={folder.folderName || ''}>
-                        {folder.folderName}
-                      </span>
-                      <span className="text-[10px] text-gray-500">
-                        {folder.isRoot ? 'Main Team Folder' : 'Additional Folder'}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-3 text-gray-500 text-xs">
-              No folders connected yet
-            </div>
-          )}
-
-          {tokenExpired && (
-            <p className="text-[10px] text-red-400 text-center mt-1.5">
-              Re-authorize Google Drive to manage folders
-            </p>
-          )}
-        </>
+        <div className="space-y-2">
+          {renderProviderSection(googleData, 'google')}
+          {renderProviderSection(microsoftData, 'microsoft')}
+        </div>
       )}
 
-      {/* Local File Upload Modal */}
       {showLocalUpload && (
         <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4">
           <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
