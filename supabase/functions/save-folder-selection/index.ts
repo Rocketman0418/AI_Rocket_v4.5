@@ -27,7 +27,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { folderIds, folderType, folderName } = await req.json();
+    const { folderIds, folderType, folderName, provider } = await req.json();
     if (!folderIds || !folderType) {
       return new Response(JSON.stringify({ error: "Folder IDs and type are required" }), {
         status: 400,
@@ -42,6 +42,8 @@ Deno.serve(async (req: Request) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const driveProvider = provider || 'google';
 
     // Update the user_drive_connections table with selected folders
     const updateData: any = {};
@@ -76,7 +78,8 @@ Deno.serve(async (req: Request) => {
     const { error: updateError } = await supabaseClient
       .from("user_drive_connections")
       .update(updateData)
-      .eq("team_id", teamId);
+      .eq("team_id", teamId)
+      .eq("provider", driveProvider);
 
     if (updateError) {
       return new Response(JSON.stringify({ error: "Failed to save folder selection" }), {

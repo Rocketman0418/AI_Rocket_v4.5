@@ -24,9 +24,10 @@ export const useOAuthReconnectPrompt = () => {
 
       const { data: connection } = await supabase
         .from('user_drive_connections')
-        .select('connection_status, is_active, scope_version, user_id')
+        .select('connection_status, is_active, scope_version, user_id, provider')
         .eq('team_id', teamId)
         .eq('is_active', true)
+        .eq('provider', 'google')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();

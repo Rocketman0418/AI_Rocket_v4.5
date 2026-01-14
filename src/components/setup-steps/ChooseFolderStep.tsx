@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { FolderPlus, CheckCircle, Folder, Loader2, FolderOpen, Plus, Search, FileText, RefreshCw, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+import { FolderPlus, CheckCircle, Folder, Loader2, FolderOpen, Plus, Search, FileText, RefreshCw, ExternalLink, ChevronDown, ChevronUp, Cloud, HardDrive } from 'lucide-react';
 import { SetupGuideProgress } from '../../lib/setup-guide-utils';
 import { getGoogleDriveConnection } from '../../lib/google-drive-oauth';
+import { getMicrosoftDriveConnection } from '../../lib/microsoft-graph-oauth';
+import { getActiveConnection } from '../../lib/unified-drive-utils';
 import { supabase } from '../../lib/supabase';
 import { useFeatureFlag } from '../../hooks/useFeatureFlag';
 import { GoogleDriveFolderPicker } from '../GoogleDriveFolderPicker';
+
+type DriveProvider = 'google' | 'microsoft';
 
 interface ChooseFolderStepProps {
   onComplete: (folderData: any) => void;
   progress: SetupGuideProgress | null;
   onProceed?: () => void;
+  provider?: DriveProvider;
 }
 
 interface GoogleDriveFolder {
@@ -38,7 +43,7 @@ const STRATEGY_DOCUMENT_EXAMPLES = [
   { icon: '📋', name: 'V/TO Document', desc: 'Vision/Traction Organizer (EOS)' },
 ];
 
-export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, onProceed }) => {
+export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, onProceed, provider: propProvider }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('initial');
   const [loading, setLoading] = useState(true);
   const [folders, setFolders] = useState<GoogleDriveFolder[]>([]);
@@ -52,7 +57,12 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
   const [folderFiles, setFolderFiles] = useState<DriveFile[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [showExamples, setShowExamples] = useState(false);
+  const [activeProvider, setActiveProvider] = useState<DriveProvider>(propProvider || 'google');
+  const [microsoftDriveId, setMicrosoftDriveId] = useState<string | null>(null);
   const useGooglePicker = false;
+
+  const providerName = activeProvider === 'microsoft' ? 'OneDrive' : 'Google Drive';
+  const ProviderIcon = activeProvider === 'microsoft' ? Cloud : HardDrive;
 
   useEffect(() => {
     checkExistingSetup();
@@ -61,14 +71,20 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
   const checkExistingSetup = async () => {
     setLoading(true);
     try {
-      const connection = await getGoogleDriveConnection();
+      const connection = await getActiveConnection();
 
       if (!connection) {
         setLoading(false);
         return;
       }
 
-      if (connection.strategy_folder_id) {
+      setActiveProvider(connection.provider as DriveProvider);
+
+      if (connection.provider === 'microsoft' && connection.microsoft_drive_id) {
+        setMicrosoftDriveId(connection.microsoft_drive_id);
+      }
+
+      if (connection.root_folder_id || connection.strategy_folder_id) {
         setHasExistingFolders(true);
       }
     } catch (error) {
@@ -152,8 +168,10 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
 
   const supportedFiles = folderFiles.filter(file => isSupportedFileType(file.mimeType));
 
-  const openGoogleDrive = () => {
-    if (selectedFolder?.id) {
+  const openCloudDrive = () => {
+    if (activeProvider === 'microsoft') {
+      window.open('https://onedrive.live.com', '_blank');
+    } else if (selectedFolder?.id) {
       window.open(`https://drive.google.com/drive/folders/${selectedFolder.id}`, '_blank');
     } else {
       window.open('https://drive.google.com', '_blank');
@@ -164,37 +182,45 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
     setLoading(true);
     setError('');
     try {
-      const connection = await getGoogleDriveConnection();
+      const connection = await getActiveConnection();
       if (!connection) {
-        setError('Not authenticated with Google Drive');
+        setError(`Not authenticated with ${providerName}`);
         return;
       }
 
+      setActiveProvider(connection.provider as DriveProvider);
       setAccessToken(connection.access_token);
 
-      // If using Google Picker, skip loading folder list
-      if (useGooglePicker) {
+      if (connection.provider === 'microsoft' && connection.microsoft_drive_id) {
+        setMicrosoftDriveId(connection.microsoft_drive_id);
+      }
+
+      if (useGooglePicker && connection.provider === 'google') {
         setViewMode('select-existing');
         setLoading(false);
         return;
       }
 
-      // Legacy: Load folder list via API
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         setError('Not authenticated');
         return;
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-google-drive-folders`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-        }
-      );
+      let endpoint = '';
+      if (connection.provider === 'microsoft') {
+        const driveId = connection.microsoft_drive_id || '';
+        endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-microsoft-folders?driveId=${encodeURIComponent(driveId)}`;
+      } else {
+        endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-google-drive-folders`;
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
 
       const responseData = await response.json();
 
@@ -203,8 +229,8 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
         throw new Error(responseData.error || 'Failed to load folders');
       }
 
-      const { folders: driveFolders } = responseData;
-      setFolders(driveFolders || []);
+      const driveFolders = responseData.folders || [];
+      setFolders(driveFolders);
       setViewMode('select-existing');
     } catch (err: any) {
       console.error('Error loading folders:', err);
@@ -265,6 +291,7 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
             folderIds: [folder.id],
             folderType: 'root',
             folderName: folder.name,
+            provider: activeProvider,
           }),
         }
       );
@@ -280,13 +307,14 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
       setCreatingFolder(false);
       setSelectedFolder(folder);
       setHasExistingFolders(true);
-      setIsNewlyCreated(true); // Mark as newly created
+      setIsNewlyCreated(true);
 
       // Call onComplete to notify parent (parent should NOT close modal yet)
       onComplete({
         selectedFolder: folder,
         folderType: 'root',
         isNewFolder: true,
+        provider: activeProvider,
       });
     } catch (err: any) {
       console.error('❌ Error creating folder:', err);
@@ -317,6 +345,7 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
             folderIds: [folder.id],
             folderType: 'root',
             folderName: folder.name,
+            provider: activeProvider,
           }),
         }
       );
@@ -328,7 +357,11 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
       setSelectedFolder(folder);
       setLoading(false);
       setViewMode('file-preview');
-      loadFolderFiles(folder.id);
+      if (activeProvider === 'google') {
+        loadFolderFiles(folder.id);
+      } else {
+        setFolderFiles([]);
+      }
     } catch (err: any) {
       console.error('Error selecting folder:', err);
       setError(err.message || 'Failed to select folder');
@@ -374,7 +407,7 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
           </h2>
           <p className="text-gray-300">
             {isNewlyCreated
-              ? `Your "Astra Team Folder" has been created in Google Drive.`
+              ? `Your "Astra Team Folder" has been created in ${providerName}.`
               : "You've already set up a team folder. Let's continue with the setup."}
           </p>
           {selectedFolder && (
@@ -441,30 +474,32 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
               Select Existing Folder
             </h3>
             <p className="text-sm text-gray-400 text-center">
-              Browse and choose a folder from your Google Drive
+              Browse and choose a folder from your {providerName}
             </p>
           </button>
 
-          {/* Create New Folder Option */}
-          <button
-            onClick={handleCreateNewFolder}
-            disabled={creatingFolder}
-            className="bg-gray-800 hover:bg-gray-700 border-2 border-gray-700 hover:border-blue-500 rounded-lg p-6 transition-all text-left group min-h-[200px] flex flex-col items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <div className="w-16 h-16 rounded-full bg-blue-600/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              {creatingFolder ? (
-                <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
-              ) : (
-                <Plus className="w-8 h-8 text-blue-400" />
-              )}
-            </div>
-            <h3 className="text-lg font-semibold text-white mb-2 text-center">
-              {creatingFolder ? 'Creating Folder...' : 'Create "Astra Team Folder"'}
-            </h3>
-            <p className="text-sm text-gray-400 text-center">
-              {creatingFolder ? 'Please wait...' : 'Let Astra create a new folder for your team documents'}
-            </p>
-          </button>
+          {/* Create New Folder Option - Only for Google Drive */}
+          {activeProvider === 'google' && (
+            <button
+              onClick={handleCreateNewFolder}
+              disabled={creatingFolder}
+              className="bg-gray-800 hover:bg-gray-700 border-2 border-gray-700 hover:border-blue-500 rounded-lg p-6 transition-all text-left group min-h-[200px] flex flex-col items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div className="w-16 h-16 rounded-full bg-blue-600/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                {creatingFolder ? (
+                  <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+                ) : (
+                  <Plus className="w-8 h-8 text-blue-400" />
+                )}
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2 text-center">
+                {creatingFolder ? 'Creating Folder...' : 'Create "Astra Team Folder"'}
+              </h3>
+              <p className="text-sm text-gray-400 text-center">
+                {creatingFolder ? 'Please wait...' : 'Let Astra create a new folder for your team documents'}
+              </p>
+            </button>
+          )}
         </div>
 
         <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
@@ -533,7 +568,7 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
           </div>
           <h2 className="text-2xl font-bold text-white mb-3">Select a Folder</h2>
           <p className="text-gray-300">
-            Choose a folder from your Google Drive for strategy documents
+            Choose a folder from your {providerName} for team documents
           </p>
         </div>
 
@@ -566,7 +601,7 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
             {folders.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-400 mb-4">
-                  {searchQuery ? `No folders found matching "${searchQuery}"` : 'No folders found in your Google Drive'}
+                  {searchQuery ? `No folders found matching "${searchQuery}"` : `No folders found in your ${providerName}`}
                 </p>
                 <button
                   onClick={() => {
@@ -680,7 +715,7 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
               <button
-                onClick={openGoogleDrive}
+                onClick={openCloudDrive}
                 className="w-full sm:w-auto px-5 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-2 min-h-[44px]"
               >
                 <span>Add More Files</span>
@@ -733,10 +768,10 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
               <button
-                onClick={openGoogleDrive}
+                onClick={openCloudDrive}
                 className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-2 min-h-[44px]"
               >
-                <span>Open Folder in Drive</span>
+                <span>Open in {providerName}</span>
                 <ExternalLink className="w-4 h-4" />
               </button>
               <button
