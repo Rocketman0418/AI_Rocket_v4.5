@@ -70,13 +70,19 @@ export const MainContainer: React.FC<MainContainerProps> = ({ onOpenAdminDashboa
 
   const postLaunchWelcomeTriggeredRef = useRef(false);
 
-  // OAuth Reconnect Prompt Hook
   const {
     showModal: showOAuthReconnectModal,
     needsReconnect,
+    isAdmin: isAdminForOAuth,
     dismissModal: dismissOAuthReconnectModal,
     handleReconnect: handleOAuthReconnect
   } = useOAuthReconnectPrompt();
+
+  useEffect(() => {
+    if (needsReconnect && isAdminForOAuth) {
+      setHasExpiredToken(true);
+    }
+  }, [needsReconnect, isAdminForOAuth]);
 
   const isAdmin = user?.user_metadata?.role === 'admin';
   const tourSteps = getTourStepsForRole(isAdmin);

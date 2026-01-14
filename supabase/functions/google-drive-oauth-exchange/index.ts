@@ -46,14 +46,13 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const token = authHeader.replace('Bearer ', '');
 
-    // Parse JWT to get user ID
     let userId: string;
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       userId = payload.sub;
-      console.log('📁 User ID from JWT:', userId);
+      console.log('[OAuth Exchange] User ID from JWT:', userId);
     } catch (e) {
-      console.error('❌ Failed to parse JWT:', e);
+      console.error('[OAuth Exchange] Failed to parse JWT:', e);
       return new Response(
         JSON.stringify({ error: 'Invalid token format' }),
         {
@@ -63,17 +62,16 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Verify user exists and get team_id from public.users table
     const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(userId);
 
-    console.log('📁 Admin API getUserById result:');
-    console.log('📁 - User ID queried:', userId);
-    console.log('📁 - User found:', !!user);
-    console.log('📁 - User email:', user?.email);
-    console.log('📁 - Error:', userError);
+    console.log('[OAuth Exchange] Admin API getUserById result:');
+    console.log('[OAuth Exchange] - User ID queried:', userId);
+    console.log('[OAuth Exchange] - User found:', !!user);
+    console.log('[OAuth Exchange] - User email:', user?.email);
+    console.log('[OAuth Exchange] - Error:', userError);
 
     if (userError || !user) {
-      console.error('❌ User verification failed:', userError);
+      console.error('[OAuth Exchange] User verification failed:', userError);
       return new Response(
         JSON.stringify({
           error: 'User not found in database. Please ensure you have signed up with this email address first.',
@@ -86,7 +84,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Get team_id from public.users table (more reliable than user metadata)
     const { data: publicUserData, error: publicUserError } = await supabase
       .from('users')
       .select('team_id')
@@ -94,9 +91,9 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     const teamId = publicUserData?.team_id || null;
-    console.log('📁 Team ID from public.users table:', teamId);
+    console.log('[OAuth Exchange] Team ID from public.users table:', teamId);
 
-    console.log('✅ User verified:', user.email);
+    console.log('[OAuth Exchange] User verified:', user.email);
 
     const { code, redirect_uri, oauth_app_id } = await req.json();
 
@@ -117,11 +114,11 @@ Deno.serve(async (req: Request) => {
 
     const finalRedirectUri = redirect_uri || driveRedirectUri;
 
-    console.log('📁 Exchanging authorization code for tokens...');
-    console.log('📁 OAuth App ID:', activeOAuthAppId);
-    console.log('📁 Client ID:', activeClientId?.substring(0, 30) + '...');
-    console.log('📁 Using redirect URI:', finalRedirectUri);
-    console.log('📁 Env GOOGLE_DRIVE_REDIRECT_URI:', driveRedirectUri);
+    console.log('[OAuth Exchange] Exchanging authorization code for tokens...');
+    console.log('[OAuth Exchange] OAuth App ID:', activeOAuthAppId);
+    console.log('[OAuth Exchange] Client ID:', activeClientId?.substring(0, 30) + '...');
+    console.log('[OAuth Exchange] Using redirect URI:', finalRedirectUri);
+    console.log('[OAuth Exchange] Env GOOGLE_DRIVE_REDIRECT_URI:', driveRedirectUri);
 
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -138,17 +135,16 @@ Deno.serve(async (req: Request) => {
     const tokens = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
-      console.error('❌ Failed to get tokens from Google');
-      console.error('❌ Status:', tokenResponse.status);
-      console.error('❌ Error:', tokens.error);
-      console.error('❌ Error description:', tokens.error_description);
-      console.error('❌ Full response:', JSON.stringify(tokens));
+      console.error('[OAuth Exchange] Failed to get tokens from Google');
+      console.error('[OAuth Exchange] Status:', tokenResponse.status);
+      console.error('[OAuth Exchange] Error:', tokens.error);
+      console.error('[OAuth Exchange] Error description:', tokens.error_description);
+      console.error('[OAuth Exchange] Full response:', JSON.stringify(tokens));
       throw new Error(tokens.error_description || tokens.error || 'Failed to get tokens');
     }
 
-    console.log('✅ Tokens received successfully');
+    console.log('[OAuth Exchange] Tokens received successfully');
 
-    // Get user profile to confirm Google account email
     const profileResponse = await fetch(
       'https://www.googleapis.com/oauth2/v2/userinfo',
       {
@@ -157,40 +153,37 @@ Deno.serve(async (req: Request) => {
     );
 
     if (!profileResponse.ok) {
-      console.error('❌ Failed to get user profile from Google');
+      console.error('[OAuth Exchange] Failed to get user profile from Google');
       throw new Error('Failed to retrieve user profile from Google');
     }
 
     const profile = await profileResponse.json();
 
-    console.log('📁 Full profile response:', JSON.stringify(profile));
+    console.log('[OAuth Exchange] Full profile response:', JSON.stringify(profile));
 
     if (!profile.email) {
-      console.error('❌ No email in profile response');
+      console.error('[OAuth Exchange] No email in profile response');
       throw new Error('Google account email not found in authorization response.');
     }
 
-    console.log('📁 Google account:', profile.email);
+    console.log('[OAuth Exchange] Google account:', profile.email);
 
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-    console.log('💾 Attempting to store Google Drive auth for user:', user.id);
-    console.log('💾 Email:', profile.email);
-    console.log('💾 Team ID:', teamId);
-    console.log('💾 Expires at:', expiresAt.toISOString());
+    console.log('[OAuth Exchange] Attempting to store Google Drive auth for user:', user.id);
+    console.log('[OAuth Exchange] Email:', profile.email);
+    console.log('[OAuth Exchange] Team ID:', teamId);
+    console.log('[OAuth Exchange] Expires at:', expiresAt.toISOString());
 
-    // Clean tokens to remove any newlines or whitespace that could break HTTP headers
     const cleanAccessToken = tokens.access_token?.replace?.(/[\r\n]/g, '') || tokens.access_token;
     const cleanRefreshToken = tokens.refresh_token?.replace?.(/[\r\n]/g, '') || tokens.refresh_token;
 
-    // Check if user already has a connection to preserve folder settings
     const { data: existingConnection } = await supabase
       .from('user_drive_connections')
       .select('id')
       .eq('user_id', user.id)
       .maybeSingle();
 
-    // Build the upsert data - only include token fields, preserve existing folders on re-auth
     const upsertData: Record<string, unknown> = {
       user_id: user.id,
       team_id: teamId || null,
@@ -200,18 +193,16 @@ Deno.serve(async (req: Request) => {
       google_account_email: profile.email,
       is_active: true,
       connection_status: 'connected',
-      scope_version: 2,
+      scope_version: 3,
       oauth_app_id: activeOAuthAppId,
     };
 
-    // Note: Folder configuration is handled separately via save-folder-selection edge function
     if (!existingConnection) {
-      console.log('💾 New connection - using unified folder structure (root_folder_id + folder_1-6)');
+      console.log('[OAuth Exchange] New connection - using unified folder structure');
     } else {
-      console.log('💾 Re-authorization - preserving existing folder configurations');
+      console.log('[OAuth Exchange] Re-authorization - preserving existing folder configurations');
     }
 
-    // Store in user_drive_connections table
     const { data, error: dbError } = await supabase
       .from('user_drive_connections')
       .upsert(upsertData, {
@@ -220,17 +211,17 @@ Deno.serve(async (req: Request) => {
       .select();
 
     if (dbError) {
-      console.error('❌ Failed to store tokens');
-      console.error('❌ Error code:', dbError.code);
-      console.error('❌ Error message:', dbError.message);
-      console.error('❌ Error details:', dbError.details);
-      console.error('❌ Error hint:', dbError.hint);
-      console.error('❌ Full error:', JSON.stringify(dbError));
+      console.error('[OAuth Exchange] Failed to store tokens');
+      console.error('[OAuth Exchange] Error code:', dbError.code);
+      console.error('[OAuth Exchange] Error message:', dbError.message);
+      console.error('[OAuth Exchange] Error details:', dbError.details);
+      console.error('[OAuth Exchange] Error hint:', dbError.hint);
+      console.error('[OAuth Exchange] Full error:', JSON.stringify(dbError));
       throw new Error(`Failed to store Google Drive authentication: ${dbError.message}`);
     }
 
-    console.log('✅ Data returned:', data);
-    console.log('✅ Google Drive authentication stored successfully');
+    console.log('[OAuth Exchange] Data returned:', data);
+    console.log('[OAuth Exchange] Google Drive authentication stored successfully');
 
     return new Response(
       JSON.stringify({
@@ -247,7 +238,7 @@ Deno.serve(async (req: Request) => {
     );
 
   } catch (error) {
-    console.error('❌ OAuth exchange error:', error);
+    console.error('[OAuth Exchange] Error:', error);
     return new Response(
       JSON.stringify({
         success: false,

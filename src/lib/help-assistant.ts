@@ -72,10 +72,9 @@ CORE FEATURES:
    LAUNCH POINTS - $5M AI MOONSHOT CHALLENGE:
    - Launch Points are part of the $5M AI Moonshot Challenge scoring criteria
    - They measure how your team uses AI to Run, Build, and Grow your business
-   - Three categories of points:
+   - Two categories of points:
      * Launch Prep: Graduated points per level (10/20/30/40/50) up to 450 total across all stages
-     * Activity: Daily Active (+5/day) for messages/reports, 5-Day Streak (+50, repeatable every 5 days)
-     * Milestones: Messages (100/500/1000), Visualizations (5/25/100 saved), Scheduled Reports (3/10 created)
+     * Milestones: Chatty Day (10 msgs/day, +25), Messages (100/500/1000, +100/+250/+500), Team Chats (50/200, +100/+200), Visualizations (5/25/100, +150/+300/+500), Scheduled Reports (3/10/25, +100/+250/+500)
 
    FUEL STAGE (10/20/30/40/50 points by level):
    - Add data to power your AI

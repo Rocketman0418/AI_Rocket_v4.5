@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Rocket, Fuel, Zap, Compass, Trophy, Flame, TrendingUp, Award, CheckCircle, Users, ChevronRight, HelpCircle, Info, FileText, Grid, RefreshCw } from 'lucide-react';
+import { X, Rocket, Fuel, Zap, Compass, Trophy, Star, TrendingUp, Award, CheckCircle, Users, ChevronRight, HelpCircle, Info, FileText, Grid, RefreshCw } from 'lucide-react';
 import { useLaunchPreparation } from '../hooks/useLaunchPreparation';
 import { useFuelLevel } from '../hooks/useFuelLevel';
 import { useDataSyncProgress } from '../hooks/useDataSyncProgress';
@@ -898,21 +898,49 @@ export const MissionControl: React.FC<MissionControlProps> = ({ onClose, onNavig
                 </div>
               </div>
 
-              {/* Ongoing Activities */}
+              {/* Milestones */}
               <div>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-                    <Flame className="w-5 h-5 text-green-400" />
+                  <div className="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                    <Star className="w-5 h-5 text-amber-400" />
                   </div>
-                  <h4 className="text-lg font-bold text-white">Ongoing Activities</h4>
+                  <h4 className="text-lg font-bold text-white">Milestones - Usage Goals</h4>
                 </div>
                 <div className="space-y-3 ml-13">
                   <div className="bg-gray-900/50 rounded-lg p-3">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-white text-sm font-medium">Daily Active</span>
-                      <span className="text-green-400 font-bold">10 pts/day</span>
+                      <span className="text-white text-sm font-medium">Chatty Day</span>
+                      <span className="text-amber-400 font-bold">25 pts</span>
                     </div>
-                    <p className="text-gray-400 text-xs">Use Astra each day to stay engaged</p>
+                    <p className="text-gray-400 text-xs">Send 10 messages in a single day</p>
+                  </div>
+                  <div className="bg-gray-900/50 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-white text-sm font-medium">Message Milestones</span>
+                      <span className="text-amber-400 font-bold">100 / 250 / 500 pts</span>
+                    </div>
+                    <p className="text-gray-400 text-xs">Send 100 / 500 / 1000 total messages</p>
+                  </div>
+                  <div className="bg-gray-900/50 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-white text-sm font-medium">Team Chat Milestones</span>
+                      <span className="text-amber-400 font-bold">100 / 200 pts</span>
+                    </div>
+                    <p className="text-gray-400 text-xs">Send 50 / 200 team chat messages</p>
+                  </div>
+                  <div className="bg-gray-900/50 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-white text-sm font-medium">Visualization Milestones</span>
+                      <span className="text-amber-400 font-bold">150 / 300 / 500 pts</span>
+                    </div>
+                    <p className="text-gray-400 text-xs">Save 5 / 25 / 100 visualizations</p>
+                  </div>
+                  <div className="bg-gray-900/50 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-white text-sm font-medium">Report Milestones</span>
+                      <span className="text-amber-400 font-bold">100 / 250 / 500 pts</span>
+                    </div>
+                    <p className="text-gray-400 text-xs">Create 3 / 10 / 25 scheduled reports</p>
                   </div>
                 </div>
               </div>

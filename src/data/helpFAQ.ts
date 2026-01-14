@@ -253,12 +253,12 @@ export const helpFAQ: FAQItem[] = [
   {
     category: 'launch-prep',
     question: 'What are Launch Points?',
-    answer: 'Launch Points are an important part of the $5M AI Moonshot Challenge scoring criteria. They measure how your team is using AI to Run, Build, and Grow your business. Points are earned through three categories: Launch Prep (completing stages), Activity (daily engagement and streaks), and Milestones (usage goals for messages, visualizations, and reports).'
+    answer: 'Launch Points are an important part of the $5M AI Moonshot Challenge scoring criteria. They measure how your team is using AI to Run, Build, and Grow your business. Points are earned through two categories: Launch Prep (completing Fuel, Boosters, and Guidance stages) and Milestones (usage goals for messages, team chats, visualizations, and reports).'
   },
   {
     category: 'launch-prep',
     question: 'How do I earn Launch Points?',
-    answer: 'You earn Launch Points in three ways: (1) Launch Prep - complete stages with graduated points (10/20/30/40/50 per level, up to 450 total), (2) Activity - Daily Active (+5/day) for sending messages or reports, plus 5-Day Streak bonus (+50, repeatable), and (3) Milestones - bonus points for reaching goals like 100/500/1000 messages, 5/25/100 visualizations, and 3/10 scheduled reports.'
+    answer: 'You earn Launch Points in two ways: (1) Launch Prep - complete Fuel, Boosters, and Guidance stages (up to 150 points each, 450 total), and (2) Milestones - bonus points for reaching usage goals like 100/500/1000 messages (+100/+250/+500), 50/200 team chats (+100/+200), 5/25/100 visualizations (+150/+300/+500), and 3/10/25 scheduled reports (+100/+250/+500).'
   },
   {
     category: 'launch-prep',
@@ -268,12 +268,12 @@ export const helpFAQ: FAQItem[] = [
   {
     category: 'launch-prep',
     question: 'What is the Boosters Stage?',
-    answer: 'The Boosters Stage helps you learn Astra\'s AI features. Progress through 5 levels: use Guided Chat or send prompts (Level 1, +50 pts), create visualizations (Level 2, +50 pts), generate manual reports (Level 3, +50 pts), schedule recurring reports (Level 4, +50 pts), and build AI agents (Level 5, +50 pts - coming soon).'
+    answer: 'The Boosters Stage helps you learn Astra\'s AI features. Progress through 5 levels: use Guided Chat or send prompts (Level 1), create visualizations (Level 2), generate manual reports (Level 3), schedule recurring reports (Level 4), and build AI agents (Level 5 - coming soon). Complete all levels to earn up to 150 points total.'
   },
   {
     category: 'launch-prep',
     question: 'What is the Guidance Stage?',
-    answer: 'The Guidance Stage is about team configuration and growth. Complete 5 levels: configure team settings (Level 1, +50 pts), enable news preferences (Level 2, +50 pts), invite team members (Level 3, +50 pts), create AI jobs (Level 4, +50 pts - coming soon), and document processes (Level 5, +50 pts - coming soon).'
+    answer: 'The Guidance Stage is about team configuration and growth. Complete 5 levels: configure team settings (Level 1), enable news preferences (Level 2), invite team members (Level 3), create AI jobs (Level 4 - coming soon), and document processes (Level 5 - coming soon). Complete all levels to earn up to 150 points total.'
   },
   {
     category: 'launch-prep',

@@ -45,8 +45,8 @@ export const GoogleDriveReauthGuide: React.FC<GoogleDriveReauthGuideProps> = ({
             Google Drive Reconnection Required
           </h3>
           <p className="text-gray-300 text-sm">
-            Your Google Drive connection has expired and needs to be refreshed.
-            Follow the steps below to restore your data sync.
+            We've upgraded to a Google-verified OAuth application for enhanced security.
+            Follow the steps below to reconnect and restore your data sync.
           </p>
         </div>
       </div>
@@ -207,13 +207,13 @@ export const GoogleDriveReauthGuide: React.FC<GoogleDriveReauthGuideProps> = ({
                 </div>
 
                 <div className="text-sm text-gray-300 space-y-2">
-                  <p><strong className="text-white">Common reasons for expiration:</strong></p>
+                  <p><strong className="text-white">Why you need to reconnect:</strong></p>
                   <ul className="list-disc list-inside space-y-1 text-gray-400 ml-2">
+                    <li><strong className="text-blue-300">We upgraded to a Google-verified OAuth app</strong> for enhanced security</li>
                     <li>Google account password was changed</li>
                     <li>Two-factor authentication was updated</li>
                     <li>Access was manually revoked from Google settings</li>
                     <li>Extended period of inactivity</li>
-                    <li>Google's periodic security refresh cycle</li>
                   </ul>
                 </div>
 

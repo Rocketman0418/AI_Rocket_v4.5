@@ -851,50 +851,35 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
 
                     <div className="bg-slate-700/30 rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-3">
-                        <Sparkles className="w-5 h-5 text-blue-400" />
-                        <span className="text-base font-semibold text-white">Activity</span>
-                      </div>
-                      <p className="text-sm text-slate-400 mb-3">Earn points for daily engagement with Astra.</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="bg-slate-800/50 rounded-lg p-3">
-                          <p className="text-sm font-medium text-white">Daily Active</p>
-                          <p className="text-xs text-slate-400 mt-1">Send a message or run a report</p>
-                          <p className="text-sm font-bold text-blue-400 mt-2">+5 pts/day</p>
-                        </div>
-                        <div className="bg-slate-800/50 rounded-lg p-3">
-                          <p className="text-sm font-medium text-white">5-Day Streak</p>
-                          <p className="text-xs text-slate-400 mt-1">Be active 5 days in a row</p>
-                          <p className="text-sm font-bold text-blue-400 mt-2">+50 pts</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-700/30 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-3">
                         <Star className="w-5 h-5 text-amber-400" />
                         <span className="text-base font-semibold text-white">Milestones</span>
                       </div>
                       <p className="text-sm text-slate-400 mb-3">Unlock bonus points for reaching usage milestones.</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="bg-slate-800/50 rounded-lg p-3">
-                          <p className="text-sm font-medium text-white">Daily Power User</p>
+                          <p className="text-sm font-medium text-white">Chatty Day</p>
                           <p className="text-xs text-slate-400 mt-1">Send 10 messages in a day</p>
                           <p className="text-sm font-bold text-amber-400 mt-2">+25 pts</p>
                         </div>
                         <div className="bg-slate-800/50 rounded-lg p-3">
                           <p className="text-sm font-medium text-white">Message Milestones</p>
                           <p className="text-xs text-slate-400 mt-1">100 / 500 / 1000 total messages</p>
-                          <p className="text-sm font-bold text-amber-400 mt-2">+100 / +150 / +200 pts</p>
+                          <p className="text-sm font-bold text-amber-400 mt-2">+100 / +250 / +500 pts</p>
+                        </div>
+                        <div className="bg-slate-800/50 rounded-lg p-3">
+                          <p className="text-sm font-medium text-white">Team Chat Milestones</p>
+                          <p className="text-xs text-slate-400 mt-1">50 / 200 team chat messages</p>
+                          <p className="text-sm font-bold text-amber-400 mt-2">+100 / +200 pts</p>
                         </div>
                         <div className="bg-slate-800/50 rounded-lg p-3">
                           <p className="text-sm font-medium text-white">Visualization Milestones</p>
                           <p className="text-xs text-slate-400 mt-1">5 / 25 / 100 saved visualizations</p>
-                          <p className="text-sm font-bold text-amber-400 mt-2">+150 / +200 / +250 pts</p>
+                          <p className="text-sm font-bold text-amber-400 mt-2">+150 / +300 / +500 pts</p>
                         </div>
                         <div className="bg-slate-800/50 rounded-lg p-3">
                           <p className="text-sm font-medium text-white">Report Milestones</p>
-                          <p className="text-xs text-slate-400 mt-1">3 / 10 scheduled reports</p>
-                          <p className="text-sm font-bold text-amber-400 mt-2">+200 / +250 pts</p>
+                          <p className="text-xs text-slate-400 mt-1">3 / 10 / 25 scheduled reports</p>
+                          <p className="text-sm font-bold text-amber-400 mt-2">+100 / +250 / +500 pts</p>
                         </div>
                       </div>
                     </div>
