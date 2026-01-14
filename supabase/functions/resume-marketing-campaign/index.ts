@@ -97,6 +97,7 @@ Deno.serve(async (req: Request) => {
       const recipient = pendingRecipients[i];
 
       let firstName = 'there';
+      let inviteCode = '';
       if (recipient.user_id) {
         const { data: userData } = await supabaseAdmin
           .from('users')
@@ -106,10 +107,22 @@ Deno.serve(async (req: Request) => {
         if (userData?.name) {
           firstName = userData.name.split(' ')[0];
         }
+      } else {
+        const { data: previewData } = await supabaseAdmin
+          .from('preview_requests')
+          .select('invite_code')
+          .eq('email', recipient.email)
+          .maybeSingle();
+        if (previewData?.invite_code) {
+          inviteCode = previewData.invite_code;
+        }
       }
 
       let emailHtml = emailData.html_content;
       emailHtml = emailHtml.replace(/\{\{firstName\}\}/g, firstName);
+      if (inviteCode) {
+        emailHtml = emailHtml.replace(/\{\{inviteCode\}\}/g, inviteCode);
+      }
 
       try {
         const resendResponse = await fetch("https://api.resend.com/emails", {

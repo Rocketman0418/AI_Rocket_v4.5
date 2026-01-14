@@ -269,7 +269,26 @@ This guided experience helps teams understand the value of each data type and en
 
 ### January 2026 Updates
 
-#### 1. Team Pulse - Weekly Team Health Snapshot (v1.4.0)
+#### 1. Team Dashboard - Daily AI-Powered Insights (v1.6.0)
+**Type:** New Feature
+**Description:**
+Introducing Team Dashboard - daily AI-powered insights on your team's goals, mission alignment, and overall health! Astra analyzes your synced data every day and presents actionable metrics in a beautiful 3-panel layout.
+
+Key features:
+- Goals & Targets Panel: Track projects, OKRs, milestones, and KPIs with status indicators and progress percentages
+- Mission Alignment Panel: See how well current work aligns with company mission and core values, with concrete examples
+- Team Health Panel: Overall health score with metrics for data richness, engagement, meeting cadence, financial health, and risk indicators
+- AI-generated recommendations based on current state analysis
+- Export to PDF for sharing with stakeholders and in meetings
+- Custom instructions to focus on metrics that matter most to your team
+- Daily automatic updates at midnight EST
+- Manual regeneration on-demand for admins
+
+Team Dashboard helps you stay on top of what matters most by analyzing all your synced documents and surfacing the key insights your team needs to stay aligned and make progress.
+
+**Display Order:** 1450
+
+#### 2. Team Pulse - Weekly Team Health Snapshot (v1.4.0)
 **Type:** New Feature
 **Description:**
 Introducing Team Pulse - a weekly snapshot of your team's health, progress, and AI-generated insights! Get a visual infographic showing everything happening across your business data at a glance.
@@ -286,7 +305,7 @@ Team Pulse helps you understand the pulse of your business by analyzing all your
 
 **Display Order:** 1400
 
-#### 2. Category Data Access - Granular Data Permissions (v1.5.0)
+#### 3. Category Data Access - Granular Data Permissions (v1.5.0)
 **Type:** New Feature
 **Description:**
 Introducing Category Data Access - control exactly which data categories each team member can access when chatting with Astra! Admins can now grant or restrict access to Strategy, Meetings, Financial, and Projects data on a per-user basis.
@@ -387,6 +406,38 @@ Fixed an issue where meeting documents weren't appearing during Astra Guided Cha
 The "What's New" feature provides a professional, user-friendly way to keep the team informed about platform updates. It's easily accessible, well-organized, and designed to highlight the continuous improvement of Astra Intelligence.
 
 ### Quick Add SQL Snippets
+
+**Team Dashboard - Daily AI-Powered Insights:**
+```sql
+INSERT INTO whats_new (
+  title,
+  description,
+  version,
+  feature_type,
+  date_added,
+  is_published,
+  display_order
+) VALUES (
+  'Team Dashboard - Daily AI-Powered Insights',
+  'Introducing Team Dashboard - daily AI-powered insights on your team''s goals, mission alignment, and overall health! Astra analyzes your synced data every day and presents actionable metrics in a beautiful 3-panel layout.
+
+Key features:
+- Goals & Targets Panel: Track projects, OKRs, milestones, and KPIs with status indicators and progress percentages
+- Mission Alignment Panel: See how well current work aligns with company mission and core values
+- Team Health Panel: Overall health score with metrics for data richness, engagement, meeting cadence, and risk indicators
+- AI-generated recommendations based on current state analysis
+- Export to PDF for sharing with stakeholders
+- Custom instructions to focus on metrics that matter to your team
+- Daily automatic updates at midnight EST
+
+Team Dashboard helps you stay on top of what matters most by surfacing the key insights your team needs to stay aligned and make progress.',
+  '1.6.0',
+  'new_feature',
+  '2026-01-14',
+  true,
+  1450
+);
+```
 
 **Category Data Access - Granular Data Permissions:**
 ```sql

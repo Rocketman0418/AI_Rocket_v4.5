@@ -97,7 +97,7 @@ export const TAB_CONFIGS: TabConfig[] = [
     shortLabel: 'Dashboard',
     icon: 'LayoutDashboard',
     isCore: false,
-    isComingSoon: true,
+    isComingSoon: false,
     order: 8,
     description: 'Daily AI-powered insights on your team\'s metrics, goals, tasks, and accomplishments. Astra reviews your data and delivers fresh updates each day.',
     color: 'sky'

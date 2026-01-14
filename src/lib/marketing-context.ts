@@ -180,15 +180,18 @@ export const PRODUCT_FEATURES = {
       ]
     },
     {
-      name: "Team Dashboard (Coming Soon)",
-      description: "Real-time AI-updated team insights dashboard showing the metrics that matter most to your business",
+      name: "Team Dashboard (NEW)",
+      description: "Daily AI-powered insights on your team's goals, mission alignment, and overall health - presented in a beautiful 3-panel layout",
       icon: "📊",
       benefits: [
-        "Live team activity and engagement metrics",
-        "AI-generated insights updated in real-time",
-        "Customizable widgets for your key business metrics",
-        "Track team performance and collaboration patterns",
-        "Instant visibility into what matters most"
+        "Goals & Targets Panel: Track projects, OKRs, milestones, and KPIs with status indicators and progress percentages",
+        "Mission Alignment Panel: See how well current work aligns with company mission and core values",
+        "Team Health Panel: Overall health score with metrics for data richness, engagement, meeting cadence, and risk indicators",
+        "AI-generated recommendations based on current state analysis",
+        "Export to PDF for sharing with stakeholders and in meetings",
+        "Custom instructions to focus on metrics that matter most to your team",
+        "Daily automatic updates at midnight EST",
+        "Manual regeneration on-demand for admins"
       ]
     },
     {
@@ -347,6 +350,10 @@ export const PRODUCT_FEATURES = {
     {
       title: "Granular Data Access Control",
       description: "Control which team members can access sensitive data categories like Financial or Strategy documents, while still giving everyone AI insights on their authorized data"
+    },
+    {
+      title: "Team Dashboard Insights",
+      description: "Get daily AI-generated insights on your team's goals progress, mission alignment, and overall health - with actionable recommendations and one-click PDF export for stakeholder meetings"
     }
   ],
 

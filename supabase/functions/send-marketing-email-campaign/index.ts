@@ -63,10 +63,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    let recipients: { id: string | null; email: string; firstName: string }[] = [];
+    let recipients: { id: string | null; email: string; firstName: string; inviteCode?: string }[] = [];
     const seenEmails = new Set<string>();
 
-    const addRecipient = (r: { id: string | null; email: string; firstName: string }) => {
+    const addRecipient = (r: { id: string | null; email: string; firstName: string; inviteCode?: string }) => {
       const emailLower = r.email.toLowerCase();
       if (!seenEmails.has(emailLower)) {
         seenEmails.add(emailLower);
@@ -104,14 +104,17 @@ Deno.serve(async (req: Request) => {
 
     if (types.includes('preview_requests')) {
       const { data: previewRequests, error } = await supabaseAdmin
-        .rpc('get_preview_requests_with_onboarding');
+        .from('preview_requests')
+        .select('email, invite_code, onboarded')
+        .eq('invite_sent', true)
+        .or('onboarded.is.null,onboarded.eq.false');
 
       if (!error && previewRequests) {
-        const notYetSignedUp = previewRequests.filter((req: any) => !req.user_onboarded);
-        notYetSignedUp.forEach((req: any) => addRecipient({
+        previewRequests.forEach((req: any) => addRecipient({
           id: null,
           email: req.email,
-          firstName: 'there'
+          firstName: 'there',
+          inviteCode: req.invite_code || ''
         }));
       }
     }
@@ -196,6 +199,9 @@ Deno.serve(async (req: Request) => {
       const recipient = recipients[i];
       let emailHtml = emailData.html_content;
       emailHtml = emailHtml.replace(/\{\{firstName\}\}/g, recipient.firstName);
+      if (recipient.inviteCode) {
+        emailHtml = emailHtml.replace(/\{\{inviteCode\}\}/g, recipient.inviteCode);
+      }
 
       const { data: contactData } = await supabaseAdmin
         .from('marketing_contacts')

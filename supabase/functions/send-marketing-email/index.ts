@@ -12,6 +12,7 @@ interface MarketingEmailRequest {
   subject?: string;
   htmlContent?: string;
   isTestEmail?: boolean;
+  testInviteCode?: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -45,7 +46,7 @@ Deno.serve(async (req: Request) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { recipientEmails, subject, htmlContent, isTestEmail }: MarketingEmailRequest = await req.json();
+    const { recipientEmails, subject, htmlContent, isTestEmail, testInviteCode }: MarketingEmailRequest = await req.json();
 
     let recipients: { email: string; firstName: string }[] = [];
 
@@ -112,7 +113,7 @@ Deno.serve(async (req: Request) => {
         : `https://airocket.app/unsubscribe?email=${encodeURIComponent(recipient.email)}`;
 
       let emailHtmlContent = htmlContent
-        ? htmlContent.replace(/\{\{firstName\}\}/g, recipient.firstName)
+        ? htmlContent.replace(/\{\{firstName\}\}/g, recipient.firstName).replace(/\{\{inviteCode\}\}/g, testInviteCode || 'TESTCODE')
         : `
         <!DOCTYPE html>
         <html>

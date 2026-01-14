@@ -70,6 +70,18 @@ const featureIconMap: Record<string, React.ComponentType<{ className?: string }>
   Activity
 };
 
+const featureDescriptions: Record<string, string> = {
+  'private': 'AI Assistant',
+  'reports': 'Scheduled Insights',
+  'team': 'Collaborate Together',
+  'visualizations': 'Charts & Graphs',
+  'team-dashboard': 'Daily Metrics',
+  'team-pulse': 'Weekly Health',
+  'ai-specialists': 'Role-Based AI',
+  'team-agents': 'Task Automation',
+  'team-guidance': 'Team Playbooks'
+};
+
 const colorClasses: Record<string, { bg: string; border: string; text: string; gradient: string }> = {
   emerald: { bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', text: 'text-emerald-400', gradient: 'from-emerald-500 to-emerald-600' },
   purple: { bg: 'bg-purple-500/20', border: 'border-purple-500/30', text: 'text-purple-400', gradient: 'from-purple-500 to-purple-600' },
@@ -322,12 +334,14 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
     color: 'orange'
   };
 
-  const nonCoreFeatures = TAB_CONFIGS.filter(t => !t.isCore && t.id !== 'team-pulse');
+  const nonCoreFeatures = TAB_CONFIGS.filter(t => !t.isCore && t.id !== 'team-pulse' && t.id !== 'team-dashboard');
+  const teamDashboardFeature = TAB_CONFIGS.find(t => t.id === 'team-dashboard');
   const teamPulseFeature = TAB_CONFIGS.find(t => t.id === 'team-pulse');
   const visualizationsIndex = nonCoreFeatures.findIndex(t => t.id === 'visualizations');
   const featureTabs = [
     ...coreFeatureTabs,
     ...nonCoreFeatures.slice(0, visualizationsIndex + 1),
+    ...(teamDashboardFeature ? [teamDashboardFeature] : []),
     ...(teamPulseFeature ? [teamPulseFeature] : []),
     moonshotFeature,
     ...nonCoreFeatures.slice(visualizationsIndex + 1)
@@ -364,6 +378,7 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
                     const IconComponent = featureIconMap[feature.icon];
                     const colors = colorClasses[feature.color] || colorClasses.emerald;
                     const isMoonshot = feature.id === 'moonshot-challenge';
+                    const isTeamDashboard = feature.id === 'team-dashboard';
                     const isTeamPulse = feature.id === 'team-pulse';
 
                     if (isMoonshot) {
@@ -412,7 +427,7 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
                           }
                         `}
                       >
-                        {isTeamPulse && (
+                        {(isTeamDashboard || isTeamPulse) && (
                           <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-bold rounded-md uppercase tracking-wide">
                             New
                           </span>
@@ -435,10 +450,14 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
                             <span className="hidden md:inline">{feature.label}</span>
                             <span className="md:hidden">{feature.shortLabel}</span>
                           </span>
-                          {feature.isComingSoon && (
+                          {feature.isComingSoon ? (
                             <span className="flex items-center gap-0.5 text-[10px] text-slate-500 mt-1">
                               <Clock className="w-2.5 h-2.5" />
                               Soon
+                            </span>
+                          ) : featureDescriptions[feature.id] && (
+                            <span className="text-[10px] text-slate-400 mt-0.5">
+                              {featureDescriptions[feature.id]}
                             </span>
                           )}
                         </div>
