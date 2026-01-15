@@ -262,6 +262,22 @@ export const MainContainer: React.FC<MainContainerProps> = ({ onOpenAdminDashboa
 
   // Check if returning from Google Drive OAuth (for users not in Launch Prep)
   React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const selectMicrosoftDrive = params.get('selectMicrosoftDrive');
+    const msOAuthComplete = sessionStorage.getItem('microsoft_oauth_complete');
+    const googleFromLaunchPrep = sessionStorage.getItem('google_drive_from_launch_prep');
+    const microsoftFromLaunchPrep = sessionStorage.getItem('microsoft_from_launch_prep');
+
+    if (selectMicrosoftDrive === 'true' || msOAuthComplete === 'true' || microsoftFromLaunchPrep === 'true') {
+      console.log('🚀 [MainContainer] Skipping OAuth handling - letting FuelStage handle Microsoft OAuth return');
+      return;
+    }
+
+    if (googleFromLaunchPrep === 'true') {
+      console.log('🚀 [MainContainer] Skipping OAuth handling - letting FuelStage handle Google OAuth return');
+      return;
+    }
+
     const shouldReopenFuel = sessionStorage.getItem('reopen_fuel_stage');
     if (shouldReopenFuel === 'true') {
       sessionStorage.removeItem('reopen_fuel_stage');

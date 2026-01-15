@@ -253,6 +253,8 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
 
         if (shouldReopenFuel === 'true' || selectMicrosoftDrive === 'true') {
           sessionStorage.removeItem('reopen_fuel_stage');
+          sessionStorage.removeItem('google_drive_from_launch_prep');
+          sessionStorage.removeItem('microsoft_from_launch_prep');
 
           let teamId = user?.user_metadata?.team_id;
           if (!teamId) {
