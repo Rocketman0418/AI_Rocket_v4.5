@@ -17,6 +17,7 @@ interface ChooseFolderStepProps {
   onProceed?: () => void;
   onSkipToSync?: () => void;
   provider?: DriveProvider;
+  isNewConnection?: boolean;
 }
 
 interface GoogleDriveFolder {
@@ -45,7 +46,7 @@ const STRATEGY_DOCUMENT_EXAMPLES = [
   { icon: '📋', name: 'V/TO Document', desc: 'Vision/Traction Organizer (EOS)' },
 ];
 
-export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, onProceed, onSkipToSync, provider: propProvider }) => {
+export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, onProceed, onSkipToSync, provider: propProvider, isNewConnection }) => {
   const { user } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('initial');
   const [loading, setLoading] = useState(true);
@@ -91,7 +92,7 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
           if (propProvider === 'microsoft' && providerConnection.microsoft_drive_id) {
             setMicrosoftDriveId(providerConnection.microsoft_drive_id);
           }
-          if (providerConnection.root_folder_id || providerConnection.strategy_folder_id) {
+          if (!isNewConnection && (providerConnection.root_folder_id || providerConnection.strategy_folder_id)) {
             setHasExistingFolders(true);
           }
           setLoading(false);
@@ -112,7 +113,7 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
         setMicrosoftDriveId(connection.microsoft_drive_id);
       }
 
-      if (connection.root_folder_id || connection.strategy_folder_id) {
+      if (!isNewConnection && (connection.root_folder_id || connection.strategy_folder_id)) {
         setHasExistingFolders(true);
       }
     } catch (error) {

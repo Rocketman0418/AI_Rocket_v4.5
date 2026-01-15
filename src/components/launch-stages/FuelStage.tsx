@@ -70,6 +70,7 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
   const [documentsFilterCategory, setDocumentsFilterCategory] = useState<string | null>(null);
   const [folderSectionKey, setFolderSectionKey] = useState(0);
   const [addFoldersProvider, setAddFoldersProvider] = useState<'google' | 'microsoft' | undefined>(undefined);
+  const [isNewConnection, setIsNewConnection] = useState(false);
 
   const isOAuthReturn = () => {
     const shouldReopenFuel = sessionStorage.getItem('reopen_fuel_stage');
@@ -258,11 +259,13 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
             console.log('🚀 [FuelStage] Reopening modal after Microsoft OAuth return');
             await clearFlowState();
             setCloudProvider('microsoft');
+            setIsNewConnection(true);
             setDriveFlowStep('choose-folder');
           } else {
             console.log('🚀 [FuelStage] Reopening modal after Google OAuth return');
             await clearFlowState();
             setCloudProvider('google');
+            setIsNewConnection(true);
             setDriveFlowStep('choose-folder');
           }
 
@@ -884,6 +887,7 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
                 <ConnectDriveStep
                   onComplete={async (provider?: 'google' | 'microsoft') => {
                     const selectedProvider = provider || 'google';
+                    setIsNewConnection(true);
                     setDriveFlowStep('choose-folder');
                     setHasCloudDrive(true);
                     setCloudProvider(selectedProvider);
@@ -896,9 +900,11 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
               {driveFlowStep === 'choose-folder' && (
                 <ChooseFolderStep
                   provider={cloudProvider || undefined}
+                  isNewConnection={isNewConnection}
                   onComplete={async (data) => {
                     console.log('Folder selected:', data);
                     setFolderData(data);
+                    setIsNewConnection(false);
                     await persistFlowState('choose-folder', data, cloudProvider);
                     await refreshCounts();
                   }}
