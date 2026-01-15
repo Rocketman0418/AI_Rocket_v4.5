@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Sparkles, Palette, MessageSquare, Check, Shuffle, PenTool } from 'lucide-react';
+import { X, Sparkles, Palette, Target, Check, Shuffle, PenTool, Zap, Layers, LayoutGrid, MessageSquare } from 'lucide-react';
 
 export interface DesignStyle {
   id: string;
@@ -191,12 +191,43 @@ interface TeamPulseCustomizeModalProps {
     custom_instructions: string | null;
     design_style: string | null;
     design_description: string | null;
+    focus_mode: 'big3' | 'highlights' | 'full_canvas' | 'custom';
   }) => void;
 }
 
-type TabType = 'instructions' | 'design';
+type TabType = 'focus' | 'design';
 
 type SelectionMode = 'random' | 'preset' | 'custom';
+
+type FocusMode = 'big3' | 'highlights' | 'full_canvas' | 'custom';
+
+const FOCUS_OPTIONS: { id: FocusMode; name: string; icon: typeof Zap; description: string; requiresInstructions?: boolean }[] = [
+  {
+    id: 'big3',
+    name: 'Big 3',
+    icon: Zap,
+    description: 'Three big insights from your team\'s data - concise and impactful'
+  },
+  {
+    id: 'highlights',
+    name: 'Highlights',
+    icon: Layers,
+    description: 'A range of 5-7 of the most notable things from your team\'s data'
+  },
+  {
+    id: 'full_canvas',
+    name: 'Full Canvas',
+    icon: LayoutGrid,
+    description: 'A full detailed overview from your team\'s data - comprehensive analysis'
+  },
+  {
+    id: 'custom',
+    name: 'Custom',
+    icon: MessageSquare,
+    description: 'Define your own focus with custom instructions below',
+    requiresInstructions: true
+  }
+];
 
 export function TeamPulseCustomizeModal({
   isOpen,
@@ -207,6 +238,7 @@ export function TeamPulseCustomizeModal({
 }: TeamPulseCustomizeModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>('design');
   const [customInstructions, setCustomInstructions] = useState(currentSettings.custom_instructions || '');
+  const [focusMode, setFocusMode] = useState<FocusMode>('highlights');
   const [selectedStyle, setSelectedStyle] = useState<string | null>(currentSettings.design_style);
   const [designDescription, setDesignDescription] = useState(currentSettings.design_description || '');
   const [selectionMode, setSelectionMode] = useState<SelectionMode>(() => {
@@ -264,7 +296,23 @@ export function TeamPulseCustomizeModal({
     if (selectionMode === 'custom') {
       return designDescription.trim().length > 0;
     }
+    if (focusMode === 'custom') {
+      return customInstructions.trim().length > 0;
+    }
     return true;
+  };
+
+  const getFocusInstruction = (): string => {
+    switch (focusMode) {
+      case 'big3':
+        return 'FOCUS: Big 3 - Generate exactly THREE big, impactful insights from the team data. Keep it concise and high-impact.';
+      case 'highlights':
+        return 'FOCUS: Highlights - Generate 5-7 of the most notable things from the team data. Balance breadth with key insights.';
+      case 'full_canvas':
+        return 'FOCUS: Full Canvas - Generate a comprehensive, detailed overview of all team data. Be thorough and include all relevant metrics.';
+      default:
+        return '';
+    }
   };
 
   const handleGenerate = async () => {
@@ -272,8 +320,10 @@ export function TeamPulseCustomizeModal({
 
     setSaving(true);
     try {
+      const additionalInstructions = customInstructions.trim();
+
       const settings = {
-        custom_instructions: customInstructions.trim() || null,
+        custom_instructions: additionalInstructions || null,
         design_style: selectionMode === 'preset' ? selectedStyle : null,
         design_description: selectionMode === 'custom' ? designDescription.trim() : null,
         rotate_random: selectionMode === 'random',
@@ -287,7 +337,8 @@ export function TeamPulseCustomizeModal({
       onGenerate({
         custom_instructions: settings.custom_instructions,
         design_style: settings.design_style,
-        design_description: settings.design_description
+        design_description: settings.design_description,
+        focus_mode: focusMode
       });
 
       setSaved(true);
@@ -329,15 +380,15 @@ export function TeamPulseCustomizeModal({
             Design Style
           </button>
           <button
-            onClick={() => setActiveTab('instructions')}
+            onClick={() => setActiveTab('focus')}
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'instructions'
+              activeTab === 'focus'
                 ? 'text-cyan-400 border-b-2 border-cyan-400 bg-cyan-500/5'
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            <MessageSquare className="w-4 h-4" />
-            Custom Instructions
+            <Target className="w-4 h-4" />
+            Focus
           </button>
         </div>
 
@@ -460,45 +511,80 @@ Example: A minimalist corporate style with clean lines, muted blue and gray tone
             </div>
           )}
 
-          {activeTab === 'instructions' && (
-            <div className="space-y-4">
+          {activeTab === 'focus' && (
+            <div className="space-y-5">
               <div>
+                <label className="block text-sm font-medium text-gray-300 mb-3">
+                  Content Focus
+                </label>
+                <div className="space-y-2">
+                  {FOCUS_OPTIONS.map((option) => {
+                    const Icon = option.icon;
+                    const isSelected = focusMode === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => setFocusMode(option.id)}
+                        className={`w-full flex items-start gap-3 p-3 rounded-lg border transition-all text-left ${
+                          isSelected
+                            ? 'border-cyan-500 bg-cyan-500/10'
+                            : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          isSelected ? 'bg-cyan-500/20' : 'bg-gray-700'
+                        }`}>
+                          <Icon className={`w-4 h-4 ${isSelected ? 'text-cyan-400' : 'text-gray-400'}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium ${isSelected ? 'text-cyan-400' : 'text-white'}`}>
+                            {option.name}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {option.description}
+                          </p>
+                        </div>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                          isSelected ? 'border-cyan-400 bg-cyan-400' : 'border-gray-600'
+                        }`}>
+                          {isSelected && <Check className="w-3 h-3 text-gray-900" />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className={`border-t border-gray-700 pt-4 ${focusMode === 'custom' ? 'bg-cyan-500/5 -mx-4 px-4 pb-4 rounded-b-lg' : ''}`}>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Custom Instructions for AI
+                  Custom Instructions {focusMode === 'custom' ? (
+                    <span className="text-cyan-400 font-normal">(required for Custom focus)</span>
+                  ) : (
+                    <span className="text-gray-500 font-normal">(optional)</span>
+                  )}
                 </label>
                 <textarea
                   value={customInstructions}
                   onChange={(e) => setCustomInstructions(e.target.value)}
-                  placeholder="Tell Astra what to focus on when generating your Team Pulse...
-
-Example: Focus on sales metrics, highlight project milestones, emphasize team collaboration patterns..."
-                  rows={6}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:border-cyan-500 focus:outline-none resize-none"
+                  placeholder={focusMode === 'custom'
+                    ? "Describe exactly what you want to see in your Team Pulse...\n\nExample: Show only our Q1 sales achievements and top 3 client wins with revenue impact."
+                    : "Add specific guidance for your Team Pulse...\n\nExample: Emphasize sales metrics, highlight project milestones, or focus on customer success patterns..."}
+                  rows={4}
+                  autoFocus={focusMode === 'custom'}
+                  className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-500 text-sm focus:border-cyan-500 focus:outline-none resize-none ${
+                    focusMode === 'custom' ? 'border-cyan-500/50' : 'border-gray-600'
+                  }`}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  These instructions guide the AI on what aspects of your team data to emphasize.
-                </p>
-              </div>
-
-              <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
-                <p className="text-xs font-medium text-gray-400 mb-2">Example instructions:</p>
-                <div className="space-y-2">
-                  {[
-                    'Focus on revenue growth and sales pipeline metrics',
-                    'Highlight team collaboration and communication patterns',
-                    'Emphasize project deadlines and milestone progress',
-                    'Include comparisons to previous weeks where possible',
-                    'Focus on customer success and retention metrics'
-                  ].map((example, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCustomInstructions(example)}
-                      className="block w-full text-left text-xs text-gray-400 hover:text-cyan-300 transition-colors py-1"
-                    >
-                      "{example}"
-                    </button>
-                  ))}
-                </div>
+                {focusMode === 'custom' && !customInstructions.trim() && (
+                  <p className="text-xs text-amber-400 mt-2">
+                    Please provide custom instructions to define your focus
+                  </p>
+                )}
+                {focusMode !== 'custom' && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    These instructions are added to the focus setting above for additional customization.
+                  </p>
+                )}
               </div>
             </div>
           )}

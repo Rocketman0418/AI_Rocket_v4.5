@@ -45,6 +45,7 @@ export default function TeamPulseView({ onClose }: TeamPulseViewProps) {
     custom_instructions: string | null;
     design_style: string | null;
     design_description: string | null;
+    focus_mode: 'big3' | 'highlights' | 'full_canvas';
   }) => {
     console.log('[TeamPulse] Customized generate called with options:', options);
 
@@ -63,7 +64,8 @@ export default function TeamPulseView({ onClose }: TeamPulseViewProps) {
     const result = await generatePulse({
       custom_instructions: options.custom_instructions,
       design_style: effectiveDesignStyle,
-      design_description: options.design_description
+      design_description: options.design_description,
+      focus_mode: options.focus_mode
     });
     console.log('[TeamPulse] Customized generatePulse result:', result);
   };

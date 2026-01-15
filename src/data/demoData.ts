@@ -176,22 +176,27 @@ export const DEMO_SMART_DATA = {
 export const DEMO_COMING_SOON = [
   {
     title: 'AI Specialists',
-    description: 'Dedicated AI team members like Business Coach, Finance Director, and Marketing Manager',
-    icon: 'UserCircle',
+    description: 'Create specialized AI team members like Business Coach, Finance Director, Marketing Manager and more to handle tasks 24/7',
+    icon: 'Brain',
   },
   {
     title: 'Team Agents',
-    description: 'Autonomous AI agents that complete tasks and workflows for your team',
+    description: 'Design and deploy custom AI Agents to complete tasks autonomously. Build workflows that work for you 24/7',
     icon: 'Bot',
   },
   {
     title: 'Team SOPs',
-    description: 'AI-powered standard operating procedures that learn from your team',
-    icon: 'BookOpen',
+    description: 'Create guidance documents and playbooks that help your team stay aligned and make better decisions',
+    icon: 'Compass',
   },
   {
-    title: 'Team Dashboard',
-    description: 'Real-time AI-updated metrics and insights on what matters most',
-    icon: 'LayoutDashboard',
+    title: 'Deep Research',
+    description: 'Launch deep AI research investigations on topics critical to your business with multi-source analysis',
+    icon: 'Search',
+  },
+  {
+    title: 'Business Coach',
+    description: 'Master your metrics, OKRs, and business frameworks with AI-powered coaching for EOS, Scaling Up, and more',
+    icon: 'Target',
   },
 ];

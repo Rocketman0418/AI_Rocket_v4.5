@@ -241,8 +241,15 @@ Deno.serve(async (req: Request) => {
     workflows.forEach(w => workflowMap.set(w.id, w.name));
 
     // Fetch all executions with pagination (up to 10 pages = 2500 executions)
-    const recentExecutions = await fetchAllExecutions(n8nUrl, n8nApiKey, 10);
-    console.log(`Total executions loaded: ${recentExecutions.length}`);
+    const allExecutions = await fetchAllExecutions(n8nUrl, n8nApiKey, 10);
+    console.log(`Total executions loaded: ${allExecutions.length}`);
+
+    // Filter out "Error Workflow" executions from all stats and displays
+    const recentExecutions = allExecutions.filter(exec => {
+      const workflowName = workflowMap.get(exec.workflowId) || '';
+      return workflowName !== 'Error Workflow';
+    });
+    console.log(`Executions after filtering out Error Workflow: ${recentExecutions.length}`);
 
     let highestExecutionId = 0;
     recentExecutions.forEach(exec => {

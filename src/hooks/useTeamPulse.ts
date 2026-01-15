@@ -15,6 +15,7 @@ interface GenerateOptions {
   custom_instructions?: string | null;
   design_style?: string | null;
   design_description?: string | null;
+  focus_mode?: 'big3' | 'highlights' | 'full_canvas' | null;
 }
 
 interface UseTeamPulseReturn {
@@ -189,6 +190,37 @@ export function useTeamPulse(): UseTeamPulseReturn {
     setGenerating(true);
     setError(null);
 
+    const pollForCompletion = async () => {
+      const maxAttempts = 30;
+      const pollInterval = 5000;
+
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+        const { data: settingsData } = await supabase
+          .from('team_pulse_settings')
+          .select('generation_in_progress, generation_error')
+          .eq('team_id', teamId)
+          .maybeSingle();
+
+        console.log(`[useTeamPulse] Poll ${i + 1}/${maxAttempts}:`, settingsData);
+
+        if (settingsData && !settingsData.generation_in_progress) {
+          setGenerating(false);
+          if (settingsData.generation_error) {
+            setError(settingsData.generation_error);
+          } else {
+            await fetchCurrentSnapshot();
+          }
+          return;
+        }
+      }
+
+      console.log('[useTeamPulse] Generation timed out after polling');
+      setGenerating(false);
+      setError('Generation timed out. Please try again.');
+    };
+
     try {
       console.log('[useTeamPulse] Getting session...');
       const { data: { session } } = await supabase.auth.getSession();
@@ -202,7 +234,7 @@ export function useTeamPulse(): UseTeamPulseReturn {
       }
 
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-team-pulse`;
-      console.log('[useTeamPulse] Calling edge function (fire and forget):', url);
+      console.log('[useTeamPulse] Calling edge function:', url);
 
       const requestBody: Record<string, unknown> = {
         team_id: teamId,
@@ -218,6 +250,9 @@ export function useTeamPulse(): UseTeamPulseReturn {
       if (options?.design_description) {
         requestBody.design_description = options.design_description;
       }
+      if (options?.focus_mode) {
+        requestBody.focus_mode = options.focus_mode;
+      }
 
       fetch(url, {
         method: 'POST',
@@ -228,14 +263,20 @@ export function useTeamPulse(): UseTeamPulseReturn {
         },
         body: JSON.stringify(requestBody)
       }).then(async (response) => {
-        console.log('[useTeamPulse] Background generation response:', response.status);
+        console.log('[useTeamPulse] Generation response:', response.status);
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          console.error('[useTeamPulse] Background generation error:', errorData);
+          console.error('[useTeamPulse] Generation error:', errorData);
+          setGenerating(false);
+          setError(errorData.error || 'Generation failed');
         }
       }).catch((err) => {
-        console.error('[useTeamPulse] Background generation fetch error:', err);
+        console.error('[useTeamPulse] Generation fetch error:', err);
+        setGenerating(false);
+        setError('Network error during generation');
       });
+
+      pollForCompletion();
 
       return true;
     } catch (err) {
@@ -245,7 +286,7 @@ export function useTeamPulse(): UseTeamPulseReturn {
       setGenerating(false);
       return false;
     }
-  }, [teamId, user]);
+  }, [teamId, user, fetchCurrentSnapshot]);
 
   useEffect(() => {
     if (teamId) {

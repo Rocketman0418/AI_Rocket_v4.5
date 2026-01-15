@@ -194,7 +194,9 @@ interface AnalysisResult {
   short_trends: string[];
 }
 
-async function analyzeWithFlash(data: TeamPulseData, apiKey: string): Promise<AnalysisResult> {
+type FocusMode = 'big3' | 'highlights' | 'full_canvas';
+
+async function analyzeWithFlash(data: TeamPulseData, apiKey: string, focusMode: FocusMode = 'highlights'): Promise<AnalysisResult> {
   const today = new Date();
   const thirtyDaysAgo = new Date(today);
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -236,7 +238,12 @@ ${data.recent_reports.map(r => `Q: ${r.prompt}\nA: ${r.response}`).join('\n\n') 
 === PREVIOUS PULSE ===
 ${data.previous_snapshot.generated_at ? `Previous pulse generated: ${data.previous_snapshot.generated_at}` : 'First snapshot'}
 
-Provide JSON response:
+${getFocusModePromptSection(focusMode)}
+
+Respond ONLY with valid JSON.`;
+
+  function getFocusModePromptSection(mode: FocusMode): string {
+    const baseJsonTemplate = `Provide JSON response:
 {
   "team_snapshot": "<DETAILED 4-5 sentence comprehensive overview of the team's current state. Include: what the team is working on, key accomplishments from the past 30 days, current priorities, notable team dynamics or collaboration patterns, and any significant milestones or progress. Be specific and reference actual projects, decisions, and activities from the data. This should paint a complete picture of where the team stands today.>",
   "key_metrics": {
@@ -245,26 +252,62 @@ Provide JSON response:
     "upcoming_deadlines": "<deadlines in the next 30-60 days>",
     "financial_status": "<CURRENT financial status or 'Not specified' if no data>",
     "team_focus_areas": "<what the team is focused on RIGHT NOW - be specific>"
-  },
-  "highlights": ["<insight 1: pattern or theme observed across ALL 30-day data>", "<insight 2: another pattern or theme>", "<insight 3: key observation about team dynamics>"],
+  },`;
+
+    const baseRules = `
+STRICT RULES:
+1. IGNORE any product/project that was completed more than 30 days ago
+2. IGNORE any pricing/subscription models from old products
+3. For "team_snapshot": Write a DETAILED 4-5 sentence summary that covers what the team is working on, recent accomplishments, current priorities, and notable team dynamics. Be specific and reference actual data.
+5. For "recommendations" (TRENDS): Identify high-level business trends, emerging patterns, and directional shifts. Focus on trajectories and patterns, NOT specific action items.
+6. If a date in the content is before ${cutoffStr}, SKIP that information entirely
+7. PRIORITIZE the most recent data (last 7-14 days) when analyzing
+8. CRITICAL FOR SHORT PHRASES: Each phrase MUST be a COMPLETE thought in 3-5 words. Examples of GOOD phrases: "Strong strategic execution", "High team momentum". Examples of BAD phrases (DO NOT USE): "The team is maintaining", "While financial reserves".`;
+
+    if (mode === 'big3') {
+      return `=== FOCUS MODE: BIG 3 ===
+Generate EXACTLY THREE big, impactful insights. Quality over quantity. Each insight should be substantial and meaningful.
+
+${baseJsonTemplate}
+  "highlights": ["<BIG INSIGHT 1: The single most important accomplishment, decision, or milestone - be specific and impactful>", "<BIG INSIGHT 2: The second most significant development - be specific and impactful>", "<BIG INSIGHT 3: The third most notable thing - be specific and impactful>"],
+  "recommendations": ["<trend 1: high-level business trend from 30-day data>", "<trend 2: emerging pattern or shift>"],
+  "trends_vs_previous": "<comparison to last pulse or 'First snapshot' if none>",
+  "short_highlights": ["<3-5 word COMPLETE phrase for insight 1>", "<3-5 word phrase for insight 2>", "<3-5 word phrase for insight 3>"],
+  "short_insights": ["<3-5 word COMPLETE observation>", "<3-5 word observation>", "<3-5 word observation>"],
+  "short_trends": ["<3-5 word COMPLETE trend>", "<3-5 word trend>"]
+}
+${baseRules}
+4. CRITICAL - For "highlights": Provide EXACTLY 3 highlights - no more, no less. These must be the THREE most significant, impactful things from the team's data. Each highlight should be substantial and meaningful. Focus on major accomplishments, pivotal decisions, and critical milestones only.`;
+    } else if (mode === 'full_canvas') {
+      return `=== FOCUS MODE: FULL CANVAS ===
+Generate a comprehensive, detailed overview with 10-15 highlights covering all aspects of team activity.
+
+${baseJsonTemplate}
+  "highlights": ["<notable thing 1>", "<notable thing 2>", "<notable thing 3>", "<notable thing 4>", "<notable thing 5>", "<notable thing 6>", "<notable thing 7>", "<notable thing 8>", "<notable thing 9>", "<notable thing 10>", "<optional 11>", "<optional 12>", "<optional 13>", "<optional 14>", "<optional 15>"],
+  "recommendations": ["<trend 1: high-level business trend from 30-day data>", "<trend 2: emerging pattern or shift>", "<trend 3: notable direction or trajectory>", "<trend 4: additional pattern>"],
+  "trends_vs_previous": "<comparison to last pulse or 'First snapshot' if none>",
+  "short_highlights": ["<3-5 word COMPLETE phrase>", "<3-5 word phrase>", "<3-5 word phrase>", "<3-5 word phrase>", "<3-5 word phrase>"],
+  "short_insights": ["<3-5 word COMPLETE observation>", "<3-5 word observation>", "<3-5 word observation>", "<3-5 word observation>"],
+  "short_trends": ["<3-5 word COMPLETE trend>", "<3-5 word trend>", "<3-5 word trend>", "<3-5 word trend>"]
+}
+${baseRules}
+4. For "highlights": Provide 10-15 highlights for a comprehensive view. Cover all aspects: accomplishments, decisions, milestones, events, projects, financial updates, team dynamics, and operational changes. Be thorough and detailed.`;
+    } else {
+      return `=== FOCUS MODE: HIGHLIGHTS ===
+Generate 5-7 of the most notable things from the team's data. Balance breadth with key insights.
+
+${baseJsonTemplate}
+  "highlights": ["<notable thing 1: specific accomplishment, decision, milestone, or event from the data>", "<notable thing 2>", "<notable thing 3>", "<notable thing 4>", "<notable thing 5>", "<notable thing 6 (optional)>", "<notable thing 7 (optional)>"],
   "recommendations": ["<trend 1: high-level business trend from 30-day data>", "<trend 2: emerging pattern or shift>", "<trend 3: notable direction or trajectory>"],
   "trends_vs_previous": "<comparison to last pulse or 'First snapshot' if none>",
   "short_highlights": ["<3-5 word COMPLETE phrase, e.g. 'Strong strategic alignment'>", "<3-5 word phrase, e.g. 'High team momentum'>", "<3-5 word phrase, e.g. 'Active project pipeline'>"],
   "short_insights": ["<3-5 word COMPLETE observation, e.g. 'Active project development'>", "<3-5 word observation, e.g. 'Growing team collaboration'>", "<3-5 word observation, e.g. 'Clear goal alignment'>"],
   "short_trends": ["<3-5 word COMPLETE trend, e.g. 'Increasing operational efficiency'>", "<3-5 word trend, e.g. 'Rising customer focus'>", "<3-5 word trend, e.g. 'Expanding market presence'>"]
 }
-
-STRICT RULES:
-1. IGNORE any product/project that was completed more than 30 days ago
-2. IGNORE any pricing/subscription models from old products
-3. For "team_snapshot": Write a DETAILED 4-5 sentence summary that covers what the team is working on, recent accomplishments, current priorities, and notable team dynamics. Be specific and reference actual data.
-4. For "highlights" (INSIGHTS): Analyze ALL data from the last 30 days and identify patterns, themes, and observations across the entire dataset. DO NOT pick specific individual items - synthesize high-level insights.
-5. For "recommendations" (TRENDS): Identify high-level business trends, emerging patterns, and directional shifts. Focus on trajectories and patterns, NOT specific action items.
-6. If a date in the content is before ${cutoffStr}, SKIP that information entirely
-7. PRIORITIZE the most recent data (last 7-14 days) when analyzing
-8. CRITICAL FOR SHORT PHRASES: Each phrase MUST be a COMPLETE thought in 3-5 words. Examples of GOOD phrases: "Strong strategic execution", "High team momentum". Examples of BAD phrases (DO NOT USE): "The team is maintaining", "While financial reserves".
-
-Respond ONLY with valid JSON.`;
+${baseRules}
+4. For "highlights" (NOTABLE THINGS): Provide 5-7 of the most notable things from the team's data - specific accomplishments, key decisions made, important milestones reached, significant events, or noteworthy developments. Be specific and reference actual items from the data.`;
+    }
+  }
 
   try {
     const response = await fetch(
@@ -382,6 +425,7 @@ interface DesignOptions {
   design_style?: string | null;
   design_description?: string | null;
   custom_instructions?: string | null;
+  focus_mode?: FocusMode | null;
 }
 
 async function generateInfographic(
@@ -449,13 +493,205 @@ IMPORTANT: Fully embrace this design style throughout the entire infographic. Ev
     ? `\n=== CUSTOM INSTRUCTIONS ===\n${designOptions.custom_instructions}\n`
     : '';
 
+  const focusMode = designOptions?.focus_mode || 'highlights';
   const shortHighlights = analysis.short_highlights || ['Strong team momentum', 'Solid execution focus', 'Building foundation'];
   const shortInsights = analysis.short_insights || ['Active project development', 'Growing collaboration', 'Clear goal alignment'];
   const shortTrends = analysis.short_trends || ['Increasing efficiency', 'Rising engagement', 'Expanding capabilities'];
   const fullHighlights = analysis.highlights || [];
   const fullRecommendations = analysis.recommendations || [];
 
-  const prompt = `Create an infographic for "${teamName}" Team Pulse report. Focus on VISUAL STORYTELLING with MINIMAL TEXT.
+  const getFocusModeInfographicSection = (): string => {
+    if (focusMode === 'big3') {
+      const top3 = fullHighlights.slice(0, 3);
+      return `=== SECTION 2: THE BIG 3 (RIGHT - PROMINENT) ===
+CRITICAL: This section should prominently feature EXACTLY THREE major insights. Make them visually impactful and large.
+
+**THE BIG 3 INSIGHTS (large, prominent icons - use trophy, star, or medal icons):**
+${top3.map((h, i) => `${i + 1}. ${h}`).join('\n') || '1. Major accomplishment\n2. Key milestone\n3. Critical decision'}
+
+**Design for Big 3:**
+- Each insight should have its own visual "card" or "badge" treatment
+- Use large, impactful icons (trophy, rocket, target, lightbulb)
+- Make text readable but concise
+- These 3 items should be the HERO content of this section
+- NO additional insights or trends beyond these 3
+
+**Quick Summary Tags (small, below the Big 3):**
+${shortHighlights.slice(0, 3).map(h => `• ${h}`).join('\n')}`;
+    } else if (focusMode === 'full_canvas') {
+      return `=== SECTION 2: COMPREHENSIVE INSIGHTS (RIGHT - DENSE) ===
+Show a comprehensive view with many data points. Pack more information into this section.
+
+**Key Insights (lightbulb icons, compact list):**
+${fullHighlights.slice(0, 8).map((h, i) => `${i + 1}. ${h}`).join('\n') || '1. Building momentum\n2. Growing collaboration'}
+
+**Trends (arrow icons):**
+${fullRecommendations.slice(0, 4).map((r, i) => `${i + 1}. ${r}`).join('\n') || '1. Positive trajectory\n2. Operations maturing'}
+
+**Quick Tags (pill/badge style, multiple rows):**
+${shortHighlights.map(h => `• ${h}`).join('\n')}
+${shortTrends.map(t => `• ${t}`).join('\n')}
+
+**Use visuals:** Dense data visualization, multiple small charts, grid layouts, connecting nodes`;
+    } else {
+      return `=== SECTION 2: INSIGHTS & TRENDS (RIGHT - secondary) ===
+
+**Insights (lightbulb icons):**
+${fullHighlights.slice(0, 4).map((h, i) => `${i + 1}. ${h}`).join('\n') || '1. Building momentum\n2. Growing collaboration'}
+
+**Trends (arrow icons):**
+${fullRecommendations.slice(0, 2).map((r, i) => `${i + 1}. ${r}`).join('\n') || '1. Positive trajectory\n2. Operations maturing'}
+
+**Quick Tags (pill/badge style):**
+${shortHighlights.slice(0, 3).map(h => `• ${h}`).join('\n')}
+${shortTrends.slice(0, 2).map(t => `• ${t}`).join('\n')}
+
+**Use visuals:** Trend arrows, mini charts, connecting nodes, flowchart elements`;
+    }
+  };
+
+  const getBig3OnlyPrompt = (): string => {
+    const top3 = fullHighlights.slice(0, 3);
+    return `Create an infographic for "${teamName}" showcasing THE BIG 3 INSIGHTS. The ENTIRE image should focus ONLY on these 3 major achievements.
+${styleInstructions}
+${customInstructionsSection}
+THEME: ${themeContext}
+COLORS: ${accentStyle}.
+
+=== CRITICAL INSTRUCTION ===
+This is a "BIG 3" focused infographic. The ENTIRE canvas should be dedicated to showcasing EXACTLY 3 major insights.
+DO NOT include team snapshot, project lists, financial details, or any other information.
+ONLY show the 3 big insights as the hero content.
+
+=== SPECS ===
+- Landscape 1920x1080 (16:9)
+- Mostly graphics/icons with minimal text
+- NO photographs or human faces
+- Clean, modern, premium aesthetic
+
+=== LAYOUT: SINGLE FOCUS - THE BIG 3 ===
+The entire infographic should be a showcase of exactly 3 major insights arranged prominently.
+
+**Suggested layouts (choose one):**
+- Three large "award badge" or "trophy card" style panels side by side
+- Three prominent circular or hexagonal medallions
+- A podium-style layout with 1st, 2nd, 3rd positioning
+- Three interconnected achievement cards
+
+=== HEADER (compact, top) ===
+"${teamName}: The Big 3" | ${new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} | Trophy or Star icon
+
+=== THE BIG 3 INSIGHTS (HERO CONTENT - FULL WIDTH) ===
+These 3 insights should dominate the entire canvas:
+
+**INSIGHT #1 (Most Important):**
+${top3[0] || 'Major accomplishment'}
+
+**INSIGHT #2 (Second Most Important):**
+${top3[1] || 'Key milestone'}
+
+**INSIGHT #3 (Third Most Important):**
+${top3[2] || 'Critical decision'}
+
+**Visual Treatment for Each Insight:**
+- Large, prominent placement (each insight gets ~30% of the canvas)
+- Unique icon representing the insight (trophy, rocket, target, star, medal, lightbulb)
+- Clear numbering (1, 2, 3) or visual hierarchy
+- Brief text label for each insight
+- Badge, card, or medallion style framing
+
+=== FOOTER (small) ===
+"Powered by AI Rocket"
+
+=== DESIGN RULES ===
+1. ONLY show the 3 insights - nothing else
+2. Each insight should be visually prominent and impactful
+3. Use large icons and minimal text
+4. Lots of white space between the 3 items
+5. Premium, celebratory aesthetic (like awards or achievements)
+6. Clear visual hierarchy showing these are THE most important things
+
+=== DO NOT ===
+- NO team snapshot section
+- NO project lists or timelines
+- NO financial details
+- NO "Key Details" sections
+- NO trends or recommendations
+- NO additional insights beyond the Big 3
+- NO human faces
+- NO purple/indigo colors
+- NO cluttered layouts
+- NO percentage labels`;
+  };
+
+  const getHighlightsOnlyPrompt = (): string => {
+    const highlights = fullHighlights.slice(0, 7);
+    return `Create an infographic for "${teamName}" showcasing KEY HIGHLIGHTS. The ENTIRE image should focus ONLY on the most notable things from the team's data.
+${styleInstructions}
+${customInstructionsSection}
+THEME: ${themeContext}
+COLORS: ${accentStyle}.
+
+=== CRITICAL INSTRUCTION ===
+This is a "HIGHLIGHTS" focused infographic. The ENTIRE canvas should be dedicated to showcasing 5-7 notable highlights.
+DO NOT include team snapshot, project lists, financial details, or any other contextual information.
+ONLY show the highlights as the hero content.
+
+=== SPECS ===
+- Landscape 1920x1080 (16:9)
+- Mostly graphics/icons with minimal text
+- NO photographs or human faces
+- Clean, modern, professional aesthetic
+
+=== LAYOUT: SINGLE FOCUS - KEY HIGHLIGHTS ===
+The entire infographic should showcase 5-7 notable things arranged in an engaging layout.
+
+**Suggested layouts (choose one):**
+- Grid of highlight cards (2 rows of 3-4 cards)
+- Flowing timeline of achievements
+- Connected nodes showing related highlights
+- Magazine-style feature layout with mixed card sizes
+
+=== HEADER (compact, top) ===
+"${teamName}: Key Highlights" | ${new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} | Lightbulb or Star icon
+
+=== THE HIGHLIGHTS (HERO CONTENT - FULL WIDTH) ===
+These highlights should fill the entire canvas:
+
+${highlights.map((h, i) => `**${i + 1}. ${h}**`).join('\n\n')}
+
+**Visual Treatment for Each Highlight:**
+- Each highlight gets its own card or visual container
+- Relevant icon for each highlight (lightbulb, checkmark, star, rocket, target, chart, handshake)
+- Brief, readable text for each item
+- Visual variety - mix of card sizes or emphasis levels
+- Color coding or visual grouping where appropriate
+
+=== FOOTER (small) ===
+"Powered by AI Rocket"
+
+=== DESIGN RULES ===
+1. ONLY show the highlights - nothing else
+2. Each highlight should be clearly visible and readable
+3. Use icons to make each highlight visually distinct
+4. Balance the layout - avoid clustering
+5. Professional, informative aesthetic
+6. Clear visual hierarchy for importance
+
+=== DO NOT ===
+- NO team snapshot section
+- NO detailed project lists or timelines
+- NO financial breakdowns
+- NO "Key Details" or "Overview" sections
+- NO trends or recommendations section
+- NO human faces
+- NO purple/indigo colors
+- NO cluttered layouts
+- NO percentage labels`;
+  };
+
+  const getFullCanvasPrompt = (): string => {
+    return `Create an infographic for "${teamName}" Team Pulse report. Focus on VISUAL STORYTELLING with MINIMAL TEXT.
 ${styleInstructions}
 ${customInstructionsSection}
 THEME: ${themeContext}
@@ -494,14 +730,14 @@ ${teamSnapshot}
 
 === SECTION 2: INSIGHTS & TRENDS (RIGHT - secondary) ===
 
-**Insights (lightbulb icons):**
-${fullHighlights.slice(0, 2).map((h, i) => `${i + 1}. ${h}`).join('\n') || '1. Building momentum\n2. Growing collaboration'}
+**Key Insights (lightbulb icons):**
+${fullHighlights.slice(0, 5).map((h, i) => `${i + 1}. ${h}`).join('\n') || '1. Building momentum\n2. Growing collaboration'}
 
 **Trends (arrow icons):**
-${fullRecommendations.slice(0, 2).map((r, i) => `${i + 1}. ${r}`).join('\n') || '1. Positive trajectory\n2. Operations maturing'}
+${fullRecommendations.slice(0, 3).map((r, i) => `${i + 1}. ${r}`).join('\n') || '1. Positive trajectory\n2. Operations maturing'}
 
 **Quick Tags (pill/badge style):**
-${shortHighlights.slice(0, 2).map(h => `• ${h}`).join('\n')}
+${shortHighlights.slice(0, 3).map(h => `• ${h}`).join('\n')}
 ${shortTrends.slice(0, 2).map(t => `• ${t}`).join('\n')}
 
 **Use visuals:** Trend arrows, mini charts, connecting nodes, flowchart elements
@@ -523,6 +759,84 @@ ${shortTrends.slice(0, 2).map(t => `• ${t}`).join('\n')}
 - NO purple/indigo colors
 - NO cluttered layouts
 - NO percentage labels (like "60%" or "40%") in section headers`;
+  };
+
+  const getCustomFocusPrompt = (): string => {
+    return `Create an infographic for "${teamName}" Team Pulse report based on USER-PROVIDED CUSTOM INSTRUCTIONS.
+${styleInstructions}
+THEME: ${themeContext}
+COLORS: ${accentStyle}.
+
+=== CRITICAL: CUSTOM FOCUS MODE ===
+The user has provided specific instructions for what they want to see. Follow their instructions exactly.
+Do NOT use any predefined layout structure. Let the user's instructions drive the content and layout.
+
+=== USER'S CUSTOM INSTRUCTIONS ===
+${customInstructions || 'Create a balanced overview of the team'}
+
+=== SPECS ===
+- Landscape 1920x1080 (16:9)
+- Mostly graphics/icons with minimal text
+- NO photographs or human faces
+- Clean, modern, professional aesthetic
+
+=== HEADER (compact, top) ===
+"${teamName}: Team Pulse" | ${new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} | Appropriate icon based on content
+
+=== AVAILABLE DATA TO DRAW FROM ===
+Use this data as source material, showing only what the user's instructions request:
+
+**Team Overview:**
+- ${memberCount} members
+- Focus areas: ${focusAreas || 'Building and growing'}
+- Active projects: ${activeProjects || 'Multiple initiatives'}
+
+**Key Details:**
+- Recent decisions: ${recentDecisions || 'Strategic planning'}
+- Upcoming: ${upcomingDeadlines || 'Milestones tracked'}
+${financialStatus && financialStatus !== 'Not specified' ? `- Financial: ${financialStatus}` : ''}
+
+**Snapshot Summary:**
+${teamSnapshot}
+
+**Available Highlights:**
+${fullHighlights.map((h, i) => `${i + 1}. ${h}`).join('\n') || 'Building momentum'}
+
+**Available Trends:**
+${fullRecommendations.map((r, i) => `${i + 1}. ${r}`).join('\n') || 'Positive trajectory'}
+
+=== FOOTER (small) ===
+"Powered by AI Rocket"
+
+=== DESIGN RULES ===
+1. FOLLOW THE USER'S CUSTOM INSTRUCTIONS as the primary directive
+2. Only show what the user asked for
+3. Use icons and visuals appropriate to the content requested
+4. Premium, clean aesthetic
+5. DO NOT include content the user didn't ask for
+
+=== DO NOT ===
+- NO human faces
+- NO purple/indigo colors
+- NO cluttered layouts
+- NO percentage labels`;
+  };
+
+  const getPromptByFocusMode = (): string => {
+    switch (focusMode) {
+      case 'big3':
+        return getBig3OnlyPrompt();
+      case 'highlights':
+        return getHighlightsOnlyPrompt();
+      case 'custom':
+        return getCustomFocusPrompt();
+      case 'full_canvas':
+      default:
+        return getFullCanvasPrompt();
+    }
+  };
+
+  const prompt = getPromptByFocusMode();
 
   console.log('[Image Gen] Creative direction:', { themeContext, accentStyle });
 
@@ -591,9 +905,13 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  let team_id: string | null = null;
+  let generationError: string | null = null;
+
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
 
     if (!geminiApiKey) {
@@ -611,11 +929,9 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
+
     if (userError || !user) {
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
@@ -623,13 +939,13 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const {
-      team_id,
-      generation_type = 'manual',
-      custom_instructions,
-      design_style,
-      design_description
-    } = await req.json();
+    const body = await req.json();
+    team_id = body.team_id;
+    const generation_type = body.generation_type || 'manual';
+    const custom_instructions = body.custom_instructions;
+    const design_style = body.design_style;
+    const design_description = body.design_description;
+    const focus_mode = (body.focus_mode as FocusMode) || 'highlights';
 
     if (!team_id) {
       return new Response(
@@ -640,6 +956,7 @@ Deno.serve(async (req: Request) => {
 
     console.log(`Generating Team Pulse for team ${team_id}`, {
       design_style,
+      focus_mode,
       has_custom_instructions: !!custom_instructions,
       has_design_description: !!design_description
     });
@@ -652,8 +969,6 @@ Deno.serve(async (req: Request) => {
         generation_error: null
       })
       .eq('team_id', team_id);
-
-    let generationError: string | null = null;
 
     try {
       const { data: pulseData, error: dataError } = await supabase.rpc('get_team_pulse_data', {
@@ -671,13 +986,14 @@ Deno.serve(async (req: Request) => {
     const teamData = pulseData as TeamPulseData;
     console.log(`Got team data for ${teamData.team_info.team_name}`);
 
-    console.log('Step 1: Analyzing with Flash model (gemini-3-flash-preview)...');
-    const analysis = await analyzeWithFlash(teamData, geminiApiKey);
+    console.log(`Step 1: Analyzing with Flash model (gemini-3-flash-preview) - Focus Mode: ${focus_mode}...`);
+    const analysis = await analyzeWithFlash(teamData, geminiApiKey, focus_mode);
     console.log('Analysis complete. Team snapshot generated.');
 
-    console.log('Step 2: Generating infographic with gemini-3-pro-image-preview...');
+    console.log(`Step 2: Generating infographic with gemini-3-pro-image-preview - Focus Mode: ${focus_mode}...`);
     const designOptions: DesignOptions = {
       design_style: design_style || null,
+      focus_mode: focus_mode,
       design_description: design_description || null,
       custom_instructions: custom_instructions || null
     };

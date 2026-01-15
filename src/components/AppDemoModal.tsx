@@ -9,6 +9,8 @@ import { DemoGuidedReportsSlide } from './demo/DemoGuidedReportsSlide';
 import { DemoVisualizationsSlide } from './demo/DemoVisualizationsSlide';
 import { DemoTeamChatSlide } from './demo/DemoTeamChatSlide';
 import { DemoSecurePrivateSlide } from './demo/DemoSecurePrivateSlide';
+import { DemoTeamDashboardSlide } from './demo/DemoTeamDashboardSlide';
+import { DemoTeamPulseSlide } from './demo/DemoTeamPulseSlide';
 import { DemoComingSoonSlide } from './demo/DemoComingSoonSlide';
 import { DemoFinalSlide } from './demo/DemoFinalSlide';
 
@@ -27,6 +29,8 @@ const SLIDES = [
   { id: 'visualizations', component: DemoVisualizationsSlide, title: 'Visualizations' },
   { id: 'team-chat', component: DemoTeamChatSlide, title: 'Team Chat' },
   { id: 'secure-private', component: DemoSecurePrivateSlide, title: 'Secure & Private' },
+  { id: 'team-dashboard', component: DemoTeamDashboardSlide, title: 'Team Dashboard' },
+  { id: 'team-pulse', component: DemoTeamPulseSlide, title: 'Team Pulse' },
   { id: 'coming-soon', component: DemoComingSoonSlide, title: 'Coming Soon' },
   { id: 'final', component: DemoFinalSlide, title: 'Get Started' },
 ];
