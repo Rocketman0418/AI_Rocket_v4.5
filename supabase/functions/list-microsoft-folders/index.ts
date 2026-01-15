@@ -7,6 +7,59 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
+async function refreshMicrosoftToken(supabase: any, connection: any): Promise<string | null> {
+  const microsoftClientId = Deno.env.get('MICROSOFT_CLIENT_ID');
+  const microsoftClientSecret = Deno.env.get('MICROSOFT_CLIENT_SECRET');
+
+  if (!microsoftClientId || !microsoftClientSecret || !connection.refresh_token) {
+    console.log('[List Microsoft Folders] Cannot refresh: missing credentials or refresh token');
+    return null;
+  }
+
+  console.log('[List Microsoft Folders] Attempting token refresh...');
+
+  try {
+    const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: microsoftClientId,
+        client_secret: microsoftClientSecret,
+        refresh_token: connection.refresh_token,
+        grant_type: 'refresh_token'
+      })
+    });
+
+    const tokens = await tokenResponse.json();
+
+    if (!tokenResponse.ok) {
+      console.error('[List Microsoft Folders] Token refresh failed:', tokens.error);
+      return null;
+    }
+
+    const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
+    const cleanAccessToken = tokens.access_token?.replace?.(/[\r\n]/g, '') || tokens.access_token;
+    const cleanRefreshToken = tokens.refresh_token?.replace?.(/[\r\n]/g, '') || tokens.refresh_token || connection.refresh_token;
+
+    await supabase
+      .from('user_drive_connections')
+      .update({
+        access_token: cleanAccessToken,
+        refresh_token: cleanRefreshToken,
+        token_expires_at: expiresAt.toISOString(),
+        connection_status: 'connected',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', connection.id);
+
+    console.log('[List Microsoft Folders] Token refreshed successfully');
+    return cleanAccessToken;
+  } catch (e) {
+    console.error('[List Microsoft Folders] Token refresh error:', e);
+    return null;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -90,6 +143,26 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    let accessToken = connection.access_token;
+    const tokenExpiresAt = connection.token_expires_at ? new Date(connection.token_expires_at) : null;
+    const isExpiredOrSoon = tokenExpiresAt && (tokenExpiresAt.getTime() - Date.now() < 5 * 60 * 1000);
+
+    if (isExpiredOrSoon || connection.connection_status === 'token_expired') {
+      console.log('[List Microsoft Folders] Token expired or expiring soon, refreshing...');
+      const newToken = await refreshMicrosoftToken(supabase, connection);
+      if (newToken) {
+        accessToken = newToken;
+      } else {
+        return new Response(
+          JSON.stringify({ error: 'Token expired. Please reconnect.' }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+    }
+
     const url = new URL(req.url);
     let driveId = url.searchParams.get('driveId');
     const itemId = url.searchParams.get('itemId') || 'root';
@@ -101,9 +174,20 @@ Deno.serve(async (req: Request) => {
 
     if (!driveId) {
       console.log('[List Microsoft Folders] No drive ID provided, fetching default drive...');
-      const meResponse = await fetch('https://graph.microsoft.com/v1.0/me/drive', {
-        headers: { Authorization: `Bearer ${connection.access_token}` }
+      let meResponse = await fetch('https://graph.microsoft.com/v1.0/me/drive', {
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
+
+      if (meResponse.status === 401) {
+        console.log('[List Microsoft Folders] Got 401 on drive fetch, attempting refresh...');
+        const newToken = await refreshMicrosoftToken(supabase, connection);
+        if (newToken) {
+          accessToken = newToken;
+          meResponse = await fetch('https://graph.microsoft.com/v1.0/me/drive', {
+            headers: { Authorization: `Bearer ${accessToken}` }
+          });
+        }
+      }
 
       if (!meResponse.ok) {
         const errorText = await meResponse.text();
@@ -160,9 +244,20 @@ Deno.serve(async (req: Request) => {
 
     const graphUrl = `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${itemId}/children?$filter=folder ne null&$select=id,name,folder,webUrl,parentReference`;
 
-    const foldersResponse = await fetch(graphUrl, {
-      headers: { Authorization: `Bearer ${connection.access_token}` }
+    let foldersResponse = await fetch(graphUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` }
     });
+
+    if (foldersResponse.status === 401) {
+      console.log('[List Microsoft Folders] Got 401 on folder fetch, attempting refresh...');
+      const newToken = await refreshMicrosoftToken(supabase, connection);
+      if (newToken) {
+        accessToken = newToken;
+        foldersResponse = await fetch(graphUrl, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+      }
+    }
 
     if (!foldersResponse.ok) {
       const errorText = await foldersResponse.text();
