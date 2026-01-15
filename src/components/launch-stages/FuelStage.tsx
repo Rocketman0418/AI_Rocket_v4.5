@@ -72,6 +72,7 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
   const [folderSectionKey, setFolderSectionKey] = useState(0);
   const [addFoldersProvider, setAddFoldersProvider] = useState<'google' | 'microsoft' | undefined>(undefined);
   const [isNewConnection, setIsNewConnection] = useState(false);
+  const [syncJustStarted, setSyncJustStarted] = useState(false);
 
   const isOAuthReturn = () => {
     const shouldReopenFuel = sessionStorage.getItem('reopen_fuel_stage');
@@ -642,6 +643,25 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
             </div>
           )}
 
+          {/* Sync Just Started Animation */}
+          {syncJustStarted && !currentSession && (
+            <div className="mt-6 mb-1 bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-600/50 rounded-lg p-3 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
+                    <RefreshCw className="w-4 h-4 text-green-400 animate-spin" />
+                  </div>
+                  <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-green-300">Sync Started!</p>
+                  <p className="text-xs text-green-400/70">Your folder is now syncing in the background. New documents will appear shortly.</p>
+                </div>
+                <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+              </div>
+            </div>
+          )}
+
           {/* Next Level Requirements - Compact inline version */}
           {currentLevel < 5 && nextThreshold && (
             <div className="mt-4 pt-3 border-t border-gray-700">
@@ -978,6 +998,8 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
                     await clearFlowState();
                     setAddFoldersProvider(undefined);
                     setShowDriveFlow(false);
+                    setSyncJustStarted(true);
+                    setTimeout(() => setSyncJustStarted(false), 8000);
                   }}
                   onBack={() => {
                     setAddFoldersProvider(undefined);
@@ -1012,6 +1034,8 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
                     }
                     await clearFlowState();
                     setShowDriveFlow(false);
+                    setSyncJustStarted(true);
+                    setTimeout(() => setSyncJustStarted(false), 8000);
                   }}
                   onGoBack={async () => {
                     setDriveFlowStep('place-files');

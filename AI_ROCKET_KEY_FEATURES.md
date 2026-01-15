@@ -143,6 +143,19 @@ Deploy task-specific AI agents that handle specific workflows like meeting summa
 - **Color**: Cyan
 - **Status**: Coming Soon
 
+### 19. Research Projects
+Launch deep AI research investigations on topics critical to your business. Powered by Deep Research AI models, Research Projects perform comprehensive multi-source analysis, synthesize findings, and deliver detailed reports on complex topics like market research, competitive analysis, technology trends, and strategic planning.
+- **Icon**: Search
+- **Color**: Orange
+- **Status**: Coming Soon
+- **Planned Features**:
+  - Multi-source deep research across web and internal data
+  - Extended analysis sessions for thorough investigation
+  - Structured research reports with citations
+  - Progress tracking for long-running research tasks
+  - Save and share research findings with team
+  - Follow-up questions to drill deeper into topics
+
 ---
 
 *For detailed product information, see ASTRA_INTELLIGENCE_PRODUCT_OVERVIEW.md*

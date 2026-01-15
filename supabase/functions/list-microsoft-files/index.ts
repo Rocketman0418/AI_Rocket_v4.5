@@ -216,7 +216,7 @@ Deno.serve(async (req: Request) => {
 
     console.log('[list-microsoft-files] Fetching files from drive:', driveId, 'folder:', folderId);
 
-    const graphUrl = `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${folderId}/children?$filter=file ne null&$select=id,name,file,lastModifiedDateTime,size,webUrl&$top=100`;
+    const graphUrl = `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${folderId}/children?$select=id,name,file,folder,lastModifiedDateTime,size,webUrl&$top=200`;
 
     let filesResponse = await fetch(graphUrl, {
       headers: { Authorization: `Bearer ${accessToken}` }
@@ -266,7 +266,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const data = await filesResponse.json();
-    const items = data.value || [];
+    const allItems = data.value || [];
+    const items = allItems.filter((item: any) => item.file && !item.folder);
 
     const files: DriveFile[] = items.map((item: any) => {
       const mimeType = item.file?.mimeType || 'application/octet-stream';

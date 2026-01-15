@@ -92,6 +92,28 @@ export const TAB_CONFIGS: TabConfig[] = [
     color: 'orange'
   },
   {
+    id: 'research-projects',
+    label: 'Deep Research',
+    shortLabel: 'Research',
+    icon: 'Search',
+    isCore: false,
+    isComingSoon: true,
+    order: 7.5,
+    description: 'Launch deep AI research investigations on topics critical to your business. Powered by Deep Research AI models for comprehensive multi-source analysis.',
+    color: 'orange'
+  },
+  {
+    id: 'business-coach',
+    label: 'Business Coach',
+    shortLabel: 'Coach',
+    icon: 'Target',
+    isCore: false,
+    isComingSoon: true,
+    order: 7.6,
+    description: 'Master your metrics, OKRs, and business frameworks with AI-powered coaching for EOS, Scaling Up, and more.',
+    color: 'sky'
+  },
+  {
     id: 'team-dashboard',
     label: 'Team Dashboard',
     shortLabel: 'Dashboard',

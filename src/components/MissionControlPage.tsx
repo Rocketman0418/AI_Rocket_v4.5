@@ -28,7 +28,9 @@ import {
   Sparkles,
   ArrowRight,
   Activity,
-  Eye
+  Eye,
+  Search,
+  Target
 } from 'lucide-react';
 import { useLaunchPreparation } from '../hooks/useLaunchPreparation';
 import { useFuelLevel } from '../hooks/useFuelLevel';
@@ -68,7 +70,9 @@ const featureIconMap: Record<string, React.ComponentType<{ className?: string }>
   Bot,
   Compass,
   LayoutDashboard,
-  Activity
+  Activity,
+  Search,
+  Target
 };
 
 const featureDescriptions: Record<string, string> = {
@@ -80,7 +84,9 @@ const featureDescriptions: Record<string, string> = {
   'team-pulse': 'Weekly Health',
   'ai-specialists': 'Role-Based AI',
   'team-agents': 'Task Automation',
-  'team-guidance': 'Team Playbooks'
+  'team-guidance': 'Team Playbooks',
+  'research-projects': 'Deep Analysis',
+  'business-coach': 'Metrics & OKRs'
 };
 
 const colorClasses: Record<string, { bg: string; border: string; text: string; gradient: string }> = {
@@ -133,6 +139,8 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
   const [loadingPointsLog, setLoadingPointsLog] = useState(false);
   const [showSyncInfoModal, setShowSyncInfoModal] = useState(false);
   const [showTeamMembersPanel, setShowTeamMembersPanel] = useState(false);
+  const [showBusinessCoachModal, setShowBusinessCoachModal] = useState(false);
+  const [showDeepResearchModal, setShowDeepResearchModal] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -170,7 +178,11 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
   };
 
   const handleFeatureClick = (feature: TabConfig) => {
-    if (feature.isComingSoon) {
+    if (feature.id === 'business-coach') {
+      setShowBusinessCoachModal(true);
+    } else if (feature.id === 'research-projects') {
+      setShowDeepResearchModal(true);
+    } else if (feature.isComingSoon) {
       setComingSoonFeature(feature);
     } else {
       onOpenTab(feature.id);
@@ -437,7 +449,13 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setInfoFeature(feature);
+                            if (feature.id === 'business-coach') {
+                              setShowBusinessCoachModal(true);
+                            } else if (feature.id === 'research-projects') {
+                              setShowDeepResearchModal(true);
+                            } else {
+                              setInfoFeature(feature);
+                            }
                           }}
                           className="absolute top-2 right-2 p-1 opacity-50 hover:opacity-100 hover:bg-slate-700/50 rounded-lg transition-all"
                         >
@@ -1095,6 +1113,202 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
                 <p className="text-xs text-slate-400 text-center">
                   Click on your team's Launch Points total to see the leaderboard and detailed earning opportunities.
                 </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBusinessCoachModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-lg max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-600 rounded-lg flex items-center justify-center">
+                  <Target className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">AI Business Coach</h2>
+                  <span className="text-xs text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full">Coming Soon</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowBusinessCoachModal(false)}
+                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="bg-gradient-to-r from-sky-500/10 to-blue-500/10 border border-sky-500/20 rounded-lg p-4">
+                <p className="text-base font-semibold text-sky-300">
+                  Master your metrics, OKRs, and business frameworks.
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  Elevate your leadership with the AI Business Coach, the first intelligent assistant designed to help teams execute with excellence. Whether you are running on EOS, implementing OKRs, or following the Scaling Up framework, our AI provides real-time, custom guidance to keep your team aligned.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="bg-slate-700/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-sky-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Compass className="w-4 h-4 text-sky-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">Framework Agnostic</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Seamlessly switch between or combine methodologies like the Entrepreneurial Operating System, Scaling Up, and Rockefeller Habits.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-700/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <BarChart3 className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">Metric Tracking</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Stay on top of your KPIs and "Rocks" with automated insights.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-700/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Brain className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">Smart Guidance</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Get AI-driven advice for your Level 10 meetings, quarterly planning, and goal setting.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-700/50 rounded-lg p-3 mt-4">
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  <strong className="text-slate-400">Disclaimer:</strong> AI Business Coach is an independent software tool. It is not affiliated with, endorsed by, or a product of EOS Worldwide (EOS), Gazelles Inc. (Scaling Up), or any other trademarked business framework mentioned. All trademarks and registered trademarks are the property of their respective owners and are used here for descriptive purposes only.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeepResearchModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-lg max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg flex items-center justify-center">
+                  <Search className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">Deep Research</h2>
+                  <span className="text-xs text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full">Coming Soon</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDeepResearchModal(false)}
+                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="bg-gradient-to-r from-orange-500/10 to-amber-500/10 border border-orange-500/20 rounded-lg p-4">
+                <p className="text-base font-semibold text-orange-300">
+                  Launch deep AI research investigations on topics critical to your business.
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  Deep Research goes beyond simple searches. Powered by advanced AI models, it conducts comprehensive multi-source analysis, synthesizes findings, and delivers actionable insights on complex business questions.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="bg-slate-700/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Search className="w-4 h-4 text-orange-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">Multi-Source Analysis</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Aggregates information from multiple sources including your synced documents, web research, and industry databases.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-700/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-4 h-4 text-cyan-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">Comprehensive Reports</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Receive detailed research reports with citations, data analysis, and executive summaries.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-700/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Clock className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">Hours of Research in Minutes</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        What would take your team hours or days to research is completed in minutes with AI-powered analysis.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-700/50 rounded-lg p-4">
+                <p className="text-sm font-medium text-white mb-3">Example Research Projects</p>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-orange-400 rounded-full mt-2 flex-shrink-0" />
+                    <p className="text-xs text-slate-300">"Analyze our top 3 competitors' pricing strategies and market positioning"</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-orange-400 rounded-full mt-2 flex-shrink-0" />
+                    <p className="text-xs text-slate-300">"Research emerging AI regulations that could impact our SaaS product in 2025"</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-orange-400 rounded-full mt-2 flex-shrink-0" />
+                    <p className="text-xs text-slate-300">"Identify potential acquisition targets in the healthcare tech space under $50M valuation"</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-orange-400 rounded-full mt-2 flex-shrink-0" />
+                    <p className="text-xs text-slate-300">"Compare our employee benefits package against industry benchmarks"</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-orange-400 rounded-full mt-2 flex-shrink-0" />
+                    <p className="text-xs text-slate-300">"Research best practices for expanding into the European market"</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
