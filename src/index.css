@@ -68,6 +68,23 @@
     animation: progress-indeterminate 1.5s ease-in-out infinite;
   }
 
+  /* Slide right animation for sync indicator */
+  @keyframes slideRight {
+    0% {
+      transform: translateX(-100%);
+    }
+    50% {
+      transform: translateX(250%);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
+  }
+
+  .animate-slide-right {
+    animation: slideRight 2s ease-in-out infinite;
+  }
+
   /* Custom scrollbar utility class */
   .custom-scrollbar::-webkit-scrollbar {
     width: 8px;

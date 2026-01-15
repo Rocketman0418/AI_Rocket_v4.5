@@ -14,6 +14,7 @@ interface ConnectedFoldersStatusProps {
   onClose: () => void;
   onDisconnected?: () => void;
   onOpenLocalUpload?: () => void;
+  onSyncStarted?: () => void;
 }
 
 interface UnifiedFolder {
@@ -41,7 +42,7 @@ const FOLDER_COLORS = [
   { bg: 'bg-teal-500/20', text: 'text-teal-400', border: 'border-teal-500/50' },
 ];
 
-export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ onConnectMore, onClose, onDisconnected, onOpenLocalUpload }) => {
+export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ onConnectMore, onClose, onDisconnected, onOpenLocalUpload, onSyncStarted }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [googleData, setGoogleData] = useState<ProviderData | null>(null);
@@ -205,6 +206,9 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
         setSyncing(false);
         setSyncCompleted(true);
         setSyncMessage({ type: 'success', text: 'Sync started successfully!' });
+        if (onSyncStarted) {
+          onSyncStarted();
+        }
       } else {
         setSyncing(false);
         setSyncMessage({ type: 'error', text: 'Failed to start sync.' });

@@ -644,21 +644,23 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
           )}
 
           {/* Sync Just Started Animation */}
-          {syncJustStarted && !currentSession && (
-            <div className="mt-6 mb-1 bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-600/50 rounded-lg p-3 animate-pulse">
-              <div className="flex items-center gap-3">
+          {syncJustStarted && (
+            <div className="mt-6 mb-1 bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-600/50 rounded-lg p-3 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 animate-pulse" />
+              <div className="relative flex items-center gap-3">
                 <div className="relative">
-                  <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
-                    <RefreshCw className="w-4 h-4 text-green-400 animate-spin" />
+                  <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
+                    <RefreshCw className="w-5 h-5 text-green-400 animate-spin" />
                   </div>
-                  <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping" />
+                  <div className="absolute inset-0 bg-green-500/30 rounded-full animate-ping opacity-75" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-green-300">Sync Started!</p>
-                  <p className="text-xs text-green-400/70">Your folder is now syncing in the background. New documents will appear shortly.</p>
+                  <p className="text-sm font-semibold text-green-300">Sync Started!</p>
+                  <p className="text-xs text-green-400/80">Your folder is now syncing in the background. New documents will appear shortly.</p>
                 </div>
-                <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0" />
               </div>
+              <div className="absolute bottom-0 left-0 h-1 w-1/3 bg-gradient-to-r from-green-500 to-emerald-400 animate-slide-right" />
             </div>
           )}
 
@@ -908,8 +910,8 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
                     setDriveFlowStep('add-more-folders');
                   }}
                   onClose={async () => {
-                    await clearFlowState();
                     setShowDriveFlow(false);
+                    await clearFlowState();
                     await refreshCounts();
                     await refreshLaunchPrep();
                     if (onRefresh) {
@@ -929,6 +931,10 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
                   }}
                   onOpenLocalUpload={() => {
                     // We need to add local upload modal here
+                  }}
+                  onSyncStarted={() => {
+                    setSyncJustStarted(true);
+                    setTimeout(() => setSyncJustStarted(false), 10000);
                   }}
                 />
               )}
@@ -991,15 +997,15 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
                 <AddMoreFoldersStep
                   provider={addFoldersProvider}
                   onComplete={async () => {
+                    setShowDriveFlow(false);
+                    setSyncJustStarted(true);
+                    setAddFoldersProvider(undefined);
+                    await clearFlowState();
                     await refreshCounts();
                     if (onRefresh) {
                       await onRefresh();
                     }
-                    await clearFlowState();
-                    setAddFoldersProvider(undefined);
-                    setShowDriveFlow(false);
-                    setSyncJustStarted(true);
-                    setTimeout(() => setSyncJustStarted(false), 8000);
+                    setTimeout(() => setSyncJustStarted(false), 10000);
                   }}
                   onBack={() => {
                     setAddFoldersProvider(undefined);
@@ -1028,14 +1034,14 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
               {driveFlowStep === 'sync-data' && (
                 <SyncDataStep
                   onComplete={async () => {
+                    setShowDriveFlow(false);
+                    setSyncJustStarted(true);
+                    await clearFlowState();
                     await refreshCounts();
                     if (onRefresh) {
                       await onRefresh();
                     }
-                    await clearFlowState();
-                    setShowDriveFlow(false);
-                    setSyncJustStarted(true);
-                    setTimeout(() => setSyncJustStarted(false), 8000);
+                    setTimeout(() => setSyncJustStarted(false), 10000);
                   }}
                   onGoBack={async () => {
                     setDriveFlowStep('place-files');
