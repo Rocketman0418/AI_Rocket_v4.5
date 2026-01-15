@@ -218,6 +218,12 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
   };
 
   const loadFolderFiles = async (folderId: string) => {
+    if (activeProvider === 'microsoft') {
+      setFolderFiles([]);
+      setLoadingFiles(false);
+      return;
+    }
+
     setLoadingFiles(true);
     setError('');
     try {
@@ -288,9 +294,13 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
     setFolderFiles([]);
   };
 
-  const openGoogleDrive = () => {
-    if (previewFolder?.id) {
+  const openCloudDrive = () => {
+    if (activeProvider === 'microsoft') {
+      window.open('https://onedrive.live.com', '_blank');
+    } else if (previewFolder?.id) {
       window.open(`https://drive.google.com/drive/folders/${previewFolder.id}`, '_blank');
+    } else {
+      window.open('https://drive.google.com', '_blank');
     }
   };
 
@@ -536,7 +546,7 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
                 <button
-                  onClick={openGoogleDrive}
+                  onClick={openCloudDrive}
                   className="w-full sm:w-auto px-5 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-2 min-h-[44px]"
                 >
                   <span>Add More Files</span>
@@ -552,25 +562,33 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-3">
-                <p className="text-sm text-yellow-300">
-                  This folder is empty or has no supported files. Add some documents to get started.
-                </p>
-              </div>
+              {activeProvider === 'microsoft' ? (
+                <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-3">
+                  <p className="text-sm text-blue-300">
+                    This folder will be synced. Your documents will be available to Astra once syncing is complete.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-3">
+                  <p className="text-sm text-yellow-300">
+                    This folder is empty or has no supported files. Add some documents to get started.
+                  </p>
+                </div>
+              )}
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
                 <button
-                  onClick={openGoogleDrive}
+                  onClick={openCloudDrive}
                   className="w-full sm:w-auto px-5 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-2 min-h-[44px]"
                 >
-                  <span>Open in Google Drive</span>
+                  <span>Open in {providerName}</span>
                   <ExternalLink className="w-4 h-4" />
                 </button>
                 <button
                   onClick={handleConfirmFolderSelection}
                   className="w-full sm:w-auto px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors min-h-[44px]"
                 >
-                  Connect Anyway
+                  {activeProvider === 'microsoft' ? 'Connect Folder' : 'Connect Anyway'}
                 </button>
               </div>
             </div>
