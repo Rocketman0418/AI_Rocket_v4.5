@@ -537,21 +537,11 @@ export function useLaunchPreparation() {
 
       if (error) throw error;
 
-      // Award daily active points
-      await awardPoints(10, 'ongoing_daily_active', 'Daily Active', 'ongoing');
-
-      // Check for streak achievements
-      if (newStreak === 7) {
-        await completeAchievement('ongoing_streak_7_days', 'guidance');
-      } else if (newStreak === 30) {
-        await completeAchievement('ongoing_streak_30_days', 'guidance');
-      }
-
       await fetchLaunchStatus();
     } catch (err) {
       console.error('Error marking user active:', err);
     }
-  }, [user, launchStatus, awardPoints, completeAchievement, fetchLaunchStatus]);
+  }, [user, launchStatus, fetchLaunchStatus]);
 
   // Initial data load
   useEffect(() => {
