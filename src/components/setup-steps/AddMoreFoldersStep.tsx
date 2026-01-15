@@ -135,7 +135,9 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
         return;
       }
 
+      let driveIdToUse: string | null = null;
       if (activeProvider === 'microsoft' && connection.microsoft_drive_id) {
+        driveIdToUse = connection.microsoft_drive_id;
         setMicrosoftDriveId(connection.microsoft_drive_id);
       }
 
@@ -161,7 +163,7 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
       setExistingFolders(existing);
       setAvailableSlots(available);
 
-      await loadDriveFolders();
+      await loadDriveFolders(driveIdToUse);
     } catch (err) {
       console.error('Error loading folders:', err);
       setError('Failed to load folder information');
@@ -170,7 +172,7 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
     }
   };
 
-  const loadDriveFolders = async () => {
+  const loadDriveFolders = async (driveIdParam?: string | null) => {
     try {
       setLoadingDriveFolders(true);
       setError('');
@@ -183,7 +185,7 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
 
       let endpoint = '';
       if (activeProvider === 'microsoft') {
-        const driveId = microsoftDriveId || '';
+        const driveId = driveIdParam || microsoftDriveId || '';
         endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-microsoft-folders?driveId=${encodeURIComponent(driveId)}`;
       } else {
         endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-google-drive-folders`;
