@@ -6,7 +6,7 @@ import { useFuelLevel, FUEL_LEVEL_THRESHOLDS } from '../../hooks/useFuelLevel';
 import { useDataSyncProgress } from '../../hooks/useDataSyncProgress';
 import { formatPoints } from '../../lib/launch-preparation-utils';
 import { getGoogleDriveConnection, isTokenExpired, initiateGoogleDriveOAuth } from '../../lib/google-drive-oauth';
-import { getActiveConnection } from '../../lib/unified-drive-utils';
+import { getActiveConnection, hasAnyRootFolder } from '../../lib/unified-drive-utils';
 import { useAuth } from '../../contexts/AuthContext';
 import { ConnectDriveStep } from '../setup-steps/ConnectDriveStep';
 import { ChooseFolderStep } from '../setup-steps/ChooseFolderStep';
@@ -254,19 +254,41 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
         if (shouldReopenFuel === 'true' || selectMicrosoftDrive === 'true') {
           sessionStorage.removeItem('reopen_fuel_stage');
 
+          let teamId = user?.user_metadata?.team_id;
+          if (!teamId) {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('team_id')
+              .eq('id', user.id)
+              .maybeSingle();
+            teamId = userData?.team_id;
+          }
+
+          const hasRootFolder = teamId ? await hasAnyRootFolder(teamId) : false;
+
           if (msOAuthComplete === 'true' || selectMicrosoftDrive === 'true') {
             sessionStorage.removeItem('microsoft_oauth_complete');
-            console.log('🚀 [FuelStage] Reopening modal after Microsoft OAuth return');
+            console.log('🚀 [FuelStage] Reopening modal after Microsoft OAuth return, hasRootFolder:', hasRootFolder);
             await clearFlowState();
             setCloudProvider('microsoft');
+            setAddFoldersProvider('microsoft');
             setIsNewConnection(true);
-            setDriveFlowStep('choose-folder');
+            if (hasRootFolder) {
+              setDriveFlowStep('add-more-folders');
+            } else {
+              setDriveFlowStep('choose-folder');
+            }
           } else {
-            console.log('🚀 [FuelStage] Reopening modal after Google OAuth return');
+            console.log('🚀 [FuelStage] Reopening modal after Google OAuth return, hasRootFolder:', hasRootFolder);
             await clearFlowState();
             setCloudProvider('google');
+            setAddFoldersProvider('google');
             setIsNewConnection(true);
-            setDriveFlowStep('choose-folder');
+            if (hasRootFolder) {
+              setDriveFlowStep('add-more-folders');
+            } else {
+              setDriveFlowStep('choose-folder');
+            }
           }
 
           setShowDriveFlow(true);
@@ -888,10 +910,28 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
                   onComplete={async (provider?: 'google' | 'microsoft') => {
                     const selectedProvider = provider || 'google';
                     setIsNewConnection(true);
-                    setDriveFlowStep('choose-folder');
                     setHasCloudDrive(true);
                     setCloudProvider(selectedProvider);
-                    await persistFlowState('choose-folder', null, selectedProvider);
+                    setAddFoldersProvider(selectedProvider);
+
+                    let teamId = user?.user_metadata?.team_id;
+                    if (!teamId && user) {
+                      const { data: userData } = await supabase
+                        .from('users')
+                        .select('team_id')
+                        .eq('id', user.id)
+                        .maybeSingle();
+                      teamId = userData?.team_id;
+                    }
+                    const hasRootFolder = teamId ? await hasAnyRootFolder(teamId) : false;
+
+                    if (hasRootFolder) {
+                      setDriveFlowStep('add-more-folders');
+                      await persistFlowState('add-more-folders', null, selectedProvider);
+                    } else {
+                      setDriveFlowStep('choose-folder');
+                      await persistFlowState('choose-folder', null, selectedProvider);
+                    }
                   }}
                   progress={null}
                   fromLaunchPrep={true}

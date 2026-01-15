@@ -170,6 +170,11 @@ export const getProviderDisplayInfo = (provider: DriveProvider): {
   }
 };
 
+export const hasAnyRootFolder = async (teamId: string): Promise<boolean> => {
+  const connections = await getAllActiveConnections(teamId);
+  return connections.some(conn => !!conn.root_folder_id);
+};
+
 export const isTokenExpired = (expiresAt: string): boolean => {
   const expirationTime = new Date(expiresAt).getTime();
   const now = Date.now();

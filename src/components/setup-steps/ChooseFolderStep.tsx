@@ -69,8 +69,36 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
   const ProviderIcon = activeProvider === 'microsoft' ? Cloud : HardDrive;
 
   useEffect(() => {
-    checkExistingSetup();
-  }, [propProvider]);
+    const initNewConnection = async () => {
+      if (isNewConnection) {
+        setHasExistingFolders(false);
+        if (propProvider) {
+          setActiveProvider(propProvider);
+          if (propProvider === 'microsoft') {
+            let teamId = user?.user_metadata?.team_id;
+            if (!teamId && user) {
+              const { data: userData } = await supabase
+                .from('users')
+                .select('team_id')
+                .eq('id', user.id)
+                .maybeSingle();
+              teamId = userData?.team_id;
+            }
+            if (teamId) {
+              const msConnection = await getConnectionByProvider(teamId, 'microsoft');
+              if (msConnection?.microsoft_drive_id) {
+                setMicrosoftDriveId(msConnection.microsoft_drive_id);
+              }
+            }
+          }
+        }
+        setLoading(false);
+        return;
+      }
+      checkExistingSetup();
+    };
+    initNewConnection();
+  }, [propProvider, isNewConnection, user]);
 
   const checkExistingSetup = async () => {
     setLoading(true);
