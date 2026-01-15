@@ -16,7 +16,6 @@ import { AddMoreFoldersStep } from '../setup-steps/AddMoreFoldersStep';
 import { FolderSetupGuide } from '../setup-steps/FolderSetupGuide';
 import { ConnectedFoldersStatus } from '../ConnectedFoldersStatus';
 import { StageProgressBar } from './StageProgressBar';
-import { GoogleDriveTroubleshootGuide } from '../GoogleDriveTroubleshootGuide';
 import { SupportMenu } from '../SupportMenu';
 import { DelegateSetupBanner } from './DelegateSetupBanner';
 import { DocumentsListModal } from './DocumentsListModal';
@@ -751,34 +750,6 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
           }}
         />
 
-        {/* Connect Cloud Drive - Only show if not connected */}
-        {!hasCloudDrive && (
-          <>
-            <button
-              onClick={async () => {
-                setDriveFlowStep('connect');
-                setShowDriveFlow(true);
-              }}
-              disabled={checkingDrive}
-              className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-            >
-              {checkingDrive ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin" />
-                  <span>Checking...</span>
-                </>
-              ) : (
-                <>
-                  <Folder className="w-4 h-4" />
-                  <span>Connect Cloud Drive</span>
-                </>
-              )}
-            </button>
-            <div className="mt-3">
-              <GoogleDriveTroubleshootGuide compact />
-            </div>
-          </>
-        )}
 
         {/* Launch Boosters Stage - Show for level 1+ */}
         {currentLevel >= 1 && (
@@ -791,7 +762,7 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
           </button>
         )}
 
-        {currentLevel < 1 && hasCloudDrive && (
+        {currentLevel < 1 && (
           <p className="text-center text-gray-400 text-[10px] mt-2">
             Reach Level 1 to unlock Boosters Stage
           </p>
@@ -815,7 +786,7 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
             <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white">
                 {driveFlowStep === 'status' && 'AI Data Sync'}
-                {driveFlowStep === 'connect' && 'Connect Google Drive'}
+                {driveFlowStep === 'connect' && 'Connect Your Data'}
                 {driveFlowStep === 'choose-folder' && 'Choose Your Folder'}
                 {driveFlowStep === 'add-more-folders' && 'Connect More Folders'}
                 {driveFlowStep === 'place-files' && 'Place Your Files'}
