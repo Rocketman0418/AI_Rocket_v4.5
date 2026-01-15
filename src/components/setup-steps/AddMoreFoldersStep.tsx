@@ -50,11 +50,36 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
   const [selectedFolders, setSelectedFolders] = useState<SelectedFolder[]>([]);
   const [existingFolders, setExistingFolders] = useState<{ id: string; name: string }[]>([]);
   const [availableSlots, setAvailableSlots] = useState<number[]>([]);
-  const [activeProvider, setActiveProvider] = useState<DriveProvider>(propProvider || 'google');
+  const [activeProvider, setActiveProvider] = useState<DriveProvider>(propProvider === 'microsoft' ? 'google' : (propProvider || 'google'));
   const [microsoftDriveId, setMicrosoftDriveId] = useState<string | null>(null);
 
   const providerName = activeProvider === 'microsoft' ? 'OneDrive' : 'Google Drive';
   const ProviderIcon = activeProvider === 'microsoft' ? Cloud : HardDrive;
+
+  if (propProvider === 'microsoft') {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyan-600/20 mb-4">
+            <Cloud className="w-8 h-8 text-cyan-400/60" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-400 mb-3">Microsoft OneDrive / SharePoint</h2>
+          <div className="inline-block mb-4">
+            <span className="text-sm bg-cyan-600/30 text-cyan-300 px-3 py-1 rounded-full font-medium">Coming Soon</span>
+          </div>
+          <p className="text-gray-400">
+            Microsoft OneDrive and SharePoint integration is coming soon.
+          </p>
+        </div>
+        <button
+          onClick={onBack}
+          className="w-full px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors min-h-[44px]"
+        >
+          Back
+        </button>
+      </div>
+    );
+  }
 
   const isSupportedFileType = (mimeType: string): boolean => {
     const supportedTypes = [

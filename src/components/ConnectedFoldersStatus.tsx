@@ -335,6 +335,25 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
     const isExpired = data?.isExpired ?? false;
     const folders = data?.folders ?? [];
 
+    if (!isGoogle) {
+      return (
+        <div className="border border-gray-700/50 bg-gray-800/30 rounded-lg p-4 opacity-60">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-cyan-600/20 flex items-center justify-center">
+                <Cloud className="w-5 h-5 text-cyan-400/60" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-400">{providerName}</h3>
+                <p className="text-xs text-gray-500">Not connected</p>
+              </div>
+            </div>
+            <span className="text-xs bg-cyan-600/30 text-cyan-300 px-2 py-1 rounded-full font-medium">Coming Soon</span>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className={`border rounded-lg p-4 ${isConnected ? `border-${colorClass}-600/50 bg-${colorClass}-900/10` : 'border-gray-700 bg-gray-800/30'}`}>
         <div className="flex items-center justify-between mb-3">
@@ -368,8 +387,8 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
 
           {!isConnected && (
             <button
-              onClick={() => isGoogle ? initiateGoogleDriveOAuth(false, true) : initiateMicrosoftOAuth(false, true)}
-              className={`px-3 py-2 ${isGoogle ? 'bg-blue-600 hover:bg-blue-700' : 'bg-cyan-600 hover:bg-cyan-700'} text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2`}
+              onClick={() => initiateGoogleDriveOAuth(false, true)}
+              className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Connect

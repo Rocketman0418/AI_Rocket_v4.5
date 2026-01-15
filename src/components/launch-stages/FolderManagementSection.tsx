@@ -137,6 +137,25 @@ export const FolderManagementSection: React.FC<FolderManagementSectionProps> = (
     const Icon = isGoogle ? HardDrive : Cloud;
     const colorClass = isGoogle ? 'blue' : 'cyan';
 
+    if (!isGoogle) {
+      return (
+        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-3 opacity-60">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 bg-cyan-600/20 rounded-lg flex items-center justify-center">
+                <Cloud className="w-4 h-4 text-cyan-400/60" />
+              </div>
+              <div>
+                <h4 className="text-xs font-medium text-gray-400">{providerName}</h4>
+                <p className="text-[10px] text-gray-500">Not connected</p>
+              </div>
+            </div>
+            <span className="text-[10px] bg-cyan-600/30 text-cyan-300 px-2 py-0.5 rounded-full font-medium">Coming Soon</span>
+          </div>
+        </div>
+      );
+    }
+
     if (!data) {
       return (
         <div className={`bg-gray-800/30 border border-gray-700 rounded-lg p-3`}>

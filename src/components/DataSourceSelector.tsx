@@ -57,38 +57,24 @@ export const DataSourceSelector: React.FC<DataSourceSelectorProps> = ({
           </div>
         </button>
 
-        <button
-          onClick={() => onSelect('microsoft')}
-          disabled={disabled}
-          className={`relative bg-gradient-to-br from-cyan-900/30 to-cyan-800/20 hover:from-cyan-800/40 hover:to-cyan-700/30 border-2 ${microsoftConnected ? 'border-green-600' : 'border-cyan-600'} hover:border-cyan-500 rounded-xl p-4 transition-all group min-h-[100px] flex items-center gap-4 disabled:opacity-50 disabled:cursor-not-allowed`}
+        <div
+          className="relative bg-gradient-to-br from-cyan-900/20 to-cyan-800/10 border-2 border-cyan-800/50 rounded-xl p-4 min-h-[100px] flex items-center gap-4 opacity-60 cursor-not-allowed"
         >
-          <div className={`w-14 h-14 rounded-full ${microsoftConnected ? 'bg-green-600/20' : 'bg-cyan-600/20'} flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0`}>
-            {microsoftConnected ? (
-              <CheckCircle className="w-7 h-7 text-green-400" />
-            ) : (
-              <Cloud className="w-7 h-7 text-cyan-400" />
-            )}
+          <div className="absolute top-2 right-2">
+            <span className="text-xs bg-cyan-600/30 text-cyan-300 px-2 py-0.5 rounded-full font-medium">Coming Soon</span>
+          </div>
+          <div className="w-14 h-14 rounded-full bg-cyan-600/20 flex items-center justify-center flex-shrink-0">
+            <Cloud className="w-7 h-7 text-cyan-400/60" />
           </div>
           <div className="flex-1 text-left">
-            <h4 className="text-base font-semibold text-white mb-0.5 flex items-center gap-2">
+            <h4 className="text-base font-semibold text-gray-400 mb-0.5 flex items-center gap-2">
               Microsoft OneDrive / SharePoint
-              {microsoftConnected && (
-                <span className="text-xs bg-green-600/30 text-green-300 px-2 py-0.5 rounded-full">Connected</span>
-              )}
             </h4>
-            <p className="text-xs text-gray-400">
-              {microsoftConnected
-                ? 'Manage folders or add more connections'
-                : 'Connect OneDrive or SharePoint to sync documents'
-              }
+            <p className="text-xs text-gray-500">
+              Connect OneDrive or SharePoint to sync documents
             </p>
           </div>
-          <div className="flex-shrink-0">
-            <svg className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </button>
+        </div>
 
         <button
           onClick={() => onSelect('local')}

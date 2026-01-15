@@ -64,7 +64,6 @@ export const ConnectDriveStep: React.FC<ConnectDriveStepProps> = ({
         setViewMode('google-connect');
         break;
       case 'microsoft':
-        setViewMode('microsoft-connect');
         break;
       case 'local':
         setViewMode('local-upload');
