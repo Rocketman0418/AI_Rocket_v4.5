@@ -387,25 +387,42 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = () => {
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const dashboardRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const hasVisualization = !!currentSnapshot?.visualization_html;
 
   const handleExportPDF = async () => {
-    if (!dashboardRef.current || isExporting) return;
+    if (isExporting) return;
 
     setIsExporting(true);
     try {
-      const canvas = await html2canvas(dashboardRef.current, {
-        scale: 2,
-        backgroundColor: '#111827',
+      let targetElement: HTMLElement | null = null;
+
+      if (hasVisualization && iframeRef.current) {
+        const iframeDoc = iframeRef.current.contentDocument || iframeRef.current.contentWindow?.document;
+        if (iframeDoc?.body) {
+          targetElement = iframeDoc.body;
+        }
+      } else if (dashboardRef.current) {
+        targetElement = dashboardRef.current;
+      }
+
+      if (!targetElement) {
+        console.error('No target element found for PDF export');
+        setIsExporting(false);
+        return;
+      }
+
+      const canvas = await html2canvas(targetElement, {
+        scale: 3,
+        backgroundColor: '#0f172a',
         logging: false,
         useCORS: true,
-        width: dashboardRef.current.scrollWidth,
-        height: dashboardRef.current.scrollHeight,
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.querySelector('[data-dashboard-export]') as HTMLElement;
-          if (clonedElement) {
-            clonedElement.style.overflow = 'visible';
-          }
-        }
+        allowTaint: true,
+        width: targetElement.scrollWidth,
+        height: targetElement.scrollHeight,
+        windowWidth: 1440,
+        windowHeight: 900
       });
 
       const pdf = new jsPDF({
@@ -414,11 +431,11 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = () => {
         format: 'a4'
       });
 
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/png', 1.0);
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
 
-      const margin = 5;
+      const margin = 8;
       const availableWidth = pdfWidth - (margin * 2);
       const availableHeight = pdfHeight - (margin * 2);
 
@@ -435,10 +452,10 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = () => {
       const xOffset = (pdfWidth - finalWidth) / 2;
       const yOffset = (pdfHeight - finalHeight) / 2;
 
-      pdf.setFillColor(17, 24, 39);
+      pdf.setFillColor(15, 23, 42);
       pdf.rect(0, 0, pdfWidth, pdfHeight, 'F');
 
-      pdf.addImage(imgData, 'PNG', xOffset, yOffset, finalWidth, finalHeight);
+      pdf.addImage(imgData, 'PNG', xOffset, yOffset, finalWidth, finalHeight, undefined, 'FAST');
 
       const safeTeamName = (teamName || 'Team').replace(/[^a-zA-Z0-9]/g, '-');
       const date = new Date().toISOString().split('T')[0];
@@ -584,34 +601,36 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = () => {
         )}
 
         {!isRegenerating && currentSnapshot && (
-          <div
-            ref={dashboardRef}
-            className="flex-1 mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 bg-gray-900 rounded-xl"
-            style={{ minHeight: '600px', maxWidth: '1400px', margin: '16px auto 0' }}
-          >
-            <div className="lg:col-span-1 flex flex-col min-h-[580px]">
-              <AlignmentMetricSection data={currentSnapshot.alignment_metrics} />
-            </div>
-
-            <div className="lg:col-span-1 flex flex-col min-h-[580px]">
-              <GoalsProgressSection data={currentSnapshot.goals_progress} />
-            </div>
-
-            <div className="lg:col-span-1 flex flex-col min-h-[580px]">
-              <HealthOverviewSection data={currentSnapshot.health_overview} />
-            </div>
+          <div className="flex-1 mt-4 rounded-xl overflow-hidden bg-gray-900" style={{ minHeight: '600px' }}>
+            {hasVisualization ? (
+              <iframe
+                ref={iframeRef}
+                srcDoc={currentSnapshot.visualization_html}
+                title="Team Dashboard Visualization"
+                className="w-full h-full border-0"
+                style={{ minHeight: '700px', aspectRatio: '16/9' }}
+                sandbox="allow-scripts allow-same-origin"
+              />
+            ) : (
+              <div
+                ref={dashboardRef}
+                className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4"
+                style={{ maxWidth: '1400px', margin: '0 auto' }}
+              >
+                <div className="lg:col-span-1 flex flex-col min-h-[580px]">
+                  <AlignmentMetricSection data={currentSnapshot.alignment_metrics} />
+                </div>
+                <div className="lg:col-span-1 flex flex-col min-h-[580px]">
+                  <GoalsProgressSection data={currentSnapshot.goals_progress} />
+                </div>
+                <div className="lg:col-span-1 flex flex-col min-h-[580px]">
+                  <HealthOverviewSection data={currentSnapshot.health_overview} />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {currentSnapshot && currentSnapshot.source_data_summary && (
-          <div className="text-center text-xs text-gray-500 py-3 mt-auto border-t border-gray-800">
-            Analysis based on{' '}
-            {currentSnapshot.source_data_summary.documents_analyzed ||
-              currentSnapshot.source_data_summary.category_summary?.reduce((sum, c) => sum + c.document_count, 0) || 0}{' '}
-            documents across{' '}
-            {currentSnapshot.source_data_summary.category_summary?.length || 0} categories
-          </div>
-        )}
       </div>
 
       <CustomizeModal

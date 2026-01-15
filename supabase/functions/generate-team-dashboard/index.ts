@@ -7,12 +7,28 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+interface MissionValuesContext {
+  vto_documents: Array<{ file_name: string; content: string; priority: number; source: string }>;
+  vision_documents: Array<{ file_name: string; content: string; priority: number; source: string }>;
+  supporting_documents: Array<{ file_name: string; content: string; priority: number; source: string }>;
+  total_found: number;
+}
+
+interface GoalsContext {
+  goal_documents: Array<{ file_name: string; content: string; date: string; priority: number; source: string }>;
+  recent_meetings: Array<{ file_name: string; content: string; date: string; priority: number; source: string }>;
+  quarterly_documents: Array<{ file_name: string; content: string; date: string; priority: number; source: string }>;
+  total_found: number;
+}
+
 interface TeamDashboardData {
   team_info: {
     team_id: string;
     team_name: string;
     created_at: string;
   };
+  mission_values_context: MissionValuesContext;
+  goals_context: GoalsContext;
   strategy_content: Array<{ file_name: string; content: string; date: string }>;
   meeting_content: Array<{ file_name: string; content: string; date: string }>;
   financial_content: Array<{ file_name: string; content: string; date: string }>;
@@ -88,261 +104,413 @@ interface DashboardAnalysis {
   };
 }
 
-async function analyzeTeamData(data: TeamDashboardData, apiKey: string, customInstructions?: string): Promise<DashboardAnalysis> {
-  const today = new Date();
-  const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+async function callGemini(prompt: string, apiKey: string, maxTokens: number = 4096): Promise<string> {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: maxTokens
+        }
+      })
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Gemini API error:', errorText);
+    throw new Error(`Gemini API error: ${response.status}`);
+  }
+
+  const result = await response.json();
+  return result.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+async function extractMissionAndValues(
+  data: TeamDashboardData,
+  apiKey: string
+): Promise<{ mission: string | null; values: string[]; purpose: string | null; niche: string | null }> {
+  console.log('Step 1/4: Extracting mission and values from specialized context...');
+
+  const context = data.mission_values_context;
+
+  const allDocs = [
+    ...context.vto_documents,
+    ...context.vision_documents,
+    ...context.supporting_documents
+  ].sort((a, b) => a.priority - b.priority);
+
+  console.log(`Found ${allDocs.length} documents for mission/values extraction`);
+
+  if (allDocs.length === 0) {
+    console.log('No VTO or vision documents found');
+    return { mission: null, values: [], purpose: null, niche: null };
+  }
+
+  const docsContent = allDocs
+    .map(d => `=== ${d.file_name} (${d.source}) ===\n${d.content}`)
+    .join('\n\n---\n\n');
+
+  const prompt = `You are extracting the mission statement and core values from ${data.team_info.team_name}'s business documents.
+
+IMPORTANT: These documents have been pre-filtered to contain VTO (Vision/Traction Organizer) and strategic vision content. The mission and core values ARE in these documents - find them.
+
+DOCUMENTS:
+${docsContent}
+
+EXTRACTION INSTRUCTIONS:
+1. Look for sections labeled "CORE VALUES", "VALUES", or numbered values like "1. PLAY 2. ADVENTURE..."
+2. Extract each value as a single word (e.g., "Play", "Adventure", "Impact", "GRIT", "Growth")
+3. Look for "CORE PURPOSE", "MISSION", "PURPOSE/CAUSE/PASSION" sections
+4. Extract the mission/purpose statement verbatim
+5. Look for "NICHE" or target market description
+
+EXPECTED FORMAT (EOS VTO documents typically have):
+- CORE VALUES section with numbered values
+- CORE PURPOSE or CORE FOCUS section
+- NICHE section describing target market
+
+Return JSON only:
+{
+  "mission_statement": "<exact mission or purpose statement>",
+  "core_values": ["<value1>", "<value2>", "<value3>", ...],
+  "purpose": "<purpose/cause/passion if different from mission>",
+  "niche": "<niche/target market description>",
+  "source_document": "<document name where found>"
+}`;
+
+  try {
+    const response = await callGemini(prompt, apiKey, 2048);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      console.log('Extracted mission/values:', {
+        mission: parsed.mission_statement?.substring(0, 50),
+        values: parsed.core_values,
+        source: parsed.source_document
+      });
+      return {
+        mission: parsed.mission_statement || parsed.purpose || null,
+        values: parsed.core_values || [],
+        purpose: parsed.purpose || null,
+        niche: parsed.niche || null
+      };
+    }
+  } catch (error) {
+    console.error('Error extracting mission/values:', error);
+  }
+
+  return { mission: null, values: [], purpose: null, niche: null };
+}
+
+async function extractGoalsAndTargets(
+  data: TeamDashboardData,
+  apiKey: string
+): Promise<GoalItem[]> {
+  console.log('Step 2/4: Extracting goals from specialized context...');
+
+  const context = data.goals_context;
+
+  const allDocs = [
+    ...context.goal_documents,
+    ...context.recent_meetings,
+    ...context.quarterly_documents
+  ].sort((a, b) => a.priority - b.priority);
+
+  console.log(`Found ${allDocs.length} documents for goals extraction`);
+
+  if (allDocs.length === 0) {
+    console.log('No goal-related documents found');
+    return [];
+  }
+
+  const docsContent = allDocs
+    .map(d => `=== ${d.file_name} (${d.source}, ${d.date || 'no date'}) ===\n${d.content}`)
+    .join('\n\n---\n\n');
+
+  const prompt = `Extract all goals, rocks, OKRs, targets, and KPIs from ${data.team_info.team_name}'s business documents.
+
+IMPORTANT: These documents have been pre-filtered to contain goal-related content (quarterly rocks, L10 meetings, OKRs). Extract ALL measurable objectives you find.
+
+DOCUMENTS:
+${docsContent}
+
+WHAT TO EXTRACT:
+- Company Rocks (EOS quarterly priorities)
+- OKRs (Objectives and Key Results)
+- Revenue/growth targets (e.g., "$100K MRR", "500 users")
+- Project milestones with deadlines
+- Product launches (e.g., "Moonshot Challenge")
+- Certification goals (e.g., "SOC2 Type II")
+- KPIs being tracked
+
+For each goal, determine:
+- name: Clear description
+- type: goal, okr, target, milestone, project, or kpi
+- status: on_track, at_risk, blocked, not_started, or completed (infer from meeting notes)
+- progress_percentage: 0-100 if mentioned
+- notes: Recent context from meeting discussions
+- deadline: Date if mentioned
+- owner: Person responsible if mentioned
+- source_reference: Document name
+
+Return 5-8 of the most important active items. JSON only:
+{
+  "goals": [
+    {
+      "name": "<goal description>",
+      "type": "<goal|okr|target|milestone|project|kpi>",
+      "status": "<on_track|at_risk|blocked|not_started|completed>",
+      "progress_percentage": <0-100 or null>,
+      "notes": "<context from meetings>",
+      "source_reference": "<document>",
+      "deadline": "<date or null>",
+      "owner": "<person or null>"
+    }
+  ]
+}`;
+
+  try {
+    const response = await callGemini(prompt, apiKey, 4096);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      console.log(`Extracted ${parsed.goals?.length || 0} goals`);
+      return parsed.goals || [];
+    }
+  } catch (error) {
+    console.error('Error extracting goals:', error);
+  }
+
+  return [];
+}
+
+async function analyzeTeamHealth(data: TeamDashboardData, goals: GoalItem[], apiKey: string): Promise<HealthOverview> {
+  console.log('Step 3/4: Analyzing team health...');
 
   const totalDocuments = data.category_summary.reduce((sum, c) => sum + c.document_count, 0);
   const recentDocuments = data.category_summary.reduce((sum, c) => sum + (c.recent_count || 0), 0);
-  const hasStrategyData = data.strategy_content.length > 0;
-  const hasMeetingData = data.meeting_content.length > 0;
-  const hasFinancialData = data.financial_content.length > 0;
-  const hasProjectData = data.project_content.length > 0;
+  const hasMeetings = data.meeting_content.length > 0;
+  const hasFinancials = data.financial_content.length > 0;
+  const discussionCount = data.team_discussions.length;
+  const goalsOnTrack = goals.filter(g => g.status === 'on_track' || g.status === 'completed').length;
+  const goalsAtRisk = goals.filter(g => g.status === 'at_risk' || g.status === 'blocked').length;
 
-  const prompt = `You are a business analyst creating a daily "Team Dashboard" for ${data.team_info.team_name}. Today is ${dateStr}.
-
-Your job is to extract and analyze THREE key areas from the team's data:
-1. GOALS, TARGETS, AND PROJECTS PROGRESS
-2. MISSION AND CORE VALUES ALIGNMENT
-3. TEAM HEALTH OVERVIEW
-
+  const contextSummary = `
 TEAM: ${data.team_info.team_name}
-TEAM SIZE: ${data.member_info.total_members} members
-TOTAL DOCUMENTS: ${totalDocuments} (${recentDocuments} updated in last 30 days)
+MEMBERS: ${data.member_info.total_members}
 
-=== STRATEGY DOCUMENTS (Primary source for Mission, Vision, Goals, OKRs) ===
-${data.strategy_content.map(s => `[${s.file_name}] Date: ${s.date || 'Unknown'}\n${s.content}`).join('\n\n') || 'No strategy documents'}
+DATA SUMMARY:
+- Total documents: ${totalDocuments}
+- Recent documents (30 days): ${recentDocuments}
+- Meeting notes: ${data.meeting_content.length}
+- Financial documents: ${data.financial_content.length}
+- Team discussions: ${discussionCount}
 
-=== MEETING NOTES (Key source for goal discussions, progress updates, blockers) ===
-${data.meeting_content.map(m => `[${m.file_name}] Date: ${m.date || 'Unknown'}\n${m.content}`).join('\n\n') || 'No meeting data'}
+GOALS STATUS:
+- Total goals: ${goals.length}
+- On track/completed: ${goalsOnTrack}
+- At risk/blocked: ${goalsAtRisk}
 
-=== FINANCIAL DOCUMENTS (Budget targets, revenue goals) ===
-${data.financial_content.map(f => `[${f.file_name}] Date: ${f.date || 'Unknown'}\n${f.content}`).join('\n\n') || 'No financial data'}
+RECENT MEETING HIGHLIGHTS:
+${data.meeting_content.slice(0, 3).map(m => `[${m.file_name}] ${m.content.substring(0, 500)}`).join('\n\n')}
 
-=== PROJECT DOCUMENTS (Milestones, deliverables) ===
-${data.project_content.map(p => `[${p.file_name}] Date: ${p.date || 'Unknown'}\n${p.content}`).join('\n\n') || 'No project data'}
+RECENT TEAM DISCUSSIONS:
+${data.team_discussions.slice(0, 10).map(t => `${t.user_name}: ${t.message.substring(0, 200)}`).join('\n')}
 
-=== OPERATIONAL DOCUMENTS ===
-${data.operational_content.map(o => `[${o.file_name}] Date: ${o.date || 'Unknown'}\n${o.content}`).join('\n\n') || 'No operational data'}
+PREVIOUS SNAPSHOT: ${data.previous_snapshot.generated_at ? `Generated ${data.previous_snapshot.generated_at}` : 'First snapshot'}
+`;
 
-=== TEAM DISCUSSIONS (from AI chat) ===
-${data.team_discussions.map(t => `${t.user_name}: ${t.message}`).join('\n') || 'No discussions'}
+  const prompt = `Analyze team health for ${data.team_info.team_name} and provide scores for 6 metrics.
 
-=== RECENT AI REPORTS ===
-${data.recent_reports.map(r => `Q: ${r.prompt}\nA: ${r.response}`).join('\n\n') || 'No reports'}
+${contextSummary}
 
-=== PREVIOUS DASHBOARD (for trend comparison) ===
-${data.previous_snapshot.generated_at ? `Previous dashboard: ${data.previous_snapshot.generated_at}` : 'First dashboard snapshot'}
+Score these 6 factors (0-100):
+1. Data Richness - How comprehensive is connected data?
+2. Goal Progress - How well is team progressing on goals?
+3. Team Engagement - How active is collaboration?
+4. Meeting Cadence - Are meetings regular and productive?
+5. Financial Health - Is financial data present and positive?
+6. Risk Indicators - Any risks or blockers? (higher = fewer risks)
 
-${customInstructions ? `=== CUSTOM INSTRUCTIONS FROM ADMIN ===
-The team admin has provided these specific instructions for generating this dashboard. Follow these directions while maintaining the required JSON structure:
-${customInstructions}
-` : ''}
-Provide JSON response with this EXACT structure:
+JSON response only:
 {
-  "goals_progress": {
-    "has_data": <true if you found ANY goals, targets, OKRs, milestones, projects, or KPIs in the data>,
-    "items": [
-      {
-        "name": "<specific goal/target/project name>",
-        "type": "<goal|okr|target|milestone|project|kpi>",
-        "status": "<on_track|at_risk|blocked|not_started|completed>",
-        "progress_percentage": <0-100 or null if unknown>,
-        "notes": "<current status details, blockers, recent progress>",
-        "source_reference": "<file name where this was found>",
-        "deadline": "<deadline if mentioned or null>",
-        "owner": "<responsible person if mentioned or null>"
-      }
-    ],
-    "suggestions": ["<suggestion if has_data is false>"]
-  },
-  "alignment_metrics": {
-    "has_data": <true if you found a mission statement OR core values>,
-    "mission_statement": "<extracted mission statement or null>",
-    "core_values": ["<value 1>", "<value 2>"],
-    "alignment_score": <0-100 score based on how team activities align with mission, or null if no mission found>,
-    "alignment_examples": [
-      {"type": "aligned", "description": "<specific example of mission-aligned activity>"},
-      {"type": "misaligned", "description": "<specific example of misalignment if any>"}
-    ],
-    "recommendations": ["<recommendation for better alignment>"],
-    "suggestions": ["<suggestion if has_data is false>"]
-  },
-  "health_overview": {
-    "overall_score": <0-100 overall health score>,
-    "factors": [
-      {"name": "Data Richness", "score": <0-100>, "explanation": "<brief explanation - keep under 15 words>", "trend": "<up|down|stable>"},
-      {"name": "Goal Progress", "score": <0-100>, "explanation": "<brief explanation - keep under 15 words>", "trend": "<up|down|stable>"},
-      {"name": "Team Engagement", "score": <0-100 based on discussions/activity>, "explanation": "<brief explanation - keep under 15 words>", "trend": "<up|down|stable>"},
-      {"name": "Meeting Cadence", "score": <0-100 based on meeting frequency/quality>, "explanation": "<brief explanation - keep under 15 words>", "trend": "<up|down|stable>"},
-      {"name": "Financial Health", "score": <0-100 or null if no data>, "explanation": "<brief explanation - keep under 15 words>", "trend": "<up|down|stable>"},
-      {"name": "Risk Indicators", "score": <0-100 higher is better/fewer risks>, "explanation": "<brief explanation - keep under 15 words>", "trend": "<up|down|stable>"}
-    ],
-    "trend_vs_previous": "<improving|declining|stable|first_snapshot>",
-    "explanation": "<2-3 sentence summary of overall team health status and key observations>",
-    "recommendations": [
-      "<actionable recommendation 1 based on lowest-scoring factors or identified risks>",
-      "<actionable recommendation 2 for improving team health>",
-      "<actionable recommendation 3 - specific and practical>"
-    ]
-  },
-  "data_sufficiency": {
-    "goals": <true if enough data to analyze goals>,
-    "alignment": <true if mission/values found>,
-    "health": <true - always have some health data if team exists>
-  }
-}
-
-CRITICAL RULES:
-1. EXTRACT SPECIFIC GOALS: Look for any mention of goals, OKRs, targets, milestones, KPIs, quotas, deadlines, or project objectives. Extract them even if progress is unclear.
-2. FIND MISSION/VALUES: Search all documents for mission statements, vision, core values, guiding principles, or company culture definitions.
-3. BE SPECIFIC: Use actual names, numbers, and details from the documents. Don't generalize.
-4. ASSESS PROGRESS FROM MEETINGS: Meeting notes often contain progress updates - use these to determine goal status.
-5. SCORE HEALTH HONESTLY: Base scores on actual data quality and activity, not assumptions.
-6. If data is insufficient for a section, set has_data to false and provide helpful suggestions.
-
-Respond ONLY with valid JSON.`;
+  "overall_score": <0-100>,
+  "factors": [
+    {"name": "Data Richness", "score": <0-100>, "explanation": "<15 words max>", "trend": "<up|down|stable>"},
+    {"name": "Goal Progress", "score": <0-100>, "explanation": "<15 words max>", "trend": "<up|down|stable>"},
+    {"name": "Team Engagement", "score": <0-100>, "explanation": "<15 words max>", "trend": "<up|down|stable>"},
+    {"name": "Meeting Cadence", "score": <0-100>, "explanation": "<15 words max>", "trend": "<up|down|stable>"},
+    {"name": "Financial Health", "score": <0-100>, "explanation": "<15 words max>", "trend": "<up|down|stable>"},
+    {"name": "Risk Indicators", "score": <0-100>, "explanation": "<15 words max>", "trend": "<up|down|stable>"}
+  ],
+  "trend_vs_previous": "<improving|declining|stable|first_snapshot>",
+  "explanation": "<2-3 sentence summary>",
+  "recommendations": ["<rec 1>", "<rec 2>", "<rec 3>"]
+}`;
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 8192
-          }
-        })
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Gemini API error:', errorText);
-      throw new Error(`Gemini API error: ${response.status}`);
+    const response = await callGemini(prompt, apiKey, 2048);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      console.log(`Health analysis complete. Overall score: ${parsed.overall_score}`);
+      return parsed;
     }
-
-    const result = await response.json();
-    const text = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('No JSON found in response');
-    }
-
-    const analysis = JSON.parse(jsonMatch[0]) as DashboardAnalysis;
-    
-    if (!analysis.goals_progress) {
-      analysis.goals_progress = {
-        has_data: false,
-        items: [],
-        suggestions: [
-          'Add strategy documents that outline your quarterly goals or OKRs',
-          'Include meeting notes where you discuss project milestones',
-          'Upload documents mentioning specific targets or deadlines'
-        ]
-      };
-    }
-
-    if (!analysis.alignment_metrics) {
-      analysis.alignment_metrics = {
-        has_data: false,
-        mission_statement: null,
-        core_values: [],
-        alignment_score: null,
-        alignment_examples: [],
-        recommendations: [],
-        suggestions: [
-          'Add a document that contains your company or team mission statement',
-          'Include your Core Values in strategy documents',
-          'Discuss mission alignment in team meetings for Astra to track'
-        ]
-      };
-    }
-
-    if (!analysis.health_overview) {
-      analysis.health_overview = {
-        overall_score: 50,
-        factors: [
-          { name: 'Data Richness', score: totalDocuments > 0 ? 60 : 20, explanation: `${totalDocuments} documents connected`, trend: 'stable' },
-          { name: 'Goal Progress', score: 50, explanation: 'Insufficient goal data', trend: 'stable' },
-          { name: 'Team Engagement', score: data.team_discussions.length > 0 ? 70 : 30, explanation: `${data.team_discussions.length} team discussions`, trend: 'stable' },
-          { name: 'Meeting Cadence', score: hasMeetingData ? 70 : 30, explanation: hasMeetingData ? 'Regular meetings detected' : 'No meeting data', trend: 'stable' },
-          { name: 'Financial Health', score: hasFinancialData ? 60 : 0, explanation: hasFinancialData ? 'Financial data available' : 'No financial data', trend: 'stable' },
-          { name: 'Risk Indicators', score: 70, explanation: 'No significant risks detected', trend: 'stable' }
-        ],
-        trend_vs_previous: data.previous_snapshot.generated_at ? 'stable' : 'first_snapshot',
-        explanation: 'Team health metrics are being established as more data is connected.',
-        recommendations: [
-          'Connect more data sources to improve analysis accuracy',
-          'Add strategy documents with goals and OKRs',
-          'Ensure meeting notes are synced regularly'
-        ]
-      };
-    }
-
-    if (!analysis.data_sufficiency) {
-      analysis.data_sufficiency = {
-        goals: analysis.goals_progress.has_data,
-        alignment: analysis.alignment_metrics.has_data,
-        health: true
-      };
-    }
-
-    return analysis;
   } catch (error) {
-    console.error('Error in team data analysis:', error);
-    
+    console.error('Error analyzing health:', error);
+  }
+
+  return {
+    overall_score: 50,
+    factors: [
+      { name: 'Data Richness', score: totalDocuments > 10 ? 70 : 50, explanation: `${totalDocuments} documents connected`, trend: 'stable' },
+      { name: 'Goal Progress', score: goals.length > 0 ? Math.round((goalsOnTrack / goals.length) * 100) : 50, explanation: `${goalsOnTrack}/${goals.length} goals on track`, trend: 'stable' },
+      { name: 'Team Engagement', score: discussionCount > 10 ? 80 : 60, explanation: `${discussionCount} team discussions`, trend: 'stable' },
+      { name: 'Meeting Cadence', score: hasMeetings ? 70 : 30, explanation: hasMeetings ? 'Regular meetings detected' : 'No meeting data', trend: 'stable' },
+      { name: 'Financial Health', score: hasFinancials ? 60 : 40, explanation: hasFinancials ? 'Financial data available' : 'Limited financial data', trend: 'stable' },
+      { name: 'Risk Indicators', score: goalsAtRisk > 2 ? 50 : 75, explanation: goalsAtRisk > 0 ? `${goalsAtRisk} items at risk` : 'No major risks', trend: 'stable' }
+    ],
+    trend_vs_previous: data.previous_snapshot.generated_at ? 'stable' : 'first_snapshot',
+    explanation: 'Team health metrics based on available data.',
+    recommendations: ['Connect more data sources', 'Add regular meeting notes', 'Document goals in strategy folder']
+  };
+}
+
+async function generateAlignmentAnalysis(
+  data: TeamDashboardData,
+  mission: string | null,
+  values: string[],
+  goals: GoalItem[],
+  apiKey: string
+): Promise<AlignmentMetrics> {
+  console.log('Step 4/4: Generating alignment analysis...');
+
+  if (!mission && values.length === 0) {
     return {
-      goals_progress: {
-        has_data: false,
-        items: [],
-        suggestions: [
-          'Add strategy documents that outline your quarterly goals or OKRs',
-          'Include meeting notes where you discuss project milestones',
-          'Upload documents mentioning specific targets or deadlines'
-        ]
-      },
-      alignment_metrics: {
-        has_data: false,
-        mission_statement: null,
-        core_values: [],
-        alignment_score: null,
-        alignment_examples: [],
-        recommendations: [],
-        suggestions: [
-          'Add a document that contains your company or team mission statement',
-          'Include your Core Values in strategy documents'
-        ]
-      },
-      health_overview: {
-        overall_score: 50,
-        factors: [
-          { name: 'Data Richness', score: totalDocuments > 0 ? 60 : 20, explanation: `${totalDocuments} documents connected`, trend: 'stable' as const },
-          { name: 'Goal Progress', score: 50, explanation: 'Analysis unavailable', trend: 'stable' as const },
-          { name: 'Team Engagement', score: data.team_discussions.length > 0 ? 70 : 30, explanation: `${data.team_discussions.length} discussions`, trend: 'stable' as const },
-          { name: 'Meeting Cadence', score: hasMeetingData ? 70 : 30, explanation: hasMeetingData ? 'Meetings detected' : 'No meeting data', trend: 'stable' as const },
-          { name: 'Financial Health', score: hasFinancialData ? 60 : 0, explanation: hasFinancialData ? 'Data available' : 'No data', trend: 'stable' as const },
-          { name: 'Risk Indicators', score: 70, explanation: 'No risks detected', trend: 'stable' as const }
-        ],
-        trend_vs_previous: 'first_snapshot',
-        explanation: 'Dashboard metrics will improve as more data is connected and analyzed.',
-        recommendations: [
-          'Connect more data sources to improve analysis accuracy',
-          'Add strategy documents with goals and OKRs',
-          'Ensure meeting notes are synced regularly'
-        ]
-      },
-      data_sufficiency: {
-        goals: false,
-        alignment: false,
-        health: true
-      }
+      has_data: false,
+      mission_statement: null,
+      core_values: [],
+      alignment_score: null,
+      alignment_examples: [],
+      recommendations: [],
+      suggestions: [
+        'Add a VTO document with mission and core values',
+        'Include a strategy document defining team purpose',
+        'Create a document with core values and guiding principles'
+      ]
     };
   }
+
+  const recentActivities = [
+    ...data.meeting_content.slice(0, 5).map(m => `Meeting: ${m.file_name}\n${m.content.substring(0, 400)}`),
+    ...data.team_discussions.slice(0, 10).map(t => `Discussion by ${t.user_name}: ${t.message.substring(0, 200)}`),
+    ...goals.slice(0, 5).map(g => `Goal: ${g.name} - Status: ${g.status}`)
+  ].join('\n\n');
+
+  const prompt = `Analyze alignment between ${data.team_info.team_name}'s activities and their mission/values.
+
+MISSION: ${mission || 'Not defined'}
+CORE VALUES: ${values.length > 0 ? values.join(', ') : 'Not defined'}
+
+RECENT ACTIVITIES:
+${recentActivities}
+
+Provide:
+1. Alignment score (0-100) based on how well activities support mission
+2. 2-3 specific alignment examples (activities supporting mission/values)
+3. Any misalignment examples if they exist
+4. 2-3 recommendations for better alignment
+
+JSON only:
+{
+  "alignment_score": <0-100>,
+  "alignment_examples": [
+    {"type": "aligned", "description": "<specific example>"},
+    {"type": "aligned", "description": "<specific example>"}
+  ],
+  "recommendations": ["<rec 1>", "<rec 2>"]
+}`;
+
+  try {
+    const response = await callGemini(prompt, apiKey, 2048);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      console.log(`Alignment analysis complete. Score: ${parsed.alignment_score}`);
+      return {
+        has_data: true,
+        mission_statement: mission,
+        core_values: values,
+        alignment_score: parsed.alignment_score,
+        alignment_examples: parsed.alignment_examples || [],
+        recommendations: parsed.recommendations || [],
+        suggestions: []
+      };
+    }
+  } catch (error) {
+    console.error('Error generating alignment analysis:', error);
+  }
+
+  return {
+    has_data: true,
+    mission_statement: mission,
+    core_values: values,
+    alignment_score: 70,
+    alignment_examples: [],
+    recommendations: ['Review activities against mission', 'Ensure goals align with values'],
+    suggestions: []
+  };
+}
+
+async function analyzeTeamData(
+  data: TeamDashboardData,
+  apiKey: string
+): Promise<DashboardAnalysis> {
+  console.log('Starting 4-step analysis with specialized context data...');
+  console.log('Mission/Values context:', {
+    vto_docs: data.mission_values_context?.vto_documents?.length || 0,
+    vision_docs: data.mission_values_context?.vision_documents?.length || 0,
+    supporting_docs: data.mission_values_context?.supporting_documents?.length || 0
+  });
+  console.log('Goals context:', {
+    goal_docs: data.goals_context?.goal_documents?.length || 0,
+    recent_meetings: data.goals_context?.recent_meetings?.length || 0,
+    quarterly_docs: data.goals_context?.quarterly_documents?.length || 0
+  });
+
+  const { mission, values } = await extractMissionAndValues(data, apiKey);
+
+  const goals = await extractGoalsAndTargets(data, apiKey);
+
+  const healthOverview = await analyzeTeamHealth(data, goals, apiKey);
+
+  const alignmentMetrics = await generateAlignmentAnalysis(data, mission, values, goals, apiKey);
+
+  const goalsProgress: GoalsProgress = {
+    has_data: goals.length > 0,
+    items: goals,
+    suggestions: goals.length < 3 ? [
+      'Add strategy documents with quarterly goals or OKRs',
+      'Include meeting notes discussing project milestones',
+      'Document specific targets with deadlines'
+    ] : []
+  };
+
+  return {
+    goals_progress: goalsProgress,
+    alignment_metrics: alignmentMetrics,
+    health_overview: healthOverview,
+    data_sufficiency: {
+      goals: goals.length > 0,
+      alignment: alignmentMetrics.has_data,
+      health: true
+    }
+  };
 }
 
 Deno.serve(async (req: Request) => {
@@ -371,10 +539,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
+
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
+
     if (userError || !user) {
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
@@ -382,7 +550,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { team_id, generation_type = 'manual', custom_instructions } = await req.json();
+    const { team_id, generation_type = 'manual' } = await req.json();
 
     if (!team_id) {
       return new Response(
@@ -392,19 +560,6 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(`Generating Team Dashboard for team ${team_id}`);
-
-    let effectiveInstructions = custom_instructions;
-    if (!effectiveInstructions) {
-      const { data: settingsData } = await supabase
-        .from('team_dashboard_settings')
-        .select('custom_instructions')
-        .eq('team_id', team_id)
-        .maybeSingle();
-
-      if (settingsData?.custom_instructions) {
-        effectiveInstructions = settingsData.custom_instructions;
-      }
-    }
 
     const { data: dashboardData, error: dataError } = await supabase.rpc('get_team_dashboard_data', {
       p_team_id: team_id
@@ -421,12 +576,8 @@ Deno.serve(async (req: Request) => {
     const teamData = dashboardData as TeamDashboardData;
     console.log(`Got team data for ${teamData.team_info.team_name}`);
 
-    console.log('Analyzing team data with gemini-3-flash-preview...');
-    if (effectiveInstructions) {
-      console.log('Using custom instructions:', effectiveInstructions.substring(0, 100) + '...');
-    }
-    const analysis = await analyzeTeamData(teamData, geminiApiKey, effectiveInstructions);
-    console.log('Analysis complete.');
+    const analysis = await analyzeTeamData(teamData, geminiApiKey);
+    console.log('All 4 analysis steps complete.');
 
     await supabase
       .from('team_dashboard_snapshots')
@@ -445,7 +596,9 @@ Deno.serve(async (req: Request) => {
         source_data_summary: {
           category_summary: teamData.category_summary,
           member_info: teamData.member_info,
-          documents_analyzed: teamData.category_summary.reduce((sum, c) => sum + c.document_count, 0)
+          documents_analyzed: teamData.category_summary.reduce((sum, c) => sum + c.document_count, 0),
+          mission_values_docs_found: teamData.mission_values_context?.total_found || 0,
+          goals_docs_found: teamData.goals_context?.total_found || 0
         },
         generated_by_user_id: generation_type === 'manual' ? user.id : null,
         generation_type,

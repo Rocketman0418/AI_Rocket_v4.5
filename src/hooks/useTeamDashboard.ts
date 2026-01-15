@@ -67,9 +67,12 @@ export interface DashboardSnapshot {
     category_summary?: Array<{ category: string; document_count: number }>;
     member_info?: { total_members: number };
     documents_analyzed?: number;
+    generated_by?: string;
   };
   generation_type: 'scheduled' | 'manual';
   is_current: boolean;
+  visualization_html?: string;
+  generation_version?: 'v1' | 'v2';
 }
 
 export interface DashboardSettings {
@@ -209,7 +212,7 @@ export function useTeamDashboard(): UseTeamDashboardReturn {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-team-dashboard`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-team-dashboard-v2`,
         {
           method: 'POST',
           headers: {
