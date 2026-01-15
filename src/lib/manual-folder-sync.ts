@@ -11,6 +11,7 @@ export interface ManualSyncPayload {
   max_depth?: number;
   exclude_folders?: string[];
   provider?: 'google' | 'microsoft';
+  microsoft_drive_id?: string;
 }
 
 export interface ManualSyncResponse {
@@ -46,6 +47,7 @@ export interface IncrementalSyncPayload {
   exclude_folders?: string[];
   provider?: 'google' | 'microsoft';
   sync_state_token?: string;
+  microsoft_drive_id?: string;
 }
 
 const N8N_UNIFIED_SYNC_URL = 'https://healthrocket.app.n8n.cloud/webhook/astra-unified-manual-sync';
@@ -80,6 +82,11 @@ export async function triggerIncrementalSync(payload: IncrementalSyncPayload): P
     if (payload.sync_state_token) {
       webhookPayload.sync_state_token = payload.sync_state_token;
       console.log(`[triggerIncrementalSync] Using sync_state_token for incremental sync`);
+    }
+
+    if (provider === 'microsoft' && payload.microsoft_drive_id) {
+      webhookPayload.microsoft_drive_id = payload.microsoft_drive_id;
+      console.log(`[triggerIncrementalSync] Including microsoft_drive_id for Microsoft sync`);
     }
 
     const response = await fetch(N8N_UNIFIED_SYNC_URL, {
@@ -186,6 +193,7 @@ interface DriveConnection {
   refresh_token?: string;
   token_expires_at: string;
   sync_state_token?: string;
+  microsoft_drive_id?: string;
   root_folder_id?: string;
   root_folder_name?: string;
   folder_1_id?: string;
@@ -284,7 +292,7 @@ async function getAllDriveConnections(teamId: string, userId: string): Promise<D
   const { data: userConnections } = await supabase
     .from('user_drive_connections')
     .select(`
-      id, provider, access_token, refresh_token, token_expires_at, sync_state_token,
+      id, provider, access_token, refresh_token, token_expires_at, sync_state_token, microsoft_drive_id,
       root_folder_id, root_folder_name,
       folder_1_id, folder_1_name, folder_1_enabled,
       folder_2_id, folder_2_name, folder_2_enabled,
@@ -299,7 +307,7 @@ async function getAllDriveConnections(teamId: string, userId: string): Promise<D
   const { data: teamConnections } = await supabase
     .from('user_drive_connections')
     .select(`
-      id, provider, access_token, refresh_token, token_expires_at, sync_state_token,
+      id, provider, access_token, refresh_token, token_expires_at, sync_state_token, microsoft_drive_id,
       root_folder_id, root_folder_name,
       folder_1_id, folder_1_name, folder_1_enabled,
       folder_2_id, folder_2_name, folder_2_enabled,
@@ -340,6 +348,7 @@ interface FolderToSync {
   slot: string;
   provider: 'google' | 'microsoft';
   sync_state_token?: string;
+  microsoft_drive_id?: string;
 }
 
 export interface SyncAllFoldersOptions {
@@ -381,7 +390,8 @@ export async function incrementalSyncAllFolders(options: SyncAllFoldersOptions):
   for (const connection of connections) {
     const provider = connection.provider as 'google' | 'microsoft';
     const syncStateToken = connection.sync_state_token;
-    console.log(`[incrementalSyncAllFolders] Processing ${provider} connection (has sync_state_token: ${!!syncStateToken})`);
+    const microsoftDriveId = connection.microsoft_drive_id;
+    console.log(`[incrementalSyncAllFolders] Processing ${provider} connection (has sync_state_token: ${!!syncStateToken}, microsoft_drive_id: ${microsoftDriveId || 'N/A'})`);
 
     if (connection.root_folder_id && connection.root_folder_name) {
       foldersToSync.push({
@@ -389,7 +399,8 @@ export async function incrementalSyncAllFolders(options: SyncAllFoldersOptions):
         name: connection.root_folder_name,
         slot: `${provider}_root`,
         provider,
-        sync_state_token: syncStateToken
+        sync_state_token: syncStateToken,
+        microsoft_drive_id: microsoftDriveId
       });
     }
 
@@ -404,7 +415,8 @@ export async function incrementalSyncAllFolders(options: SyncAllFoldersOptions):
           name: folderName,
           slot: `${provider}_folder_${i}`,
           provider,
-          sync_state_token: syncStateToken
+          sync_state_token: syncStateToken,
+          microsoft_drive_id: microsoftDriveId
         });
       }
     }
@@ -455,6 +467,7 @@ export async function incrementalSyncAllFolders(options: SyncAllFoldersOptions):
         access_token: accessToken,
         provider: folder.provider,
         sync_state_token: folder.sync_state_token,
+        microsoft_drive_id: folder.microsoft_drive_id,
       });
 
       results.push({
@@ -508,14 +521,16 @@ export async function syncAllFolders(options: SyncAllFoldersOptions): Promise<Sy
 
   for (const connection of connections) {
     const provider = connection.provider as 'google' | 'microsoft';
-    console.log(`[syncAllFolders] Processing ${provider} connection`);
+    const microsoftDriveId = connection.microsoft_drive_id;
+    console.log(`[syncAllFolders] Processing ${provider} connection (microsoft_drive_id: ${microsoftDriveId || 'N/A'})`);
 
     if (connection.root_folder_id && connection.root_folder_name) {
       foldersToSync.push({
         id: connection.root_folder_id,
         name: connection.root_folder_name,
         slot: `${provider}_root`,
-        provider
+        provider,
+        microsoft_drive_id: microsoftDriveId
       });
     }
 
@@ -529,13 +544,14 @@ export async function syncAllFolders(options: SyncAllFoldersOptions): Promise<Sy
           id: folderId,
           name: folderName,
           slot: `${provider}_folder_${i}`,
-          provider
+          provider,
+          microsoft_drive_id: microsoftDriveId
         });
       }
     }
   }
 
-  console.log('[syncAllFolders] Folders to sync:', foldersToSync);
+  console.log('[syncAllFolders] Folders to sync:', foldersToSync.map(f => ({ name: f.name, provider: f.provider })));
 
   if (foldersToSync.length === 0) {
     console.log('[syncAllFolders] No folders configured to sync');
@@ -578,6 +594,7 @@ export async function syncAllFolders(options: SyncAllFoldersOptions): Promise<Sy
         folder_name: folder.name,
         access_token: accessToken,
         provider: folder.provider,
+        microsoft_drive_id: folder.microsoft_drive_id,
       });
 
       results.push({

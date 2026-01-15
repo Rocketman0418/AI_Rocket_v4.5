@@ -66,6 +66,28 @@ Deno.serve(async (req: Request) => {
     const provider = payload.provider || 'google';
     console.log(`[manual-folder-sync-proxy] Creating sync session for team ${payload.team_id}, provider: ${provider}`);
 
+    if (provider === 'microsoft' && !payload.microsoft_drive_id) {
+      console.log('[manual-folder-sync-proxy] Microsoft sync requires microsoft_drive_id, fetching from connection...');
+      const { data: connection } = await supabase
+        .from('user_drive_connections')
+        .select('microsoft_drive_id')
+        .eq('user_id', payload.user_id)
+        .eq('provider', 'microsoft')
+        .eq('is_active', true)
+        .maybeSingle();
+      
+      if (connection?.microsoft_drive_id) {
+        payload.microsoft_drive_id = connection.microsoft_drive_id;
+        console.log(`[manual-folder-sync-proxy] Found microsoft_drive_id: ${payload.microsoft_drive_id}`);
+      } else {
+        console.error('[manual-folder-sync-proxy] Microsoft drive ID not found in connection');
+        return new Response(
+          JSON.stringify({ error: 'Microsoft drive ID not found. Please reconnect your Microsoft account.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     const folderName = payload.folder_name || 'Root';
     const folderType = payload.folder_type || folderName;
 
@@ -94,7 +116,7 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[manual-folder-sync-proxy] Forwarding sync request to UNIFIED workflow for team ${payload.team_id}, folder: ${folderName}, provider: ${provider}`);
 
-    const n8nPayload = {
+    const n8nPayload: Record<string, unknown> = {
       team_id: payload.team_id,
       user_id: payload.user_id,
       folder_id: payload.folder_id,
@@ -107,6 +129,11 @@ Deno.serve(async (req: Request) => {
       sync_session_id: session?.id,
       provider: provider,
     };
+
+    if (provider === 'microsoft' && payload.microsoft_drive_id) {
+      n8nPayload.microsoft_drive_id = payload.microsoft_drive_id;
+      console.log(`[manual-folder-sync-proxy] Including microsoft_drive_id: ${payload.microsoft_drive_id}`);
+    }
 
     const n8nResponse = await fetch(N8N_UNIFIED_SYNC_URL, {
       method: 'POST',
