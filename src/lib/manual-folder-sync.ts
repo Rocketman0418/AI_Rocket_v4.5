@@ -7,8 +7,10 @@ export interface ManualSyncPayload {
   access_token: string;
   folder_name?: string;
   folder_path?: string;
+  folder_type?: string;
   max_depth?: number;
   exclude_folders?: string[];
+  provider?: 'google' | 'microsoft';
 }
 
 export interface ManualSyncResponse {
@@ -39,14 +41,18 @@ export interface IncrementalSyncPayload {
   access_token: string;
   folder_name?: string;
   folder_path?: string;
+  folder_type?: string;
   max_depth?: number;
   exclude_folders?: string[];
+  provider?: 'google' | 'microsoft';
+  sync_state_token?: string;
 }
 
-const N8N_INCREMENTAL_WEBHOOK = 'https://healthrocket.app.n8n.cloud/webhook/astra-data-sync-incremental';
+const N8N_UNIFIED_SYNC_URL = 'https://healthrocket.app.n8n.cloud/webhook/astra-unified-manual-sync';
 
 export async function triggerIncrementalSync(payload: IncrementalSyncPayload): Promise<{ success: boolean; message: string }> {
-  console.log('Triggering incremental sync (only new files)...');
+  const provider = payload.provider || 'google';
+  console.log(`Triggering incremental sync via unified workflow for ${provider}...`);
 
   try {
     const { data: session } = await supabase.auth.getSession();
@@ -58,37 +64,39 @@ export async function triggerIncrementalSync(payload: IncrementalSyncPayload): P
       };
     }
 
-    const webhookPayload = {
+    const webhookPayload: Record<string, unknown> = {
       team_id: payload.team_id,
       user_id: payload.user_id,
       folder_id: payload.folder_id,
+      folder_type: payload.folder_type || payload.folder_name || 'Root',
       access_token: payload.access_token,
       folder_name: payload.folder_name || 'Root',
       folder_path: payload.folder_path || '/',
       max_depth: payload.max_depth || 10,
       exclude_folders: payload.exclude_folders || ['Archive', 'Old', 'Trash', '.hidden'],
+      provider: provider,
     };
 
-    const response = await fetch(getN8nProxyUrl(), {
+    if (payload.sync_state_token) {
+      webhookPayload.sync_state_token = payload.sync_state_token;
+      console.log(`[triggerIncrementalSync] Using sync_state_token for incremental sync`);
+    }
+
+    const response = await fetch(N8N_UNIFIED_SYNC_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.session.access_token}`,
       },
-      body: JSON.stringify({
-        webhook_path: 'astra-data-sync-incremental',
-        method: 'POST',
-        payload: webhookPayload,
-      }),
+      body: JSON.stringify(webhookPayload),
       keepalive: true,
     });
 
     if (response.ok) {
       const text = await response.text();
-      console.log('Incremental sync triggered successfully:', text);
+      console.log('Incremental sync triggered successfully via unified workflow:', text);
       return {
         success: true,
-        message: 'Incremental sync started - processing new files in background',
+        message: 'Incremental sync started - processing changes in background',
       };
     } else {
       console.error('Failed to trigger incremental sync:', response.status);
@@ -171,12 +179,42 @@ export async function triggerManualFolderSync(payload: ManualSyncPayload): Promi
   };
 }
 
-async function getValidAccessToken(teamId: string, userId: string): Promise<string | null> {
-  console.log('getValidAccessToken: Querying by user_id:', userId);
+interface DriveConnection {
+  id: string;
+  provider: 'google' | 'microsoft';
+  access_token: string;
+  refresh_token?: string;
+  token_expires_at: string;
+  sync_state_token?: string;
+  root_folder_id?: string;
+  root_folder_name?: string;
+  folder_1_id?: string;
+  folder_1_name?: string;
+  folder_1_enabled?: boolean;
+  folder_2_id?: string;
+  folder_2_name?: string;
+  folder_2_enabled?: boolean;
+  folder_3_id?: string;
+  folder_3_name?: string;
+  folder_3_enabled?: boolean;
+  folder_4_id?: string;
+  folder_4_name?: string;
+  folder_4_enabled?: boolean;
+  folder_5_id?: string;
+  folder_5_name?: string;
+  folder_5_enabled?: boolean;
+  folder_6_id?: string;
+  folder_6_name?: string;
+  folder_6_enabled?: boolean;
+}
+
+async function getValidAccessToken(teamId: string, userId: string, provider: 'google' | 'microsoft' = 'google'): Promise<string | null> {
+  console.log(`getValidAccessToken: Querying by user_id: ${userId}, provider: ${provider}`);
   let { data: connection, error } = await supabase
     .from('user_drive_connections')
     .select('access_token, refresh_token, token_expires_at')
     .eq('user_id', userId)
+    .eq('provider', provider)
     .eq('is_active', true)
     .maybeSingle();
 
@@ -188,6 +226,7 @@ async function getValidAccessToken(teamId: string, userId: string): Promise<stri
       .from('user_drive_connections')
       .select('access_token, refresh_token, token_expires_at')
       .eq('team_id', teamId)
+      .eq('provider', provider)
       .eq('is_active', true)
       .maybeSingle();
 
@@ -214,17 +253,18 @@ async function getValidAccessToken(teamId: string, userId: string): Promise<stri
     }
 
     try {
-      const refreshResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-drive-refresh-token`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ team_id: teamId }),
-        }
-      );
+      const refreshEndpoint = provider === 'microsoft'
+        ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/microsoft-graph-refresh-token`
+        : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/google-drive-refresh-token`;
+
+      const refreshResponse = await fetch(refreshEndpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ team_id: teamId }),
+      });
 
       if (refreshResponse.ok) {
         const refreshData = await refreshResponse.json();
@@ -238,10 +278,68 @@ async function getValidAccessToken(teamId: string, userId: string): Promise<stri
   return connection.access_token;
 }
 
+async function getAllDriveConnections(teamId: string, userId: string): Promise<DriveConnection[]> {
+  console.log('[getAllDriveConnections] Fetching all active connections for team:', teamId, 'user:', userId);
+
+  const { data: userConnections } = await supabase
+    .from('user_drive_connections')
+    .select(`
+      id, provider, access_token, refresh_token, token_expires_at, sync_state_token,
+      root_folder_id, root_folder_name,
+      folder_1_id, folder_1_name, folder_1_enabled,
+      folder_2_id, folder_2_name, folder_2_enabled,
+      folder_3_id, folder_3_name, folder_3_enabled,
+      folder_4_id, folder_4_name, folder_4_enabled,
+      folder_5_id, folder_5_name, folder_5_enabled,
+      folder_6_id, folder_6_name, folder_6_enabled
+    `)
+    .eq('user_id', userId)
+    .eq('is_active', true);
+
+  const { data: teamConnections } = await supabase
+    .from('user_drive_connections')
+    .select(`
+      id, provider, access_token, refresh_token, token_expires_at, sync_state_token,
+      root_folder_id, root_folder_name,
+      folder_1_id, folder_1_name, folder_1_enabled,
+      folder_2_id, folder_2_name, folder_2_enabled,
+      folder_3_id, folder_3_name, folder_3_enabled,
+      folder_4_id, folder_4_name, folder_4_enabled,
+      folder_5_id, folder_5_name, folder_5_enabled,
+      folder_6_id, folder_6_name, folder_6_enabled
+    `)
+    .eq('team_id', teamId)
+    .eq('is_active', true);
+
+  const allConnections: DriveConnection[] = [];
+  const seenProviders = new Set<string>();
+
+  if (userConnections) {
+    for (const conn of userConnections) {
+      allConnections.push(conn as DriveConnection);
+      seenProviders.add(conn.provider);
+    }
+  }
+
+  if (teamConnections) {
+    for (const conn of teamConnections) {
+      if (!seenProviders.has(conn.provider)) {
+        allConnections.push(conn as DriveConnection);
+        seenProviders.add(conn.provider);
+      }
+    }
+  }
+
+  console.log('[getAllDriveConnections] Found', allConnections.length, 'connections:', allConnections.map(c => c.provider));
+  return allConnections;
+}
+
 interface FolderToSync {
   id: string;
   name: string;
   slot: string;
+  provider: 'google' | 'microsoft';
+  sync_state_token?: string;
 }
 
 export interface SyncAllFoldersOptions {
@@ -271,102 +369,48 @@ export async function incrementalSyncAllFolders(options: SyncAllFoldersOptions):
   console.log('[incrementalSyncAllFolders] Input:', { teamId, userId });
   console.log('========================================');
 
-  console.log('Checking for expired connections...');
-  let { data: expiredConnection, error: expiredError } = await supabase
-    .from('user_drive_connections')
-    .select('connection_status, is_active')
-    .eq('user_id', userId)
-    .eq('is_active', false)
-    .maybeSingle();
+  const connections = await getAllDriveConnections(teamId, userId);
 
-  if (!expiredConnection && !expiredError) {
-    const result = await supabase
-      .from('user_drive_connections')
-      .select('connection_status, is_active')
-      .eq('team_id', teamId)
-      .eq('is_active', false)
-      .maybeSingle();
-
-    expiredConnection = result.data;
-    expiredError = result.error;
-  }
-
-  if (expiredConnection?.connection_status === 'token_expired') {
-    console.error('Token is expired - user needs to reconnect');
-    throw new Error('GOOGLE_TOKEN_EXPIRED');
-  }
-
-  console.log('Querying by user_id:', userId);
-  let { data: connection, error: connectionError } = await supabase
-    .from('user_drive_connections')
-    .select(`
-      root_folder_id, root_folder_name,
-      folder_1_id, folder_1_name, folder_1_enabled,
-      folder_2_id, folder_2_name, folder_2_enabled,
-      folder_3_id, folder_3_name, folder_3_enabled,
-      folder_4_id, folder_4_name, folder_4_enabled,
-      folder_5_id, folder_5_name, folder_5_enabled,
-      folder_6_id, folder_6_name, folder_6_enabled
-    `)
-    .eq('user_id', userId)
-    .eq('is_active', true)
-    .maybeSingle();
-
-  console.log('Query by user_id result:', { connection, error: connectionError });
-
-  if (!connection && !connectionError) {
-    console.log('No connection found by user_id, trying team_id:', teamId);
-    const result = await supabase
-      .from('user_drive_connections')
-      .select(`
-        root_folder_id, root_folder_name,
-        folder_1_id, folder_1_name, folder_1_enabled,
-        folder_2_id, folder_2_name, folder_2_enabled,
-        folder_3_id, folder_3_name, folder_3_enabled,
-        folder_4_id, folder_4_name, folder_4_enabled,
-        folder_5_id, folder_5_name, folder_5_enabled,
-        folder_6_id, folder_6_name, folder_6_enabled
-      `)
-      .eq('team_id', teamId)
-      .eq('is_active', true)
-      .maybeSingle();
-
-    console.log('Query by team_id result:', { data: result.data, error: result.error });
-    connection = result.data;
-    connectionError = result.error;
-  }
-
-  if (connectionError || !connection) {
-    console.error('[incrementalSyncAllFolders] Final connection error:', connectionError);
-    console.error('[incrementalSyncAllFolders] Final connection data:', connection);
-    throw new Error('No active Google Drive connection found');
+  if (connections.length === 0) {
+    console.error('[incrementalSyncAllFolders] No active drive connections found');
+    throw new Error('No active drive connection found');
   }
 
   const foldersToSync: FolderToSync[] = [];
 
-  if (connection.root_folder_id && connection.root_folder_name) {
-    foldersToSync.push({
-      id: connection.root_folder_id,
-      name: connection.root_folder_name,
-      slot: 'root'
-    });
-  }
+  for (const connection of connections) {
+    const provider = connection.provider as 'google' | 'microsoft';
+    const syncStateToken = connection.sync_state_token;
+    console.log(`[incrementalSyncAllFolders] Processing ${provider} connection (has sync_state_token: ${!!syncStateToken})`);
 
-  for (let i = 1; i <= 6; i++) {
-    const folderId = connection[`folder_${i}_id` as keyof typeof connection] as string | null;
-    const folderName = connection[`folder_${i}_name` as keyof typeof connection] as string | null;
-    const folderEnabled = connection[`folder_${i}_enabled` as keyof typeof connection] as boolean | null;
-
-    if (folderId && folderName && folderEnabled !== false) {
+    if (connection.root_folder_id && connection.root_folder_name) {
       foldersToSync.push({
-        id: folderId,
-        name: folderName,
-        slot: `folder_${i}`
+        id: connection.root_folder_id,
+        name: connection.root_folder_name,
+        slot: `${provider}_root`,
+        provider,
+        sync_state_token: syncStateToken
       });
+    }
+
+    for (let i = 1; i <= 6; i++) {
+      const folderId = connection[`folder_${i}_id` as keyof typeof connection] as string | null;
+      const folderName = connection[`folder_${i}_name` as keyof typeof connection] as string | null;
+      const folderEnabled = connection[`folder_${i}_enabled` as keyof typeof connection] as boolean | null;
+
+      if (folderId && folderName && folderEnabled !== false) {
+        foldersToSync.push({
+          id: folderId,
+          name: folderName,
+          slot: `${provider}_folder_${i}`,
+          provider,
+          sync_state_token: syncStateToken
+        });
+      }
     }
   }
 
-  console.log('[incrementalSyncAllFolders] Folders to sync:', foldersToSync);
+  console.log('[incrementalSyncAllFolders] Folders to sync:', foldersToSync.map(f => ({ name: f.name, provider: f.provider, hasToken: !!f.sync_state_token })));
 
   if (foldersToSync.length === 0) {
     console.log('[incrementalSyncAllFolders] No folders configured to sync');
@@ -378,11 +422,6 @@ export async function incrementalSyncAllFolders(options: SyncAllFoldersOptions):
     };
   }
 
-  const accessToken = await getValidAccessToken(teamId, userId);
-  if (!accessToken) {
-    throw new Error('Failed to get valid access token');
-  }
-
   const results: SyncAllFoldersResult['results'] = [];
   let totalFilesSent = 0;
   let totalFilesFailed = 0;
@@ -390,7 +429,21 @@ export async function incrementalSyncAllFolders(options: SyncAllFoldersOptions):
   console.log('[incrementalSyncAllFolders] Starting incremental sync for', foldersToSync.length, 'folder(s)');
 
   for (const folder of foldersToSync) {
-    console.log(`[incrementalSyncAllFolders] Processing ${folder.name} (${folder.slot}): folderId=${folder.id}`);
+    console.log(`[incrementalSyncAllFolders] Processing ${folder.name} (${folder.slot}, ${folder.provider}): folderId=${folder.id}, hasToken=${!!folder.sync_state_token}`);
+
+    const accessToken = await getValidAccessToken(teamId, userId, folder.provider);
+    if (!accessToken) {
+      console.error(`[incrementalSyncAllFolders] Failed to get access token for ${folder.provider}`);
+      results.push({
+        folderName: folder.name,
+        slot: folder.slot,
+        success: false,
+        filesSent: 0,
+        filesFailed: 0,
+        error: `Failed to get ${folder.provider} access token`,
+      });
+      continue;
+    }
 
     try {
       const response = await triggerIncrementalSync({
@@ -398,7 +451,10 @@ export async function incrementalSyncAllFolders(options: SyncAllFoldersOptions):
         user_id: userId,
         folder_id: folder.id,
         folder_name: folder.name,
+        folder_type: folder.name,
         access_token: accessToken,
+        provider: folder.provider,
+        sync_state_token: folder.sync_state_token,
       });
 
       results.push({
@@ -441,98 +497,41 @@ export async function syncAllFolders(options: SyncAllFoldersOptions): Promise<Sy
   console.log('[syncAllFolders] Input:', { teamId, userId });
   console.log('========================================');
 
-  console.log('Checking for expired connections...');
-  let { data: expiredConnection, error: expiredError } = await supabase
-    .from('user_drive_connections')
-    .select('connection_status, is_active')
-    .eq('user_id', userId)
-    .eq('is_active', false)
-    .maybeSingle();
+  const connections = await getAllDriveConnections(teamId, userId);
 
-  if (!expiredConnection && !expiredError) {
-    const result = await supabase
-      .from('user_drive_connections')
-      .select('connection_status, is_active')
-      .eq('team_id', teamId)
-      .eq('is_active', false)
-      .maybeSingle();
-
-    expiredConnection = result.data;
-    expiredError = result.error;
-  }
-
-  if (expiredConnection?.connection_status === 'token_expired') {
-    console.error('Token is expired - user needs to reconnect');
-    throw new Error('GOOGLE_TOKEN_EXPIRED');
-  }
-
-  console.log('Querying by user_id:', userId);
-  let { data: connection, error: connectionError } = await supabase
-    .from('user_drive_connections')
-    .select(`
-      root_folder_id, root_folder_name,
-      folder_1_id, folder_1_name, folder_1_enabled,
-      folder_2_id, folder_2_name, folder_2_enabled,
-      folder_3_id, folder_3_name, folder_3_enabled,
-      folder_4_id, folder_4_name, folder_4_enabled,
-      folder_5_id, folder_5_name, folder_5_enabled,
-      folder_6_id, folder_6_name, folder_6_enabled
-    `)
-    .eq('user_id', userId)
-    .eq('is_active', true)
-    .maybeSingle();
-
-  console.log('Query by user_id result:', { connection, error: connectionError });
-
-  if (!connection && !connectionError) {
-    console.log('No connection found by user_id, trying team_id:', teamId);
-    const result = await supabase
-      .from('user_drive_connections')
-      .select(`
-        root_folder_id, root_folder_name,
-        folder_1_id, folder_1_name, folder_1_enabled,
-        folder_2_id, folder_2_name, folder_2_enabled,
-        folder_3_id, folder_3_name, folder_3_enabled,
-        folder_4_id, folder_4_name, folder_4_enabled,
-        folder_5_id, folder_5_name, folder_5_enabled,
-        folder_6_id, folder_6_name, folder_6_enabled
-      `)
-      .eq('team_id', teamId)
-      .eq('is_active', true)
-      .maybeSingle();
-
-    console.log('Query by team_id result:', { data: result.data, error: result.error });
-    connection = result.data;
-    connectionError = result.error;
-  }
-
-  if (connectionError || !connection) {
-    console.error('[syncAllFolders] Final connection error:', connectionError);
-    console.error('[syncAllFolders] Final connection data:', connection);
-    throw new Error('No active Google Drive connection found');
+  if (connections.length === 0) {
+    console.error('[syncAllFolders] No active drive connections found');
+    throw new Error('No active drive connection found');
   }
 
   const foldersToSync: FolderToSync[] = [];
 
-  if (connection.root_folder_id && connection.root_folder_name) {
-    foldersToSync.push({
-      id: connection.root_folder_id,
-      name: connection.root_folder_name,
-      slot: 'root'
-    });
-  }
+  for (const connection of connections) {
+    const provider = connection.provider as 'google' | 'microsoft';
+    console.log(`[syncAllFolders] Processing ${provider} connection`);
 
-  for (let i = 1; i <= 6; i++) {
-    const folderId = connection[`folder_${i}_id` as keyof typeof connection] as string | null;
-    const folderName = connection[`folder_${i}_name` as keyof typeof connection] as string | null;
-    const folderEnabled = connection[`folder_${i}_enabled` as keyof typeof connection] as boolean | null;
-
-    if (folderId && folderName && folderEnabled !== false) {
+    if (connection.root_folder_id && connection.root_folder_name) {
       foldersToSync.push({
-        id: folderId,
-        name: folderName,
-        slot: `folder_${i}`
+        id: connection.root_folder_id,
+        name: connection.root_folder_name,
+        slot: `${provider}_root`,
+        provider
       });
+    }
+
+    for (let i = 1; i <= 6; i++) {
+      const folderId = connection[`folder_${i}_id` as keyof typeof connection] as string | null;
+      const folderName = connection[`folder_${i}_name` as keyof typeof connection] as string | null;
+      const folderEnabled = connection[`folder_${i}_enabled` as keyof typeof connection] as boolean | null;
+
+      if (folderId && folderName && folderEnabled !== false) {
+        foldersToSync.push({
+          id: folderId,
+          name: folderName,
+          slot: `${provider}_folder_${i}`,
+          provider
+        });
+      }
     }
   }
 
@@ -548,11 +547,6 @@ export async function syncAllFolders(options: SyncAllFoldersOptions): Promise<Sy
     };
   }
 
-  const accessToken = await getValidAccessToken(teamId, userId);
-  if (!accessToken) {
-    throw new Error('Failed to get valid access token');
-  }
-
   const results: SyncAllFoldersResult['results'] = [];
   let totalFilesSent = 0;
   let totalFilesFailed = 0;
@@ -560,7 +554,21 @@ export async function syncAllFolders(options: SyncAllFoldersOptions): Promise<Sy
   console.log('[syncAllFolders] Starting to sync', foldersToSync.length, 'folder(s)');
 
   for (const folder of foldersToSync) {
-    console.log(`[syncAllFolders] Processing ${folder.name} (${folder.slot}): folderId=${folder.id}`);
+    console.log(`[syncAllFolders] Processing ${folder.name} (${folder.slot}, ${folder.provider}): folderId=${folder.id}`);
+
+    const accessToken = await getValidAccessToken(teamId, userId, folder.provider);
+    if (!accessToken) {
+      console.error(`[syncAllFolders] Failed to get access token for ${folder.provider}`);
+      results.push({
+        folderName: folder.name,
+        slot: folder.slot,
+        success: false,
+        filesSent: 0,
+        filesFailed: 0,
+        error: `Failed to get ${folder.provider} access token`,
+      });
+      continue;
+    }
 
     try {
       const response = await triggerManualFolderSync({
@@ -569,6 +577,7 @@ export async function syncAllFolders(options: SyncAllFoldersOptions): Promise<Sy
         folder_id: folder.id,
         folder_name: folder.name,
         access_token: accessToken,
+        provider: folder.provider,
       });
 
       results.push({

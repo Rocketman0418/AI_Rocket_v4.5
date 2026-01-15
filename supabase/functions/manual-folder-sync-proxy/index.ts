@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const N8N_WEBHOOK_URL = 'https://healthrocket.app.n8n.cloud/webhook/astra-data-sync-scanner';
+const N8N_UNIFIED_SYNC_URL = 'https://healthrocket.app.n8n.cloud/webhook/astra-unified-manual-sync';
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -63,9 +63,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`[manual-folder-sync-proxy] Creating sync session for team ${payload.team_id}`);
+    const provider = payload.provider || 'google';
+    console.log(`[manual-folder-sync-proxy] Creating sync session for team ${payload.team_id}, provider: ${provider}`);
 
     const folderName = payload.folder_name || 'Root';
+    const folderType = payload.folder_type || folderName;
 
     const { data: session, error: sessionError } = await supabase
       .from('data_sync_sessions')
@@ -73,7 +75,7 @@ Deno.serve(async (req: Request) => {
         team_id: payload.team_id,
         user_id: payload.user_id,
         sync_type: 'manual',
-        folder_type: folderName,
+        folder_type: folderType,
         folder_id: payload.folder_id,
         status: 'discovery',
         files_discovered: 0,
@@ -90,21 +92,23 @@ Deno.serve(async (req: Request) => {
       console.log(`[manual-folder-sync-proxy] Created sync session: ${session.id}`);
     }
 
-    console.log(`[manual-folder-sync-proxy] Forwarding sync request for team ${payload.team_id}, folder: ${folderName}`);
+    console.log(`[manual-folder-sync-proxy] Forwarding sync request to UNIFIED workflow for team ${payload.team_id}, folder: ${folderName}, provider: ${provider}`);
 
     const n8nPayload = {
       team_id: payload.team_id,
       user_id: payload.user_id,
       folder_id: payload.folder_id,
+      folder_type: folderType,
       access_token: payload.access_token,
       folder_name: folderName,
       folder_path: payload.folder_path || '/',
       max_depth: payload.max_depth || 10,
       exclude_folders: payload.exclude_folders || ['Archive', 'Old', 'Trash', '.hidden'],
       sync_session_id: session?.id,
+      provider: provider,
     };
 
-    const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
+    const n8nResponse = await fetch(N8N_UNIFIED_SYNC_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -129,7 +133,7 @@ Deno.serve(async (req: Request) => {
       responseData.session_id = session.id;
     }
 
-    console.log(`[manual-folder-sync-proxy] n8n response status: ${n8nResponse.status}`);
+    console.log(`[manual-folder-sync-proxy] n8n unified workflow response status: ${n8nResponse.status}`);
 
     return new Response(
       JSON.stringify(responseData),

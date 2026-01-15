@@ -218,12 +218,6 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
   };
 
   const loadFolderFiles = async (folderId: string) => {
-    if (activeProvider === 'microsoft') {
-      setFolderFiles([]);
-      setLoadingFiles(false);
-      return;
-    }
-
     setLoadingFiles(true);
     setError('');
     try {
@@ -233,15 +227,20 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
         return;
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-google-drive-files?folderId=${encodeURIComponent(folderId)}`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-        }
-      );
+      let endpoint = '';
+      if (activeProvider === 'microsoft') {
+        const driveId = microsoftDriveId || '';
+        endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-microsoft-files?folderId=${encodeURIComponent(folderId)}&driveId=${encodeURIComponent(driveId)}`;
+      } else {
+        endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-google-drive-files?folderId=${encodeURIComponent(folderId)}`;
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
 
       const responseData = await response.json();
 
@@ -361,7 +360,9 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
               user_id: user.id,
               folder_id: folder.id,
               folder_name: folder.name,
+              folder_type: folder.name,
               access_token: connection.access_token,
+              provider: activeProvider,
             });
             console.log(`[AddMoreFoldersStep] Manual sync triggered for folder: ${folder.name}`);
           } catch (syncErr) {
@@ -562,19 +563,11 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
             </div>
           ) : (
             <div className="space-y-3">
-              {activeProvider === 'microsoft' ? (
-                <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-3">
-                  <p className="text-sm text-blue-300">
-                    This folder will be synced. Your documents will be available to Astra once syncing is complete.
-                  </p>
-                </div>
-              ) : (
-                <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-3">
-                  <p className="text-sm text-yellow-300">
-                    This folder is empty or has no supported files. Add some documents to get started.
-                  </p>
-                </div>
-              )}
+              <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-3">
+                <p className="text-sm text-yellow-300">
+                  This folder is empty or has no supported files. Add some documents to get started.
+                </p>
+              </div>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
                 <button
@@ -588,7 +581,7 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
                   onClick={handleConfirmFolderSelection}
                   className="w-full sm:w-auto px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors min-h-[44px]"
                 >
-                  {activeProvider === 'microsoft' ? 'Connect Folder' : 'Connect Anyway'}
+                  Connect Anyway
                 </button>
               </div>
             </div>
