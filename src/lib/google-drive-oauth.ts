@@ -188,6 +188,7 @@ export const getGoogleDriveConnection = async (autoRefresh = false): Promise<Goo
     .from('user_drive_connections')
     .select('*')
     .eq('user_id', user.id)
+    .eq('provider', 'google')
     .eq('is_active', true)
     .maybeSingle();
 
@@ -197,6 +198,7 @@ export const getGoogleDriveConnection = async (autoRefresh = false): Promise<Goo
       .from('user_drive_connections')
       .select('*')
       .eq('team_id', user.user_metadata.team_id)
+      .eq('provider', 'google')
       .eq('is_active', true)
       .maybeSingle();
 
@@ -219,6 +221,7 @@ export const getGoogleDriveConnection = async (autoRefresh = false): Promise<Goo
       .from('user_drive_connections')
       .select('*')
       .eq('user_id', user.id)
+      .eq('provider', 'google')
       .eq('is_active', true)
       .maybeSingle();
 
