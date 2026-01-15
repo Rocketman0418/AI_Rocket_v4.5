@@ -15,6 +15,7 @@ interface ChooseFolderStepProps {
   onComplete: (folderData: any) => void;
   progress: SetupGuideProgress | null;
   onProceed?: () => void;
+  onSkipToSync?: () => void;
   provider?: DriveProvider;
 }
 
@@ -44,7 +45,7 @@ const STRATEGY_DOCUMENT_EXAMPLES = [
   { icon: '📋', name: 'V/TO Document', desc: 'Vision/Traction Organizer (EOS)' },
 ];
 
-export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, onProceed, provider: propProvider }) => {
+export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, onProceed, onSkipToSync, provider: propProvider }) => {
   const { user } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('initial');
   const [loading, setLoading] = useState(true);
@@ -398,13 +399,21 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
 
   const handleConfirmFolder = () => {
     if (!selectedFolder) return;
-    setHasExistingFolders(true);
-    onComplete({
+
+    const folderDataToSend = {
       selectedFolder,
       folderType: 'root',
       isNewFolder: false,
       filesInFolder: supportedFiles.length,
-    });
+    };
+
+    onComplete(folderDataToSend);
+
+    if (supportedFiles.length > 0 && onSkipToSync) {
+      onSkipToSync();
+    } else {
+      setHasExistingFolders(true);
+    }
   };
 
   if (loading && viewMode === 'initial') {

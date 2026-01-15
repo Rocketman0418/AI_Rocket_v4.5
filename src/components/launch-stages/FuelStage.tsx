@@ -71,6 +71,14 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
   const [folderSectionKey, setFolderSectionKey] = useState(0);
   const [addFoldersProvider, setAddFoldersProvider] = useState<'google' | 'microsoft' | undefined>(undefined);
 
+  const isOAuthReturn = () => {
+    const shouldReopenFuel = sessionStorage.getItem('reopen_fuel_stage');
+    const msOAuthComplete = sessionStorage.getItem('microsoft_oauth_complete');
+    const params = new URLSearchParams(window.location.search);
+    const selectMicrosoftDrive = params.get('selectMicrosoftDrive');
+    return shouldReopenFuel === 'true' || selectMicrosoftDrive === 'true' || msOAuthComplete === 'true';
+  };
+
   const refreshCounts = async () => {
     await refreshFuelLevel();
     setFolderSectionKey(prev => prev + 1);
@@ -95,25 +103,31 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
   }, []); // Only run on mount - refresh functions are stable refs
 
   // Helper function to persist flow state to database
-  const persistFlowState = async (step: typeof driveFlowStep | null, folderDataToPersist?: any) => {
+  const persistFlowState = async (step: typeof driveFlowStep | null, folderDataToPersist?: any, provider?: 'google' | 'microsoft' | null) => {
     if (!user) return;
 
     try {
+      const dataToUpsert: any = {
+        user_id: user.id,
+        stage: 'fuel',
+        drive_flow_step: step,
+        drive_flow_folder_data: folderDataToPersist || folderData
+      };
+
+      if (provider !== undefined) {
+        dataToUpsert.drive_flow_provider = provider;
+      }
+
       const { error } = await supabase
         .from('launch_preparation_progress')
-        .upsert({
-          user_id: user.id,
-          stage: 'fuel',
-          drive_flow_step: step,
-          drive_flow_folder_data: folderDataToPersist || folderData
-        }, {
+        .upsert(dataToUpsert, {
           onConflict: 'user_id,stage'
         });
 
       if (error) {
         console.error('Error persisting flow state:', error);
       } else {
-        console.log('✅ Persisted flow state:', step);
+        console.log('✅ Persisted flow state:', step, 'provider:', provider);
       }
     } catch (error) {
       console.error('Error persisting flow state:', error);
@@ -129,7 +143,8 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
         .from('launch_preparation_progress')
         .update({
           drive_flow_step: null,
-          drive_flow_folder_data: null
+          drive_flow_folder_data: null,
+          drive_flow_provider: null
         })
         .eq('user_id', user.id)
         .eq('stage', 'fuel');
@@ -149,10 +164,15 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
     const loadPersistedState = async () => {
       if (!user) return;
 
+      if (isOAuthReturn()) {
+        console.log('🚫 Skipping persisted state - OAuth return in progress');
+        return;
+      }
+
       try {
         const { data, error } = await supabase
           .from('launch_preparation_progress')
-          .select('drive_flow_step, drive_flow_folder_data')
+          .select('drive_flow_step, drive_flow_folder_data, drive_flow_provider')
           .eq('user_id', user.id)
           .eq('stage', 'fuel')
           .maybeSingle();
@@ -183,10 +203,13 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
             }
           }
 
-          console.log('🔄 Restoring flow state:', step);
+          console.log('🔄 Restoring flow state:', step, 'provider:', data.drive_flow_provider);
           setDriveFlowStep(step);
           if (data.drive_flow_folder_data) {
             setFolderData(data.drive_flow_folder_data);
+          }
+          if (data.drive_flow_provider) {
+            setCloudProvider(data.drive_flow_provider);
           }
           setShowDriveFlow(true);
         }
@@ -233,10 +256,12 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
           if (msOAuthComplete === 'true' || selectMicrosoftDrive === 'true') {
             sessionStorage.removeItem('microsoft_oauth_complete');
             console.log('🚀 [FuelStage] Reopening modal after Microsoft OAuth return');
+            await clearFlowState();
             setCloudProvider('microsoft');
-            setDriveFlowStep('connect');
+            setDriveFlowStep('choose-folder');
           } else {
             console.log('🚀 [FuelStage] Reopening modal after Google OAuth return');
+            await clearFlowState();
             setCloudProvider('google');
             setDriveFlowStep('choose-folder');
           }
@@ -858,10 +883,11 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
               {driveFlowStep === 'connect' && (
                 <ConnectDriveStep
                   onComplete={async (provider?: 'google' | 'microsoft') => {
+                    const selectedProvider = provider || 'google';
                     setDriveFlowStep('choose-folder');
                     setHasCloudDrive(true);
-                    setCloudProvider(provider || 'google');
-                    await persistFlowState('choose-folder');
+                    setCloudProvider(selectedProvider);
+                    await persistFlowState('choose-folder', null, selectedProvider);
                   }}
                   progress={null}
                   fromLaunchPrep={true}
@@ -873,12 +899,17 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
                   onComplete={async (data) => {
                     console.log('Folder selected:', data);
                     setFolderData(data);
-                    await persistFlowState('choose-folder', data);
+                    await persistFlowState('choose-folder', data, cloudProvider);
                     await refreshCounts();
                   }}
                   onProceed={async () => {
                     setDriveFlowStep('place-files');
-                    await persistFlowState('place-files');
+                    await persistFlowState('place-files', null, cloudProvider);
+                  }}
+                  onSkipToSync={async () => {
+                    console.log('Skipping to sync - folder already has files');
+                    setDriveFlowStep('sync-data');
+                    await persistFlowState('sync-data', null, cloudProvider);
                   }}
                   progress={null}
                 />
