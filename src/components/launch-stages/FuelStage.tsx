@@ -50,6 +50,7 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
   const { getSyncProgress, currentSession } = useDataSyncProgress();
 
   const internalFuelProgress = stageProgress.find(s => s.stage === 'fuel');
+  const oauthHandledRef = React.useRef(false);
   const [showDriveFlow, setShowDriveFlow] = useState(false);
   const [driveFlowStep, setDriveFlowStep] = useState<'status' | 'connect' | 'choose-folder' | 'add-more-folders' | 'place-files' | 'sync-data' | 'setup-guide'>('status');
   const [folderData, setFolderData] = useState<any>(null);
@@ -251,10 +252,16 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
         const msOAuthComplete = sessionStorage.getItem('microsoft_oauth_complete');
         const selectMicrosoftDrive = new URLSearchParams(window.location.search).get('selectMicrosoftDrive');
 
-        if (shouldReopenFuel === 'true' || selectMicrosoftDrive === 'true') {
+        if ((shouldReopenFuel === 'true' || selectMicrosoftDrive === 'true') && !oauthHandledRef.current) {
+          oauthHandledRef.current = true;
           sessionStorage.removeItem('reopen_fuel_stage');
+          sessionStorage.removeItem('return_to_launch_prep');
           sessionStorage.removeItem('google_drive_from_launch_prep');
           sessionStorage.removeItem('microsoft_from_launch_prep');
+
+          if (selectMicrosoftDrive) {
+            window.history.replaceState({}, '', window.location.pathname);
+          }
 
           let teamId = user?.user_metadata?.team_id;
           if (!teamId) {
@@ -294,9 +301,6 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
           }
 
           setShowDriveFlow(true);
-          if (selectMicrosoftDrive) {
-            window.history.replaceState({}, '', window.location.pathname);
-          }
           await refreshFuelLevel();
           if (onRefresh) {
             await onRefresh();

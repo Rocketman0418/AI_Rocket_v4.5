@@ -129,9 +129,10 @@ const AppContent: React.FC = () => {
       }
 
       // Step 4: Check if returning from OAuth callback
+      // Don't remove the flag here - FuelStage will remove it after handling the OAuth return
+      // This prevents race conditions where auth state changes cause re-evaluation
       const shouldReturnToLaunchPrep = sessionStorage.getItem('return_to_launch_prep');
       if (shouldReturnToLaunchPrep === 'true') {
-        sessionStorage.removeItem('return_to_launch_prep');
         console.log('🚀 [App] Returning to Launch Prep after OAuth');
         if (!isCancelled) setAppView('launch_prep');
         return;
