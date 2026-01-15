@@ -51,6 +51,59 @@ export interface IncrementalSyncPayload {
 }
 
 const N8N_UNIFIED_SYNC_URL = 'https://healthrocket.app.n8n.cloud/webhook/astra-unified-manual-sync';
+const N8N_SYNC_NOW_URL = 'https://healthrocket.app.n8n.cloud/webhook/astra-sync-now';
+
+export interface SyncNowPayload {
+  team_id: string;
+  user_id: string;
+  folder_ids?: string[];
+  source: 'manual_sync_now' | 'new_folder_connected';
+}
+
+export async function triggerSyncNow(payload: SyncNowPayload): Promise<{ success: boolean; message: string }> {
+  console.log('[triggerSyncNow] Triggering sync via astra-sync-now webhook...');
+  console.log('[triggerSyncNow] Payload:', {
+    team_id: payload.team_id,
+    user_id: payload.user_id,
+    folder_ids: payload.folder_ids,
+    source: payload.source
+  });
+
+  try {
+    const response = await fetch(N8N_SYNC_NOW_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    });
+
+    if (response.ok) {
+      const text = await response.text();
+      console.log('[triggerSyncNow] Sync triggered successfully:', text);
+      return {
+        success: true,
+        message: payload.folder_ids?.length
+          ? `Sync queued for ${payload.folder_ids.length} folder(s)`
+          : 'Sync queued for all folders',
+      };
+    } else {
+      const errorText = await response.text();
+      console.error('[triggerSyncNow] Failed to trigger sync:', response.status, errorText);
+      return {
+        success: false,
+        message: `Failed to trigger sync: ${response.status}`,
+      };
+    }
+  } catch (error) {
+    console.error('[triggerSyncNow] Error triggering sync:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
 
 export async function triggerIncrementalSync(payload: IncrementalSyncPayload): Promise<{ success: boolean; message: string }> {
   const provider = payload.provider || 'google';

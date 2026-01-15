@@ -6,7 +6,7 @@ import { useDataSyncProgress } from '../hooks/useDataSyncProgress';
 import { calculateStageProgress, formatPoints, FUEL_LEVELS, BOOSTERS_LEVELS, GUIDANCE_LEVELS } from '../lib/launch-preparation-utils';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { incrementalSyncAllFolders } from '../lib/manual-folder-sync';
+import { triggerSyncNow } from '../lib/manual-folder-sync';
 import { DocumentsListModal } from './launch-stages/DocumentsListModal';
 import { CategoriesDetailModal } from './launch-stages/CategoriesDetailModal';
 import { GoogleDriveTroubleshootGuide } from './GoogleDriveTroubleshootGuide';
@@ -165,9 +165,10 @@ export const MissionControl: React.FC<MissionControlProps> = ({ onClose, onNavig
         return;
       }
 
-      const result = await incrementalSyncAllFolders({
-        teamId,
-        userId: user.id
+      const result = await triggerSyncNow({
+        team_id: teamId,
+        user_id: user.id,
+        source: 'manual_sync_now'
       });
 
       if (result.success) {

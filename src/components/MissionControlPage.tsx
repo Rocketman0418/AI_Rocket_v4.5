@@ -42,7 +42,7 @@ import { DocumentsListModal } from './launch-stages/DocumentsListModal';
 import { CategoriesDetailModal } from './launch-stages/CategoriesDetailModal';
 import { TeamMembersPanel } from './TeamMembersPanel';
 import { calculateStageProgress } from '../lib/launch-preparation-utils';
-import { incrementalSyncAllFolders } from '../lib/manual-folder-sync';
+import { triggerSyncNow } from '../lib/manual-folder-sync';
 
 interface MissionControlPageProps {
   onOpenTab: (tab: TabType) => void;
@@ -191,9 +191,10 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
         return;
       }
 
-      const result = await incrementalSyncAllFolders({
-        teamId,
-        userId: user.id
+      const result = await triggerSyncNow({
+        team_id: teamId,
+        user_id: user.id,
+        source: 'manual_sync_now'
       });
 
       if (result.success) {

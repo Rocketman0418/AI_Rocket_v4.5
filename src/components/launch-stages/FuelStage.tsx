@@ -22,7 +22,7 @@ import { DocumentsListModal } from './DocumentsListModal';
 import { CategoriesDetailModal } from './CategoriesDetailModal';
 import { FolderManagementSection } from './FolderManagementSection';
 import { supabase } from '../../lib/supabase';
-import { incrementalSyncAllFolders } from '../../lib/manual-folder-sync';
+import { triggerSyncNow } from '../../lib/manual-folder-sync';
 
 const LEVEL_ICONS = [Circle, Zap, Flame, Rocket, Target, Trophy];
 
@@ -410,9 +410,10 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
         return;
       }
 
-      const result = await incrementalSyncAllFolders({
-        teamId,
-        userId: user.id
+      const result = await triggerSyncNow({
+        team_id: teamId,
+        user_id: user.id,
+        source: 'manual_sync_now'
       });
 
       if (result.success) {

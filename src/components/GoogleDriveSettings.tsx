@@ -12,7 +12,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { AstraGuidedSetupModal } from './AstraGuidedSetupModal';
 import { FolderSelectionWrapper } from './FolderSelectionWrapper';
-import { syncAllFolders } from '../lib/manual-folder-sync';
+import { triggerSyncNow, triggerManualFolderSync } from '../lib/manual-folder-sync';
 import { GoogleDriveReauthGuide } from './GoogleDriveReauthGuide';
 import { GoogleOAuthInfoModal } from './GoogleOAuthInfoModal';
 import LocalFileUpload from './LocalFileUpload';
@@ -96,7 +96,7 @@ export const GoogleDriveSettings: React.FC<GoogleDriveSettingsProps> = ({ fromLa
   };
 
   const handleManualSync = async () => {
-    console.log('[SYNC] Button clicked, triggering manual folder sync...');
+    console.log('[SYNC] Button clicked, triggering sync via astra-sync-now...');
 
     setManualSyncing(true);
     setSyncResult(null);
@@ -122,10 +122,11 @@ export const GoogleDriveSettings: React.FC<GoogleDriveSettingsProps> = ({ fromLa
         return;
       }
 
-      console.log('[SYNC] Calling syncAllFolders...');
-      const result = await syncAllFolders({
-        teamId,
-        userId: user.id,
+      console.log('[SYNC] Calling triggerSyncNow...');
+      const result = await triggerSyncNow({
+        team_id: teamId,
+        user_id: user.id,
+        source: 'manual_sync_now',
       });
       console.log('[SYNC] Manual sync result:', result);
 
@@ -133,7 +134,7 @@ export const GoogleDriveSettings: React.FC<GoogleDriveSettingsProps> = ({ fromLa
         console.log('[SYNC] Success! Setting success state...');
         setSyncResult({
           success: true,
-          message: `Sync triggered for ${result.results.length} folder(s)`,
+          message: result.message,
         });
         setTimeout(() => {
           console.log('[SYNC] Clearing success checkmark');
@@ -147,7 +148,7 @@ export const GoogleDriveSettings: React.FC<GoogleDriveSettingsProps> = ({ fromLa
         console.error('[SYNC] Sync failed:', result);
         setSyncResult({
           success: false,
-          message: 'Failed to sync folders',
+          message: result.message || 'Failed to sync folders',
         });
       }
     } catch (error) {
@@ -520,6 +521,11 @@ export const GoogleDriveSettings: React.FC<GoogleDriveSettingsProps> = ({ fromLa
       setSavingFolders(true);
       setError('');
 
+      const previousMeetingsId = connection?.folder_1_id;
+      const previousStrategyId = connection?.folder_2_id;
+      const previousFinancialId = connection?.folder_3_id;
+      const previousProjectsId = connection?.folder_4_id;
+
       await updateFolderConfiguration({
         meetings_folder_id: selectedMeetingsFolder?.id || null,
         meetings_folder_name: selectedMeetingsFolder?.name || null,
@@ -534,28 +540,48 @@ export const GoogleDriveSettings: React.FC<GoogleDriveSettingsProps> = ({ fromLa
       await loadConnection();
       setShowFolderPicker(false);
 
-      // Trigger manual sync after folder configuration changes
-      console.log('[SYNC] Folder configuration saved, triggering manual sync...');
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.user_metadata?.team_id) {
-          await syncAllFolders({
-            teamId: user.user_metadata.team_id,
-            userId: user.id,
-            folderTypes: ['strategy', 'meetings', 'financial', 'projects'],
-          });
-          console.log('[SYNC] Manual sync triggered successfully after folder save');
-        }
-      } catch (syncError) {
-        console.error('[SYNC] Error triggering sync after folder save:', syncError);
+      const newFolders: { id: string; name: string; type: string }[] = [];
+      if (selectedMeetingsFolder?.id && selectedMeetingsFolder.id !== previousMeetingsId) {
+        newFolders.push({ id: selectedMeetingsFolder.id, name: selectedMeetingsFolder.name, type: 'meetings' });
+      }
+      if (selectedStrategyFolder?.id && selectedStrategyFolder.id !== previousStrategyId) {
+        newFolders.push({ id: selectedStrategyFolder.id, name: selectedStrategyFolder.name, type: 'strategy' });
+      }
+      if (selectedFinancialFolder?.id && selectedFinancialFolder.id !== previousFinancialId) {
+        newFolders.push({ id: selectedFinancialFolder.id, name: selectedFinancialFolder.name, type: 'financial' });
+      }
+      if (selectedProjectsFolder?.id && selectedProjectsFolder.id !== previousProjectsId) {
+        newFolders.push({ id: selectedProjectsFolder.id, name: selectedProjectsFolder.name, type: 'projects' });
+      }
 
-        // Check if the error is due to expired Google token
-        if (syncError instanceof Error && syncError.message === 'GOOGLE_TOKEN_EXPIRED') {
-          setError('Your Google Drive connection has expired. Please reconnect your account.');
-          // Refresh the connection status to trigger the reconnect flow
-          loadConnection();
+      if (newFolders.length > 0) {
+        console.log('[SYNC] New folders detected, triggering Unified Manual Sync for:', newFolders.map(f => f.name));
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          const teamId = user?.user_metadata?.team_id;
+          if (teamId && connection?.access_token) {
+            for (const folder of newFolders) {
+              await triggerManualFolderSync({
+                team_id: teamId,
+                user_id: user.id,
+                folder_id: folder.id,
+                folder_name: folder.name,
+                folder_type: folder.type,
+                access_token: connection.access_token,
+                provider: 'google',
+              });
+              console.log(`[SYNC] Unified Manual Sync triggered for folder: ${folder.name}`);
+            }
+          }
+        } catch (syncError) {
+          console.error('[SYNC] Error triggering sync for new folders:', syncError);
+          if (syncError instanceof Error && syncError.message === 'GOOGLE_TOKEN_EXPIRED') {
+            setError('Your Google Drive connection has expired. Please reconnect your account.');
+            loadConnection();
+          }
         }
-        // Don't fail the save operation if sync fails
+      } else {
+        console.log('[SYNC] No new folders to sync');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to save folder configuration');

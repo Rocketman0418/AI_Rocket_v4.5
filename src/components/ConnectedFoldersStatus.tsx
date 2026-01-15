@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Folder, CheckCircle, Loader2, FolderPlus, RefreshCw, Trash2, Edit2, X, Search, FolderOpen, User, Plus, FilePlus, Unlink, AlertTriangle, HardDrive, Cloud } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { syncAllFolders } from '../lib/manual-folder-sync';
+import { triggerSyncNow } from '../lib/manual-folder-sync';
 import { PlaceFilesStep } from './setup-steps/PlaceFilesStep';
 import { GoogleDriveTroubleshootGuide } from './GoogleDriveTroubleshootGuide';
 import { initiateGoogleDriveOAuth } from '../lib/google-drive-oauth';
@@ -195,9 +195,10 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
 
       setSyncMessage({ type: 'success', text: 'Syncing documents...' });
 
-      const result = await syncAllFolders({
-        teamId,
-        userId: user.id,
+      const result = await triggerSyncNow({
+        team_id: teamId,
+        user_id: user.id,
+        source: 'manual_sync_now'
       });
 
       if (result.success) {

@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoadingCarousel } from './LoadingCarousel';
 import { FUEL_LEVELS } from '../../lib/launch-preparation-utils';
-import { syncAllFolders } from '../../lib/manual-folder-sync';
+import { triggerSyncNow } from '../../lib/manual-folder-sync';
 import { OAuthReconnectModal } from '../OAuthReconnectModal';
 import LocalFileUpload from '../LocalFileUpload';
 
@@ -68,22 +68,23 @@ export const SyncDataStep: React.FC<SyncDataStepProps> = ({ onComplete, onGoBack
         return;
       }
 
-      console.log('Calling manual folder sync for team:', teamId);
+      console.log('Calling sync now for team:', teamId);
 
-      const result = await syncAllFolders({
-        teamId,
-        userId,
+      const result = await triggerSyncNow({
+        team_id: teamId,
+        user_id: userId,
+        source: 'new_folder_connected'
       });
 
-      console.log('Manual folder sync completed:', result);
+      console.log('Sync now triggered:', result);
 
       if (result.success) {
-        console.log(`Successfully synced ${result.totalFilesSent} files`);
+        console.log('Sync triggered successfully');
       } else {
-        console.warn('Some folders failed to sync:', result.results.filter(r => !r.success));
+        console.warn('Failed to trigger sync:', result.message);
       }
     } catch (error) {
-      console.error('Error triggering manual sync:', error);
+      console.error('Error triggering sync:', error);
 
       if (error instanceof Error && error.message === 'GOOGLE_TOKEN_EXPIRED') {
         console.log('Token expired - showing reconnect modal');
