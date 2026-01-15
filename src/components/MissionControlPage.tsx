@@ -931,7 +931,7 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
 
             <div className="p-4 space-y-4">
               <p className="text-sm text-slate-300">
-                AI Data Sync connects your Google Drive folders to power Astra's intelligence. Here's how it works:
+                AI Data Sync connects your cloud storage to power Astra's intelligence. Here's how it works:
               </p>
 
               <div className="space-y-3">
@@ -940,8 +940,8 @@ export default function MissionControlPage({ onOpenTab, onNavigateToStage, onOpe
                     <span className="text-xs font-bold text-blue-400">1</span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-white">Connect Google Drive</p>
-                    <p className="text-xs text-slate-400">Link your Google account to enable folder access</p>
+                    <p className="text-sm font-medium text-white">Connect Your Cloud Drive</p>
+                    <p className="text-xs text-slate-400">Link Google Drive, Microsoft OneDrive/SharePoint, or upload files directly</p>
                   </div>
                 </div>
 

@@ -586,12 +586,22 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
       );
     }
 
-    // Legacy folder list view
+    const providerBadgeColor = activeProvider === 'microsoft' ? 'cyan' : 'blue';
+
     return (
       <div className="space-y-6">
+        <div className="flex justify-center mb-2">
+          <div className={`inline-flex items-center gap-2 px-3 py-1.5 bg-${providerBadgeColor}-900/30 border border-${providerBadgeColor}-600/50 rounded-full`}>
+            <ProviderIcon className={`w-4 h-4 text-${providerBadgeColor}-400`} />
+            <span className={`text-sm font-medium text-${providerBadgeColor}-300`}>
+              {activeProvider === 'microsoft' ? 'Microsoft OneDrive / SharePoint' : 'Google Drive'}
+            </span>
+          </div>
+        </div>
+
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-600/20 mb-4">
-            <Folder className="w-8 h-8 text-orange-400" />
+          <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full ${activeProvider === 'microsoft' ? 'bg-cyan-600/20' : 'bg-blue-600/20'} mb-4`}>
+            <ProviderIcon className={`w-8 h-8 ${activeProvider === 'microsoft' ? 'text-cyan-400' : 'text-blue-400'}`} />
           </div>
           <h2 className="text-2xl font-bold text-white mb-3">Select a Folder</h2>
           <p className="text-gray-300">

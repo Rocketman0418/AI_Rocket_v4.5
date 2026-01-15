@@ -87,7 +87,7 @@ export const StageSelector: React.FC<StageSelectorProps> = ({
       id: 'fuel' as const,
       name: 'Fuel',
       description: 'Fuel your rocket with data',
-      helpText: 'Connect your data sources like Google Drive and Gmail to power your AI with relevant context.',
+      helpText: 'Connect your cloud storage (Google Drive, Microsoft OneDrive/SharePoint) to power your AI with relevant context.',
       icon: Fuel,
       color: 'blue',
       progress: fuelPercent,

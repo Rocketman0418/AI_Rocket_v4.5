@@ -305,7 +305,7 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
       }
     } catch (err) {
       console.error('Error disconnecting drive:', err);
-      setError(`Failed to disconnect ${provider === 'google' ? 'Google Drive' : 'Microsoft OneDrive'}`);
+      setError(`Failed to disconnect ${provider === 'google' ? 'Google Drive' : 'Microsoft OneDrive/SharePoint'}`);
     } finally {
       setDisconnecting(false);
     }
@@ -569,7 +569,7 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-white">
-                    Disconnect {showDisconnectConfirm === 'google' ? 'Google Drive' : 'Microsoft OneDrive'}?
+                    Disconnect {showDisconnectConfirm === 'google' ? 'Google Drive' : 'Microsoft OneDrive/SharePoint'}?
                   </h3>
                   <p className="text-sm text-gray-400">This action can be undone by reconnecting</p>
                 </div>

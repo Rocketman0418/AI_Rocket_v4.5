@@ -28,14 +28,16 @@ const SUPPORTED_FILE_TYPES = [
   { name: 'Word (.docx)', icon: '📄' },
   { name: 'Excel (.xlsx)', icon: '📊' },
   { name: 'PowerPoint (.pptx)', icon: '📽️' },
-  { name: 'Text (.txt)', icon: '📝' }
+  { name: 'Text (.txt)', icon: '📝' },
+  { name: 'Markdown (.md)', icon: '📋' },
+  { name: 'CSV (.csv)', icon: '📊' }
 ];
 
 const HOW_IT_WORKS = [
   {
     icon: Cloud,
     title: 'Connect Your Data',
-    description: 'Link your Google Drive folders or upload files directly from your computer.'
+    description: 'Link your Google Drive or Microsoft OneDrive/SharePoint folders, or upload files directly.'
   },
   {
     icon: FolderSync,
@@ -63,7 +65,7 @@ export const FolderSetupGuide: React.FC<FolderSetupGuideProps> = ({ onBack }) =>
         </div>
         <h2 className="text-2xl font-bold text-white mb-2">How Data Sync Works</h2>
         <p className="text-gray-300 text-sm">
-          Sync Google Drive folders or upload local files and let AI organize your business knowledge
+          Sync folders from Google Drive or Microsoft OneDrive/SharePoint, upload local files, and let AI organize your knowledge
         </p>
       </div>
 
@@ -164,7 +166,7 @@ export const FolderSetupGuide: React.FC<FolderSetupGuideProps> = ({ onBack }) =>
             <span className="text-xs font-semibold text-white">Auto-Sync</span>
           </div>
           <p className="text-[11px] text-gray-400">
-            Changes to your Drive files are automatically synced to keep Astra up-to-date.
+            Changes to your cloud drive files are automatically synced to keep Astra up-to-date.
           </p>
         </div>
         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3">

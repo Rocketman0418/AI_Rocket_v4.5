@@ -284,7 +284,7 @@ const onboardingScreens = [
               <div>
                 <h4 className="font-semibold text-white mb-1">Fuel - Connect Your Data</h4>
                 <p className="text-gray-400 text-sm">
-                  Link your Google Drive folders so Astra can access your documents and emails
+                  Link your cloud storage (Google Drive or Microsoft OneDrive/SharePoint) so Astra can access your documents
                 </p>
               </div>
             </div>
@@ -621,8 +621,8 @@ export const LaunchOnboardingScreens: React.FC<LaunchOnboardingScreensProps> = (
                           <FileText className="w-3 h-3 text-blue-400" />
                         </div>
                         <div>
-                          <span className="text-white font-medium">Connecting Google Drive</span>
-                          <p className="text-gray-400 text-sm">Link your folders so Astra can access your documents</p>
+                          <span className="text-white font-medium">Connecting Your Cloud Drive</span>
+                          <p className="text-gray-400 text-sm">Link your cloud storage so Astra can access your documents</p>
                         </div>
                       </li>
                       <li className="flex items-start space-x-3">
@@ -674,7 +674,7 @@ export const LaunchOnboardingScreens: React.FC<LaunchOnboardingScreensProps> = (
                     <ul className="space-y-2 mb-6">
                       <li className="flex items-start space-x-3">
                         <span className="text-blue-400">-</span>
-                        <span className="text-gray-300">An IT admin manages your company's Google Drive</span>
+                        <span className="text-gray-300">An IT admin manages your company's cloud storage</span>
                       </li>
                       <li className="flex items-start space-x-3">
                         <span className="text-blue-400">-</span>

@@ -72,8 +72,8 @@ export function QuickStartGuide({ onStartTour, isAdmin }: QuickStartGuideProps) 
           description="Drag and drop files directly into Astra from the Fuel Stage. Supports PDF, Word, Excel, PowerPoint, text, and CSV files up to 50 MB each."
         />
         <GuideSection
-          title="Google Drive Sync"
-          description="Connect Google Drive to automatically sync documents from your Strategy, Meetings, Financial, and Projects folders."
+          title="Cloud Drive Sync"
+          description="Connect Google Drive or Microsoft OneDrive/SharePoint to automatically sync documents from your Strategy, Meetings, Financial, and Projects folders."
         />
         <GuideSection
           title="AI Classification"
@@ -107,8 +107,8 @@ export function QuickStartGuide({ onStartTour, isAdmin }: QuickStartGuideProps) 
             description="Go to Team Members and click 'Invite Member' to add people to your team via email."
           />
           <GuideSection
-            title="Connecting Google Drive"
-            description="In Team Settings, connect your Google Drive to let Astra access and analyze your documents."
+            title="Connecting Cloud Storage"
+            description="In Team Settings, connect Google Drive or Microsoft OneDrive/SharePoint to let Astra access and analyze your documents."
           />
           <GuideSection
             title="Scheduled Reports"

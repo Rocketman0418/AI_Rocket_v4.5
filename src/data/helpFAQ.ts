@@ -92,18 +92,18 @@ export const helpFAQ: FAQItem[] = [
   },
   {
     category: 'integrations',
-    question: 'What is Google Drive integration?',
-    answer: 'Google Drive integration allows Astra to access and analyze your team\'s Google Drive documents. Once connected, you can ask questions about your docs, sheets, and slides.'
+    question: 'What are the cloud storage integrations?',
+    answer: 'Astra integrates with Google Drive and Microsoft OneDrive/SharePoint to access and analyze your team\'s documents. Once connected, you can ask questions about your docs, sheets, and slides from either service.'
   },
   {
     category: 'integrations',
-    question: 'Is my Google Drive data secure?',
+    question: 'Is my cloud storage data secure?',
     answer: 'Yes! We only access files you grant permission to, and all data is encrypted. Your documents are processed securely and stored safely in your team\'s private database.'
   },
   {
     category: 'integrations',
-    question: 'Can I disconnect Google Drive?',
-    answer: 'Yes, admins can disconnect Google Drive at any time from Team Settings. This will stop syncing new documents, but previously synced data will remain available to your team.'
+    question: 'Can I disconnect my cloud storage?',
+    answer: 'Yes, admins can disconnect Google Drive or Microsoft OneDrive/SharePoint at any time from the Fuel Stage. This will stop syncing new documents, but previously synced data will remain available to your team.'
   },
   {
     category: 'integrations',
@@ -167,13 +167,13 @@ export const helpFAQ: FAQItem[] = [
   },
   {
     category: 'data-sync',
-    question: 'Do I need Google Drive to use Astra?',
-    answer: 'No! While Google Drive integration provides powerful automatic syncing, you can also upload files directly from your computer using the Local File Upload feature. This is great for documents that aren\'t in Google Drive, such as email attachments, downloaded reports, or files from other systems.'
+    question: 'Do I need a cloud storage service to use Astra?',
+    answer: 'No! While Google Drive and Microsoft OneDrive/SharePoint integrations provide powerful automatic syncing, you can also upload files directly from your computer using the Local File Upload feature. This is great for documents that aren\'t in cloud storage, such as email attachments, downloaded reports, or files from other systems.'
   },
   {
     category: 'data-sync',
     question: 'What are Connected Folders?',
-    answer: 'Connected Folders are specific Google Drive folders you designate for Astra to sync. There are four folder types: Strategy (business plans, goals), Meetings (notes, agendas), Financial (budgets, reports), and Projects (project docs, timelines). Each folder helps Astra understand different aspects of your business.'
+    answer: 'Connected Folders are folders from Google Drive or Microsoft OneDrive/SharePoint that you designate for Astra to sync. There are four folder types: Strategy (business plans, goals), Meetings (notes, agendas), Financial (budgets, reports), and Projects (project docs, timelines). Each folder helps Astra understand different aspects of your business.'
   },
   {
     category: 'data-sync',
@@ -237,8 +237,8 @@ export const helpFAQ: FAQItem[] = [
   },
   {
     category: 'admin',
-    question: 'How do I connect Google Drive?',
-    answer: 'Go to Team Settings, find the Google Drive section, and click "Connect Google Drive". You\'ll be taken to Google to authorize access, then you can select which folders to sync.'
+    question: 'How do I connect cloud storage?',
+    answer: 'Go to Mission Control and click on the Fuel Stage. Choose between Google Drive or Microsoft OneDrive/SharePoint, then authorize access. You\'ll be able to select which folders to sync with Astra.'
   },
   {
     category: 'admin',
@@ -263,7 +263,7 @@ export const helpFAQ: FAQItem[] = [
   {
     category: 'launch-prep',
     question: 'What is the Fuel Stage?',
-    answer: 'The Fuel Stage is about adding data to power your AI. Connect your Google Drive and add documents to your Strategy, Meetings, Financial, and Projects folders. Progress through 5 levels by adding more documents - Level 1 needs just 1 document, while Level 5 requires a comprehensive data collection.'
+    answer: 'The Fuel Stage is about adding data to power your AI. Connect Google Drive, Microsoft OneDrive/SharePoint, or upload local files to your Strategy, Meetings, Financial, and Projects folders. Progress through 5 levels by adding more documents - Level 1 needs just 1 document, while Level 5 requires a comprehensive data collection.'
   },
   {
     category: 'launch-prep',
@@ -338,7 +338,7 @@ export const faqCategories = {
   },
   'integrations': {
     title: '🔗 Integrations',
-    description: 'Connecting Google Drive and other services'
+    description: 'Connecting cloud storage and other services'
   },
   'admin': {
     title: '⚙️ Admin Features',

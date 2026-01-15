@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-**AI Rocket powered by Astra Intelligence** is an enterprise AI platform that connects all your company data and makes it instantly accessible through conversational AI. Astra transforms how teams work with their business information by synthesizing data from Google Drive, Gmail, financial records, and meeting transcripts into actionable insights.
+**AI Rocket powered by Astra Intelligence** is an enterprise AI platform that connects all your company data and makes it instantly accessible through conversational AI. Astra transforms how teams work with their business information by synthesizing data from Google Drive, Microsoft OneDrive, local file uploads, financial records, and meeting transcripts into actionable insights.
 
 ### Core Value Proposition
 **"AI Connected to ALL Your Data"** - One AI platform that connects private conversations, team collaboration, and cross-product insights across your entire business ecosystem.
@@ -209,12 +209,17 @@ Suggested Prompts:
 - **Presence Awareness**: Know who's online and active
 - **Conflict Resolution**: Handles concurrent edits gracefully
 
-### 7. Google Drive Integration
+### 7. Cloud Storage Integration
 
-**Seamless connection to your Google Workspace:**
+**Seamless connection to your cloud storage:**
+
+#### Supported Services
+- **Google Drive**: Full integration with Google Workspace documents
+- **Microsoft OneDrive/SharePoint**: Connect Microsoft 365 files
+- **Local File Upload**: Upload documents directly from your computer
 
 #### Folder-Based Organization
-- **Three Data Categories**: Strategy, Meetings, Financial
+- **Four Data Categories**: Strategy, Meetings, Financial, Projects
 - **Multi-Folder Support**: Connect multiple folders per category
 - **Automatic Sync**: New files detected and processed automatically
 - **Version Control**: Track document updates and changes
@@ -318,7 +323,8 @@ Launch Preparation is a comprehensive guided onboarding system that ensures ever
 **Goal**: Connect business data to enable AI insights
 
 **Key Activities:**
-- Connect Google Drive account via OAuth
+- Connect cloud storage (Google Drive or Microsoft OneDrive) via OAuth
+- Upload local files directly to Astra
 - Select folder categories (Strategy, Projects, Meetings, Financials)
 - Trigger initial data synchronization
 - Monitor document counts per category
@@ -674,19 +680,26 @@ FOR EACH ROW EXECUTE FUNCTION sync_team_points();
 
 ### Supported Data Sources
 
-#### 1. Google Drive Documents
+#### 1. Cloud Storage (Google Drive & Microsoft OneDrive)
 **File Types:**
 - Google Docs, Sheets, Slides
+- Microsoft Word, Excel, PowerPoint
 - PDF documents
-- Microsoft Office files (Word, Excel, PowerPoint)
 - Text files and markdown
 
 **Organization:**
 - Strategy folder: Business plans, strategic docs, proposals
 - Meetings folder: Meeting notes, transcripts, agendas
 - Financial folder: Budgets, P&L statements, forecasts
+- Projects folder: Project documentation, timelines
 
-#### 2. Gmail (Feature Flag)
+#### 2. Local File Upload
+**Supported Formats:**
+- PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx)
+- Text files (.txt, .md), CSV files
+- Up to 50MB per file, 10 files per batch
+
+#### 3. Gmail (Feature Flag)
 **Email Processing:**
 - Thread detection and grouping
 - Sender/recipient extraction
@@ -982,13 +995,14 @@ FOR EACH ROW EXECUTE FUNCTION sync_team_points();
    - Key features introduction
    - Value proposition explanation
 
-2. **Connect Google Drive**
+2. **Connect Your Cloud Storage**
+   - Choose Google Drive or Microsoft OneDrive
    - OAuth authorization
    - Permission explanation
    - Security assurances
 
 3. **Choose Your Folders**
-   - Browse Drive structure
+   - Browse cloud storage structure
    - Select folders per category
    - Multi-folder support
 

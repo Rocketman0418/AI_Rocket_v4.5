@@ -755,7 +755,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ isOpen, on
                     <h3 className="text-lg font-semibold text-white">Folder Configuration</h3>
                   </div>
                   <p className="text-sm text-gray-400 mb-4">
-                    Connect and configure your Google Drive folders for Strategy, Meetings, Financial, and Projects documents.
+                    Connect and configure your cloud storage folders for Strategy, Meetings, Financial, and Projects documents.
                   </p>
                   <button
                     onClick={() => {
@@ -794,14 +794,14 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ isOpen, on
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <HardDrive className="w-5 h-5 text-gray-400" />
-                    <h3 className="text-lg font-semibold text-white">Google Drive Sync</h3>
+                    <h3 className="text-lg font-semibold text-white">Cloud Drive Sync</h3>
                     <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs font-semibold rounded-full border border-blue-500/30">
                       Coming Soon
                     </span>
                   </div>
                 </div>
                 <p className="text-sm text-gray-400 mb-4">
-                  Connect your Google Drive to automatically sync and vectorize documents from your Meeting Recordings and Strategy Documents folders.
+                  Connect your cloud storage (Google Drive or Microsoft OneDrive/SharePoint) to automatically sync and analyze your documents.
                 </p>
                 <div className="flex items-center space-x-2 text-sm text-gray-500">
                   <Clock className="w-4 h-4" />

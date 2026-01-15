@@ -234,7 +234,7 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
             sessionStorage.removeItem('microsoft_oauth_complete');
             console.log('🚀 [FuelStage] Reopening modal after Microsoft OAuth return');
             setCloudProvider('microsoft');
-            setDriveFlowStep('connect-drive');
+            setDriveFlowStep('connect');
           } else {
             console.log('🚀 [FuelStage] Reopening modal after Google OAuth return');
             setCloudProvider('google');
@@ -481,10 +481,10 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
               <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-semibold text-white mb-1">
-                  {cloudProvider === 'microsoft' ? 'Microsoft OneDrive' : 'Google Drive'} Authorization Expired
+                  {cloudProvider === 'microsoft' ? 'Microsoft OneDrive/SharePoint' : 'Google Drive'} Authorization Expired
                 </h3>
                 <p className="text-sm text-gray-300 mb-3">
-                  Your {cloudProvider === 'microsoft' ? 'Microsoft OneDrive' : 'Google Drive'} connection has expired and needs to be refreshed.
+                  Your {cloudProvider === 'microsoft' ? 'Microsoft OneDrive/SharePoint' : 'Google Drive'} connection has expired and needs to be refreshed.
                   Click below to re-authorize and continue syncing your documents.
                 </p>
                 <button
