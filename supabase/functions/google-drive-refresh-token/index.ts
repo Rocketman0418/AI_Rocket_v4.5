@@ -45,13 +45,12 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const token = authHeader.replace('Bearer ', '');
 
-    // Parse JWT to get user ID
     let userId: string;
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       userId = payload.sub;
     } catch (e) {
-      console.error('❌ Failed to parse JWT:', e);
+      console.error('Failed to parse JWT:', e);
       return new Response(
         JSON.stringify({ error: 'Invalid token format' }),
         {
@@ -61,10 +60,9 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Verify user exists
     const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(userId);
     if (userError || !user) {
-      console.error('❌ User verification failed:', userError);
+      console.error('User verification failed:', userError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         {
@@ -74,16 +72,18 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log('🔄 Refreshing Google Drive token for user:', user.id);
+    console.log('[Google Refresh] Refreshing token for user:', user.id);
 
-    // Fetch the user's Google Drive connection
     const { data: driveConnection, error: fetchError } = await supabase
       .from('user_drive_connections')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .eq('provider', 'google')
+      .eq('is_active', true)
+      .maybeSingle();
 
     if (fetchError || !driveConnection) {
+      console.error('[Google Refresh] Connection not found:', fetchError);
       return new Response(
         JSON.stringify({ error: 'Google Drive connection not found' }),
         {
@@ -107,8 +107,8 @@ Deno.serve(async (req: Request) => {
     const activeClientId = useAltCredentials ? googleClientIdAlt : googleClientId;
     const activeClientSecret = useAltCredentials ? googleClientSecretAlt : googleClientSecret;
 
-    console.log('🔄 Requesting new access token from Google...');
-    console.log('🔄 Using OAuth App:', driveConnection.oauth_app_id || 'primary');
+    console.log('[Google Refresh] Requesting new access token...');
+    console.log('[Google Refresh] Using OAuth App:', driveConnection.oauth_app_id || 'primary');
 
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -124,9 +124,8 @@ Deno.serve(async (req: Request) => {
     const tokens = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
-      console.error('❌ Failed to refresh token:', tokens);
+      console.error('[Google Refresh] Failed to refresh token:', tokens);
 
-      // If refresh token is invalid, mark connection as error and require reconnection
       if (tokens.error === 'invalid_grant') {
         await supabase
           .from('user_drive_connections')
@@ -134,7 +133,8 @@ Deno.serve(async (req: Request) => {
             is_active: false,
             connection_status: 'token_expired'
           })
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .eq('provider', 'google');
 
         throw new Error('Refresh token is invalid. Please reconnect your Google Drive account.');
       }
@@ -142,23 +142,20 @@ Deno.serve(async (req: Request) => {
       throw new Error(tokens.error_description || 'Failed to refresh token');
     }
 
-    console.log('✅ Token refreshed successfully');
+    console.log('[Google Refresh] Token refreshed successfully');
 
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-    // Clean tokens to remove any newlines or whitespace that could break HTTP headers
     const cleanAccessToken = tokens.access_token?.replace?.(/[\r\n]/g, '') || tokens.access_token;
     const cleanRefreshToken = tokens.refresh_token?.replace?.(/[\r\n]/g, '') || tokens.refresh_token;
 
-    // Update the access token (and refresh token if a new one was provided)
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       access_token: cleanAccessToken,
       token_expires_at: expiresAt.toISOString(),
       is_active: true,
       connection_status: 'connected'
     };
 
-    // Google sometimes issues a new refresh token
     if (cleanRefreshToken) {
       updateData.refresh_token = cleanRefreshToken;
     }
@@ -166,19 +163,21 @@ Deno.serve(async (req: Request) => {
     const { error: updateError } = await supabase
       .from('user_drive_connections')
       .update(updateData)
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .eq('provider', 'google');
 
     if (updateError) {
-      console.error('❌ Failed to update tokens:', updateError);
+      console.error('[Google Refresh] Failed to update tokens:', updateError);
       throw new Error('Failed to update Google Drive authentication');
     }
 
-    console.log('✅ Tokens updated successfully');
-    console.log('✅ New expiration:', expiresAt.toISOString());
+    console.log('[Google Refresh] Tokens updated successfully');
+    console.log('[Google Refresh] New expiration:', expiresAt.toISOString());
 
     return new Response(
       JSON.stringify({
         success: true,
+        access_token: cleanAccessToken,
         expires_at: expiresAt.toISOString()
       }),
       {
@@ -190,7 +189,7 @@ Deno.serve(async (req: Request) => {
     );
 
   } catch (error) {
-    console.error('❌ Token refresh error:', error);
+    console.error('[Google Refresh] Error:', error);
     return new Response(
       JSON.stringify({
         success: false,

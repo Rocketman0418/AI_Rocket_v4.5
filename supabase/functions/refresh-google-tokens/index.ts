@@ -7,19 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
-/**
- * Edge Function: Refresh Google Tokens (Gmail + Drive)
- *
- * This function runs automatically via pg_cron every 10 minutes to ensure
- * all active Google OAuth tokens (Gmail and Drive) are refreshed BEFORE they expire.
- * This ensures n8n workflows always have valid tokens to work with.
- *
- * Process:
- * 1. Find all tokens expiring in the next 45 minutes
- * 2. Refresh them using the refresh_token
- * 3. Update the database with new access_tokens
- * 4. Mark as inactive if refresh fails
- */
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -101,7 +88,7 @@ Deno.serve(async (req: Request) => {
 
           const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-          const updateData: any = {
+          const updateData: Record<string, unknown> = {
             access_token: tokens.access_token,
             expires_at: expiresAt.toISOString(),
             is_active: true
@@ -127,6 +114,7 @@ Deno.serve(async (req: Request) => {
     const { data: driveConnections, error: driveError } = await supabase
       .from('user_drive_connections')
       .select('*')
+      .eq('provider', 'google')
       .eq('is_active', true)
       .eq('connection_status', 'connected')
       .lt('token_expires_at', refreshThreshold);
@@ -134,14 +122,14 @@ Deno.serve(async (req: Request) => {
     if (driveError) {
       console.error('[Token Refresh] Error fetching Drive connections:', driveError);
     } else {
-      console.log(`[Token Refresh] Found ${driveConnections?.length || 0} Drive tokens to refresh`);
+      console.log(`[Token Refresh] Found ${driveConnections?.length || 0} Google Drive tokens to refresh`);
 
       for (const connection of driveConnections || []) {
         const previousExpiry = connection.token_expires_at;
 
         try {
           const { clientId, clientSecret } = getOAuthCredentials(connection.oauth_app_id);
-          console.log(`Refreshing Drive token for user: ${connection.user_id} (OAuth app: ${connection.oauth_app_id || 'primary'})`);
+          console.log(`[Token Refresh] Refreshing Drive token for user: ${connection.user_id} (OAuth app: ${connection.oauth_app_id || 'primary'})`);
 
           const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
             method: 'POST',
@@ -176,15 +164,15 @@ Deno.serve(async (req: Request) => {
                   is_active: false,
                   connection_status: 'token_expired'
                 })
-                .eq('user_id', connection.user_id);
-              console.log(`[Token Refresh] Marked Drive connection as expired for user: ${connection.user_id}`);
+                .eq('id', connection.id);
+              console.log(`[Token Refresh] Marked Drive connection as expired: ${connection.id}`);
             }
             continue;
           }
 
           const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-          const updateData: any = {
+          const updateData: Record<string, unknown> = {
             access_token: tokens.access_token,
             token_expires_at: expiresAt.toISOString(),
             is_active: true,
@@ -198,7 +186,7 @@ Deno.serve(async (req: Request) => {
           await supabase
             .from('user_drive_connections')
             .update(updateData)
-            .eq('user_id', connection.user_id);
+            .eq('id', connection.id);
 
           await supabase.from('token_refresh_logs').insert({
             user_id: connection.user_id,
@@ -209,7 +197,7 @@ Deno.serve(async (req: Request) => {
             new_expiry: expiresAt.toISOString()
           });
 
-          console.log(`[Token Refresh] Drive token refreshed for user: ${connection.user_id}`);
+          console.log(`[Token Refresh] Drive token refreshed for connection: ${connection.id}`);
         } catch (err) {
           console.error(`[Token Refresh] Error refreshing Drive token for ${connection.user_id}:`, err);
 
