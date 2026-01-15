@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { FolderPlus, CheckCircle, Loader2, AlertCircle, Search, Folder, Link, ExternalLink, ArrowLeft, X } from 'lucide-react';
+import { FolderPlus, CheckCircle, Loader2, AlertCircle, Search, Folder, Link, ExternalLink, ArrowLeft, X, HardDrive, Cloud } from 'lucide-react';
 import { initiateGoogleDriveOAuth } from '../../lib/google-drive-oauth';
+import { initiateMicrosoftOAuth } from '../../lib/microsoft-graph-oauth';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { triggerManualFolderSync } from '../../lib/manual-folder-sync';
 
+type DriveProvider = 'google' | 'microsoft';
+
 interface AddMoreFoldersStepProps {
   onComplete: () => void;
   onBack: () => void;
+  provider?: DriveProvider;
 }
 
 interface GoogleDriveFolder {
@@ -29,7 +33,7 @@ interface SelectedFolder {
   slotIndex: number;
 }
 
-export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComplete, onBack }) => {
+export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComplete, onBack, provider: propProvider }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -46,6 +50,11 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
   const [selectedFolders, setSelectedFolders] = useState<SelectedFolder[]>([]);
   const [existingFolders, setExistingFolders] = useState<{ id: string; name: string }[]>([]);
   const [availableSlots, setAvailableSlots] = useState<number[]>([]);
+  const [activeProvider, setActiveProvider] = useState<DriveProvider>(propProvider || 'google');
+  const [microsoftDriveId, setMicrosoftDriveId] = useState<string | null>(null);
+
+  const providerName = activeProvider === 'microsoft' ? 'OneDrive' : 'Google Drive';
+  const ProviderIcon = activeProvider === 'microsoft' ? Cloud : HardDrive;
 
   const isSupportedFileType = (mimeType: string): boolean => {
     const supportedTypes = [
@@ -116,12 +125,18 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
         .from('user_drive_connections')
         .select('*')
         .eq('team_id', teamId)
+        .eq('provider', activeProvider)
+        .eq('is_active', true)
         .maybeSingle();
 
       if (!connection || connection.connection_status === 'token_expired') {
         setNeedsReconnect(true);
         setLoading(false);
         return;
+      }
+
+      if (activeProvider === 'microsoft' && connection.microsoft_drive_id) {
+        setMicrosoftDriveId(connection.microsoft_drive_id);
       }
 
       const existing: { id: string; name: string }[] = [];
@@ -166,15 +181,20 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
         return;
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-google-drive-folders`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-        }
-      );
+      let endpoint = '';
+      if (activeProvider === 'microsoft') {
+        const driveId = microsoftDriveId || '';
+        endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-microsoft-folders?driveId=${encodeURIComponent(driveId)}`;
+      } else {
+        endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-google-drive-folders`;
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -185,7 +205,7 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
       setDriveFolders(data.folders || []);
     } catch (err: any) {
       console.error('Error loading drive folders:', err);
-      setError(err.message || 'Failed to load Google Drive folders');
+      setError(err.message || `Failed to load ${providerName} folders`);
     } finally {
       setLoadingDriveFolders(false);
     }
@@ -303,7 +323,8 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
       const { error: updateError } = await supabase
         .from('user_drive_connections')
         .update(updates)
-        .eq('team_id', teamId);
+        .eq('team_id', teamId)
+        .eq('provider', activeProvider);
 
       if (updateError) throw updateError;
 
@@ -311,6 +332,7 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
         .from('user_drive_connections')
         .select('access_token')
         .eq('team_id', teamId)
+        .eq('provider', activeProvider)
         .eq('is_active', true)
         .maybeSingle();
 
@@ -344,7 +366,11 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
   const handleReconnect = () => {
     setConnecting(true);
     sessionStorage.setItem('reopen_fuel_stage', 'true');
-    initiateGoogleDriveOAuth(false, true);
+    if (activeProvider === 'microsoft') {
+      initiateMicrosoftOAuth(false, true);
+    } else {
+      initiateGoogleDriveOAuth(false, true);
+    }
   };
 
   if (loading) {
@@ -363,17 +389,17 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
       <div className="space-y-6">
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-600/20 mb-4">
-            <Link className="w-8 h-8 text-orange-400" />
+            <ProviderIcon className="w-8 h-8 text-orange-400" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-3">Connect Google Drive</h2>
+          <h2 className="text-2xl font-bold text-white mb-3">Connect {providerName}</h2>
           <p className="text-gray-300">
-            Connect your Google Drive to select folders
+            Connect your {providerName} to select folders
           </p>
         </div>
 
         <div className="bg-orange-900/20 border border-orange-700 rounded-lg p-4">
           <p className="text-sm text-orange-300">
-            Your Google Drive is not currently connected. Click below to authenticate.
+            Your {providerName} is not currently connected. Click below to authenticate.
           </p>
         </div>
 
@@ -396,8 +422,8 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
               </>
             ) : (
               <>
-                <Link className="w-5 h-5" />
-                <span>Connect Google Drive</span>
+                <ProviderIcon className="w-5 h-5" />
+                <span>Connect {providerName}</span>
               </>
             )}
           </button>
@@ -424,7 +450,7 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
         </div>
         <h2 className="text-2xl font-bold text-white mb-3">Add More Folders</h2>
         <p className="text-gray-300">
-          Select additional Google Drive folders to sync
+          Select additional {providerName} folders to sync
         </p>
         {remainingSlots > 0 && (
           <p className="text-sm text-gray-500 mt-2">

@@ -10,7 +10,7 @@ import { initiateMicrosoftOAuth } from '../lib/microsoft-graph-oauth';
 import { getBothConnections, isTokenExpired, DualConnectionStatus, UnifiedDriveConnection } from '../lib/unified-drive-utils';
 
 interface ConnectedFoldersStatusProps {
-  onConnectMore: () => void;
+  onConnectMore: (provider?: 'google' | 'microsoft') => void;
   onClose: () => void;
   onDisconnected?: () => void;
   onOpenLocalUpload?: () => void;
@@ -446,7 +446,7 @@ export const ConnectedFoldersStatus: React.FC<ConnectedFoldersStatusProps> = ({ 
         {isConnected && !isExpired && (
           <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-700/50">
             <button
-              onClick={onConnectMore}
+              onClick={() => onConnectMore(provider)}
               className="flex-1 px-3 py-2 bg-gray-700/50 hover:bg-gray-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
             >
               <FolderPlus className="w-3.5 h-3.5" />

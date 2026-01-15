@@ -69,6 +69,7 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
   const [showCategoriesModal, setShowCategoriesModal] = useState(false);
   const [documentsFilterCategory, setDocumentsFilterCategory] = useState<string | null>(null);
   const [folderSectionKey, setFolderSectionKey] = useState(0);
+  const [addFoldersProvider, setAddFoldersProvider] = useState<'google' | 'microsoft' | undefined>(undefined);
 
   const refreshCounts = async () => {
     await refreshFuelLevel();
@@ -812,7 +813,8 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
             <div className="p-6">
               {driveFlowStep === 'status' && (
                 <ConnectedFoldersStatus
-                  onConnectMore={() => {
+                  onConnectMore={(provider) => {
+                    setAddFoldersProvider(provider);
                     setDriveFlowStep('add-more-folders');
                   }}
                   onClose={async () => {
@@ -872,15 +874,18 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
               )}
               {driveFlowStep === 'add-more-folders' && (
                 <AddMoreFoldersStep
+                  provider={addFoldersProvider}
                   onComplete={async () => {
                     await refreshCounts();
                     if (onRefresh) {
                       await onRefresh();
                     }
                     await clearFlowState();
+                    setAddFoldersProvider(undefined);
                     setShowDriveFlow(false);
                   }}
                   onBack={() => {
+                    setAddFoldersProvider(undefined);
                     setDriveFlowStep('status');
                   }}
                 />
