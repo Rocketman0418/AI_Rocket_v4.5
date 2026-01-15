@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { LayoutDashboard, RefreshCw, Clock, AlertCircle, Loader2, Calendar, Sparkles, Download, Settings, X, Beaker, Info, Check, ToggleLeft, ToggleRight } from 'lucide-react';
+import { LayoutDashboard, RefreshCw, Clock, AlertCircle, Loader2, Calendar, Sparkles, Download, X, Beaker, Info } from 'lucide-react';
 import { useTeamDashboard } from '../hooks/useTeamDashboard';
 import { GoalsProgressSection } from './team-dashboard/GoalsProgressSection';
 import { AlignmentMetricSection } from './team-dashboard/AlignmentMetricSection';
@@ -59,116 +59,31 @@ function GeneratingState() {
   );
 }
 
-function ExperimentalBanner() {
-  return (
-    <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-      <Beaker className="w-4 h-4 text-amber-400 flex-shrink-0" />
-      <p className="text-xs text-amber-300">
-        <span className="font-medium">Experimental Feature:</span> This AI-generated dashboard may contain inaccuracies. If results seem off, try regenerating.
-      </p>
-    </div>
-  );
-}
-
-const INSTRUCTION_EXAMPLES = [
-  "Focus more on sales pipeline metrics and revenue targets",
-  "Include weekly activity comparisons where possible",
-  "Highlight any risks related to project deadlines",
-  "Emphasize team collaboration and communication patterns",
-  "Track OKRs aligned with Q1 company objectives"
-];
-
-interface CustomizeModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  currentInstructions: string | null;
-  onSave: (instructions: string | null) => void;
-}
-
-function CustomizeModal({ isOpen, onClose, currentInstructions, onSave }: CustomizeModalProps) {
-  const [instructions, setInstructions] = useState(currentInstructions || '');
-  const [saved, setSaved] = useState(false);
-
-  if (!isOpen) return null;
-
-  const handleSave = () => {
-    onSave(instructions.trim() || null);
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      onClose();
-    }, 1500);
-  };
+function ExperimentalTag() {
+  const [showTooltip, setShowTooltip] = useState(false);
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg shadow-2xl">
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <div className="flex items-center gap-2">
-            <Settings className="w-5 h-5 text-sky-400" />
-            <h2 className="text-lg font-semibold text-white">Customize Dashboard</h2>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="p-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Custom Instructions
-            </label>
-            <textarea
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              placeholder="Tell Astra what to focus on when generating your dashboard..."
-              rows={4}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:border-sky-500 focus:outline-none resize-none"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              These instructions will apply to all future automatic dashboard generations.
+    <div className="relative">
+      <button
+        onClick={() => setShowTooltip(!showTooltip)}
+        className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full text-xs text-amber-300 hover:bg-amber-500/20 transition-colors"
+      >
+        <Beaker className="w-3.5 h-3.5" />
+        <span className="font-medium">Experimental</span>
+      </button>
+      {showTooltip && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setShowTooltip(false)}
+          />
+          <div className="absolute top-full left-0 mt-2 z-50 w-64 p-3 bg-gray-900 border border-amber-500/30 rounded-lg shadow-xl">
+            <p className="text-xs text-amber-200">
+              This AI-generated dashboard may contain inaccuracies. If results seem off, try regenerating.
             </p>
           </div>
-
-          <div className="bg-gray-800/50 rounded-lg p-3">
-            <p className="text-xs font-medium text-gray-400 mb-2">Example instructions:</p>
-            <div className="space-y-1.5">
-              {INSTRUCTION_EXAMPLES.map((example, i) => (
-                <button
-                  key={i}
-                  onClick={() => setInstructions(example)}
-                  className="block w-full text-left text-xs text-gray-400 hover:text-sky-300 transition-colors"
-                >
-                  "{example}"
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-700">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saved}
-            className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:bg-sky-600 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            {saved ? (
-              <>
-                <Check className="w-4 h-4" />
-                Saved!
-              </>
-            ) : (
-              'Save Instructions'
-            )}
-          </button>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
@@ -176,23 +91,14 @@ function CustomizeModal({ isOpen, onClose, currentInstructions, onSave }: Custom
 interface GenerateModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onGenerate: (instructions?: string, applyToFuture?: boolean) => void;
-  defaultInstructions: string | null;
+  onGenerate: () => void;
 }
 
-function GenerateModal({ isOpen, onClose, onGenerate, defaultInstructions }: GenerateModalProps) {
-  const [showCustomize, setShowCustomize] = useState(false);
-  const [instructions, setInstructions] = useState(defaultInstructions || '');
-  const [applyToFuture, setApplyToFuture] = useState(false);
-
+function GenerateModal({ isOpen, onClose, onGenerate }: GenerateModalProps) {
   if (!isOpen) return null;
 
   const handleGenerate = () => {
-    if (showCustomize && instructions.trim()) {
-      onGenerate(instructions.trim(), applyToFuture);
-    } else {
-      onGenerate();
-    }
+    onGenerate();
     onClose();
   };
 
@@ -214,52 +120,11 @@ function GenerateModal({ isOpen, onClose, onGenerate, defaultInstructions }: Gen
             Generate a new AI-powered dashboard with the latest team data. This typically takes 30-60 seconds.
           </p>
 
-          <button
-            onClick={() => setShowCustomize(!showCustomize)}
-            className="flex items-center gap-2 text-sm text-sky-400 hover:text-sky-300 transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-            {showCustomize ? 'Hide custom instructions' : 'Add custom instructions for this generation'}
-          </button>
-
-          {showCustomize && (
-            <div className="space-y-3">
-              <textarea
-                value={instructions}
-                onChange={(e) => setInstructions(e.target.value)}
-                placeholder="Tell Astra what to focus on..."
-                rows={3}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:border-sky-500 focus:outline-none resize-none"
-              />
-
-              <button
-                onClick={() => setApplyToFuture(!applyToFuture)}
-                className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
-              >
-                {applyToFuture ? (
-                  <ToggleRight className="w-5 h-5 text-sky-400" />
-                ) : (
-                  <ToggleLeft className="w-5 h-5" />
-                )}
-                Apply to all future dashboards
-              </button>
-
-              <div className="bg-gray-800/50 rounded-lg p-2">
-                <p className="text-xs text-gray-500">Examples:</p>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {INSTRUCTION_EXAMPLES.slice(0, 3).map((ex, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setInstructions(ex)}
-                      className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors"
-                    >
-                      {ex.slice(0, 30)}...
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+            <p className="text-xs text-slate-400">
+              The Team Dashboard provides a consistent view of your team's goals, alignment, and health metrics.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-700">
@@ -372,40 +237,25 @@ function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) 
 export const TeamDashboardView: React.FC<TeamDashboardViewProps> = () => {
   const {
     currentSnapshot,
-    settings,
     loading,
     error,
     regenerate,
     isRegenerating,
     canRegenerate,
     isAdmin,
-    updateCustomInstructions,
     teamName
   } = useTeamDashboard();
 
-  const [showCustomizeModal, setShowCustomizeModal] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const dashboardRef = useRef<HTMLDivElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  const hasVisualization = !!currentSnapshot?.visualization_html;
 
   const handleExportPDF = async () => {
     if (isExporting) return;
 
     setIsExporting(true);
     try {
-      let targetElement: HTMLElement | null = null;
-
-      if (hasVisualization && iframeRef.current) {
-        const iframeDoc = iframeRef.current.contentDocument || iframeRef.current.contentWindow?.document;
-        if (iframeDoc?.body) {
-          targetElement = iframeDoc.body;
-        }
-      } else if (dashboardRef.current) {
-        targetElement = dashboardRef.current;
-      }
+      const targetElement = dashboardRef.current;
 
       if (!targetElement) {
         console.error('No target element found for PDF export');
@@ -496,7 +346,6 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = () => {
           isOpen={showGenerateModal}
           onClose={() => setShowGenerateModal(false)}
           onGenerate={regenerate}
-          defaultInstructions={settings?.custom_instructions || null}
         />
       </div>
     );
@@ -514,7 +363,10 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = () => {
                 <LayoutDashboard className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-white">Team Dashboard</h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-xl font-semibold text-white">Team Dashboard</h1>
+                  <ExperimentalTag />
+                </div>
                 <p className="text-sm text-slate-400">
                   Daily AI-Powered Goals, Alignment & Health Insights
                 </p>
@@ -552,37 +404,24 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = () => {
               )}
 
               {isAdmin && (
-                <>
-                  <button
-                    onClick={() => setShowCustomizeModal(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm transition-colors"
-                    title="Customize dashboard preferences"
-                  >
-                    <Settings className="w-4 h-4" />
-                    <span className="hidden sm:inline">Customize</span>
-                  </button>
-
-                  <button
-                    onClick={() => setShowGenerateModal(true)}
-                    disabled={isRegenerating || !canRegenerate}
-                    className={`
-                      flex items-center gap-2 px-4 py-1.5 rounded-lg font-medium transition-all text-sm
-                      ${isRegenerating || !canRegenerate
-                        ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-sky-500 to-blue-500 text-white hover:from-sky-600 hover:to-blue-600'
-                      }
-                    `}
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} />
-                    {isRegenerating ? 'Generating...' : 'Generate'}
-                  </button>
-                </>
+                <button
+                  onClick={() => setShowGenerateModal(true)}
+                  disabled={isRegenerating || !canRegenerate}
+                  className={`
+                    flex items-center gap-2 px-4 py-1.5 rounded-lg font-medium transition-all text-sm
+                    ${isRegenerating || !canRegenerate
+                      ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-sky-500 to-blue-500 text-white hover:from-sky-600 hover:to-blue-600'
+                    }
+                  `}
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+                  {isRegenerating ? 'Generating...' : 'Generate'}
+                </button>
               )}
             </div>
           </div>
         </div>
-
-        <ExperimentalBanner />
 
         {error && (
           <div className="mt-4 flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
@@ -602,49 +441,30 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = () => {
 
         {!isRegenerating && currentSnapshot && (
           <div className="flex-1 mt-4 rounded-xl overflow-hidden bg-gray-900" style={{ minHeight: '600px' }}>
-            {hasVisualization ? (
-              <iframe
-                ref={iframeRef}
-                srcDoc={currentSnapshot.visualization_html}
-                title="Team Dashboard Visualization"
-                className="w-full h-full border-0"
-                style={{ minHeight: '700px', aspectRatio: '16/9' }}
-                sandbox="allow-scripts allow-same-origin"
-              />
-            ) : (
-              <div
-                ref={dashboardRef}
-                className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4"
-                style={{ maxWidth: '1400px', margin: '0 auto' }}
-              >
-                <div className="lg:col-span-1 flex flex-col min-h-[580px]">
-                  <AlignmentMetricSection data={currentSnapshot.alignment_metrics} />
-                </div>
-                <div className="lg:col-span-1 flex flex-col min-h-[580px]">
-                  <GoalsProgressSection data={currentSnapshot.goals_progress} />
-                </div>
-                <div className="lg:col-span-1 flex flex-col min-h-[580px]">
-                  <HealthOverviewSection data={currentSnapshot.health_overview} />
-                </div>
+            <div
+              ref={dashboardRef}
+              className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4"
+              style={{ maxWidth: '1400px', margin: '0 auto' }}
+            >
+              <div className="lg:col-span-1 flex flex-col min-h-[580px]">
+                <AlignmentMetricSection data={currentSnapshot.alignment_metrics} />
               </div>
-            )}
+              <div className="lg:col-span-1 flex flex-col min-h-[580px]">
+                <GoalsProgressSection data={currentSnapshot.goals_progress} />
+              </div>
+              <div className="lg:col-span-1 flex flex-col min-h-[580px]">
+                <HealthOverviewSection data={currentSnapshot.health_overview} />
+              </div>
+            </div>
           </div>
         )}
 
       </div>
 
-      <CustomizeModal
-        isOpen={showCustomizeModal}
-        onClose={() => setShowCustomizeModal(false)}
-        currentInstructions={settings?.custom_instructions || null}
-        onSave={updateCustomInstructions}
-      />
-
       <GenerateModal
         isOpen={showGenerateModal}
         onClose={() => setShowGenerateModal(false)}
         onGenerate={regenerate}
-        defaultInstructions={settings?.custom_instructions || null}
       />
     </div>
   );

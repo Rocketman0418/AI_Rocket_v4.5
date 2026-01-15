@@ -5,13 +5,33 @@ interface TeamPulseInfographicProps {
   imageUrl: string | null;
   imageBase64: string | null;
   generatedAt: string;
+  designStyle: string | null;
 }
+
+const STYLE_DISPLAY_NAMES: Record<string, string> = {
+  pixel_power: 'Pixel Power',
+  blueprint: 'The Blueprint',
+  botanical_garden: 'Botanical Garden',
+  interstellar_voyage: 'Interstellar Voyage',
+  papercraft_popup: 'Papercraft Pop-Up',
+  neon_noir: 'Neon Noir',
+  retro_cartoon: 'Retro Cartoon',
+  modern_superhero: 'Modern Superhero',
+  animal_kingdom: 'Animal Kingdom',
+  vintage_board_game: 'Vintage Board Game',
+  pop_art: 'Pop Art',
+  expedition_map: 'Expedition Map'
+};
 
 export function TeamPulseInfographic({
   imageUrl,
   imageBase64,
-  generatedAt
+  generatedAt,
+  designStyle
 }: TeamPulseInfographicProps) {
+  const styleDisplayName = designStyle
+    ? (STYLE_DISPLAY_NAMES[designStyle] || 'Custom')
+    : null;
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -65,6 +85,14 @@ export function TeamPulseInfographic({
             </button>
           </div>
           <div className="flex items-center gap-2">
+            {styleDisplayName && (
+              <>
+                <span className="px-2 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs">
+                  {styleDisplayName}
+                </span>
+                <div className="w-px h-4 bg-slate-700 mx-1" />
+              </>
+            )}
             <button
               onClick={handleZoomOut}
               disabled={zoom <= 0.5}

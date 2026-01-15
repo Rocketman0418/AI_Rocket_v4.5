@@ -5,6 +5,7 @@ import { TeamPulseHeader } from './team-pulse/TeamPulseHeader';
 import { TeamPulseInfographic } from './team-pulse/TeamPulseInfographic';
 import { TeamPulseEmptyState } from './team-pulse/TeamPulseEmptyState';
 import { TeamPulseInsightsPanel } from './team-pulse/TeamPulseInsightsPanel';
+import { TeamPulseCustomizeModal, DESIGN_STYLES } from './team-pulse/TeamPulseCustomizeModal';
 import { AlertCircle, Loader2, Sparkles } from 'lucide-react';
 
 interface TeamPulseViewProps {
@@ -16,13 +17,16 @@ export default function TeamPulseView({ onClose }: TeamPulseViewProps) {
   const {
     currentSnapshot,
     settings,
+    customizationSettings,
     loading,
     generating,
     error,
-    generatePulse
+    generatePulse,
+    updateCustomizationSettings
   } = useTeamPulse();
 
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showCustomizeModal, setShowCustomizeModal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -35,6 +39,33 @@ export default function TeamPulseView({ onClose }: TeamPulseViewProps) {
     console.log('[TeamPulse] Generate button clicked, calling generatePulse...');
     const result = await generatePulse();
     console.log('[TeamPulse] generatePulse result:', result);
+  };
+
+  const handleCustomizedGenerate = async (options: {
+    custom_instructions: string | null;
+    design_style: string | null;
+    design_description: string | null;
+  }) => {
+    console.log('[TeamPulse] Customized generate called with options:', options);
+
+    let effectiveDesignStyle = options.design_style;
+
+    if (customizationSettings.rotate_random && !options.design_style) {
+      const styleIds = DESIGN_STYLES.map(s => s.id);
+      const lastUsed = settings?.last_used_style;
+      const availableStyles = lastUsed
+        ? styleIds.filter(id => id !== lastUsed)
+        : styleIds;
+      effectiveDesignStyle = availableStyles[Math.floor(Math.random() * availableStyles.length)];
+      console.log('[TeamPulse] Rotate random selected style:', effectiveDesignStyle);
+    }
+
+    const result = await generatePulse({
+      custom_instructions: options.custom_instructions,
+      design_style: effectiveDesignStyle,
+      design_description: options.design_description
+    });
+    console.log('[TeamPulse] Customized generatePulse result:', result);
   };
 
   if (loading) {
@@ -57,6 +88,7 @@ export default function TeamPulseView({ onClose }: TeamPulseViewProps) {
           generating={generating}
           isAdmin={isAdmin}
           onGenerate={handleGenerate}
+          onCustomize={() => setShowCustomizeModal(true)}
         />
 
         {error && (
@@ -106,6 +138,7 @@ export default function TeamPulseView({ onClose }: TeamPulseViewProps) {
                 imageUrl={currentSnapshot.infographic_url}
                 imageBase64={currentSnapshot.infographic_base64}
                 generatedAt={currentSnapshot.generated_at}
+                designStyle={currentSnapshot.design_style}
               />
             )}
 
@@ -127,6 +160,14 @@ export default function TeamPulseView({ onClose }: TeamPulseViewProps) {
           </>
         )}
       </div>
+
+      <TeamPulseCustomizeModal
+        isOpen={showCustomizeModal}
+        onClose={() => setShowCustomizeModal(false)}
+        currentSettings={customizationSettings}
+        onSave={updateCustomizationSettings}
+        onGenerate={handleCustomizedGenerate}
+      />
     </div>
   );
 }

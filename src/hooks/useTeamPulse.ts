@@ -3,22 +3,47 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { TeamPulseSnapshot, TeamPulseSettings } from '../types';
 
+export interface TeamPulseCustomizationSettings {
+  custom_instructions: string | null;
+  design_style: string | null;
+  design_description: string | null;
+  rotate_random: boolean;
+  apply_to_future: boolean;
+}
+
+interface GenerateOptions {
+  custom_instructions?: string | null;
+  design_style?: string | null;
+  design_description?: string | null;
+}
+
 interface UseTeamPulseReturn {
   currentSnapshot: TeamPulseSnapshot | null;
   settings: TeamPulseSettings | null;
+  customizationSettings: TeamPulseCustomizationSettings;
   history: TeamPulseSnapshot[];
   loading: boolean;
   generating: boolean;
   error: string | null;
-  generatePulse: () => Promise<boolean>;
+  generatePulse: (options?: GenerateOptions) => Promise<boolean>;
   refreshSnapshot: () => Promise<void>;
   loadHistory: () => Promise<void>;
+  updateCustomizationSettings: (settings: TeamPulseCustomizationSettings) => Promise<void>;
 }
+
+const DEFAULT_CUSTOMIZATION: TeamPulseCustomizationSettings = {
+  custom_instructions: null,
+  design_style: null,
+  design_description: null,
+  rotate_random: false,
+  apply_to_future: true
+};
 
 export function useTeamPulse(): UseTeamPulseReturn {
   const { user } = useAuth();
   const [currentSnapshot, setCurrentSnapshot] = useState<TeamPulseSnapshot | null>(null);
   const [settings, setSettings] = useState<TeamPulseSettings | null>(null);
+  const [customizationSettings, setCustomizationSettings] = useState<TeamPulseCustomizationSettings>(DEFAULT_CUSTOMIZATION);
   const [history, setHistory] = useState<TeamPulseSnapshot[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -64,8 +89,57 @@ export function useTeamPulse(): UseTeamPulseReturn {
       }
 
       setSettings(data);
+
+      if (data) {
+        setCustomizationSettings({
+          custom_instructions: data.custom_instructions || null,
+          design_style: data.design_style || null,
+          design_description: data.design_description || null,
+          rotate_random: data.rotate_random || false,
+          apply_to_future: data.apply_to_future !== false
+        });
+
+        if (data.generation_in_progress) {
+          setGenerating(true);
+        } else {
+          setGenerating(false);
+          if (data.generation_error) {
+            setError(data.generation_error);
+          }
+        }
+      }
     } catch (err) {
       console.error('Error in fetchSettings:', err);
+    }
+  }, [teamId]);
+
+  const updateCustomizationSettings = useCallback(async (newSettings: TeamPulseCustomizationSettings) => {
+    if (!teamId) return;
+
+    try {
+      const { error: updateError } = await supabase
+        .from('team_pulse_settings')
+        .upsert({
+          team_id: teamId,
+          custom_instructions: newSettings.custom_instructions,
+          design_style: newSettings.design_style,
+          design_description: newSettings.design_description,
+          rotate_random: newSettings.rotate_random,
+          apply_to_future: newSettings.apply_to_future,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'team_id'
+        });
+
+      if (updateError) {
+        console.error('Error updating customization settings:', updateError);
+        throw updateError;
+      }
+
+      setCustomizationSettings(newSettings);
+    } catch (err) {
+      console.error('Error in updateCustomizationSettings:', err);
+      throw err;
     }
   }, [teamId]);
 
@@ -103,8 +177,8 @@ export function useTeamPulse(): UseTeamPulseReturn {
     setLoading(false);
   }, [fetchCurrentSnapshot, fetchSettings]);
 
-  const generatePulse = useCallback(async (): Promise<boolean> => {
-    console.log('[useTeamPulse] generatePulse called', { teamId, userId: user?.id });
+  const generatePulse = useCallback(async (options?: GenerateOptions): Promise<boolean> => {
+    console.log('[useTeamPulse] generatePulse called', { teamId, userId: user?.id, options });
 
     if (!teamId || !user) {
       console.log('[useTeamPulse] Missing teamId or user', { teamId, user: !!user });
@@ -128,55 +202,50 @@ export function useTeamPulse(): UseTeamPulseReturn {
       }
 
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-team-pulse`;
-      console.log('[useTeamPulse] Calling edge function:', url);
+      console.log('[useTeamPulse] Calling edge function (fire and forget):', url);
 
-      const response = await fetch(url, {
+      const requestBody: Record<string, unknown> = {
+        team_id: teamId,
+        generation_type: 'manual'
+      };
+
+      if (options?.custom_instructions) {
+        requestBody.custom_instructions = options.custom_instructions;
+      }
+      if (options?.design_style) {
+        requestBody.design_style = options.design_style;
+      }
+      if (options?.design_description) {
+        requestBody.design_description = options.design_description;
+      }
+
+      fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
           'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         },
-        body: JSON.stringify({
-          team_id: teamId,
-          generation_type: 'manual'
-        })
+        body: JSON.stringify(requestBody)
+      }).then(async (response) => {
+        console.log('[useTeamPulse] Background generation response:', response.status);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('[useTeamPulse] Background generation error:', errorData);
+        }
+      }).catch((err) => {
+        console.error('[useTeamPulse] Background generation fetch error:', err);
       });
 
-      console.log('[useTeamPulse] Response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('[useTeamPulse] Error response:', errorData);
-        throw new Error(errorData.error || `Generation failed with status ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('[useTeamPulse] Success response:', result);
-
-      if (result.snapshot?.infographic_error) {
-        console.warn('[useTeamPulse] Infographic generation failed:', result.snapshot.infographic_error);
-      }
-
-      if (result.snapshot?.has_infographic) {
-        console.log('[useTeamPulse] Infographic generated successfully!');
-      }
-
-      if (result.success) {
-        await refreshSnapshot();
-        return true;
-      } else {
-        throw new Error(result.error || 'Generation failed');
-      }
+      return true;
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to generate Team Pulse';
-      console.error('[useTeamPulse] Error generating pulse:', err);
+      const errorMsg = err instanceof Error ? err.message : 'Failed to start Team Pulse generation';
+      console.error('[useTeamPulse] Error starting pulse generation:', err);
       setError(errorMsg);
-      return false;
-    } finally {
       setGenerating(false);
+      return false;
     }
-  }, [teamId, user, refreshSnapshot]);
+  }, [teamId, user]);
 
   useEffect(() => {
     if (teamId) {
@@ -200,7 +269,33 @@ export function useTeamPulse(): UseTeamPulseReturn {
           filter: `team_id=eq.${teamId}`
         },
         () => {
+          console.log('[useTeamPulse] Snapshot change detected, refreshing...');
           fetchCurrentSnapshot();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'team_pulse_settings',
+          filter: `team_id=eq.${teamId}`
+        },
+        (payload) => {
+          console.log('[useTeamPulse] Settings change detected:', payload.new);
+          const newSettings = payload.new as Record<string, unknown>;
+
+          if (newSettings.generation_in_progress === false) {
+            console.log('[useTeamPulse] Generation completed, refreshing...');
+            setGenerating(false);
+
+            if (newSettings.generation_error) {
+              setError(newSettings.generation_error as string);
+            } else {
+              setError(null);
+              fetchCurrentSnapshot();
+            }
+          }
         }
       )
       .subscribe();
@@ -213,12 +308,14 @@ export function useTeamPulse(): UseTeamPulseReturn {
   return {
     currentSnapshot,
     settings,
+    customizationSettings,
     history,
     loading,
     generating,
     error,
     generatePulse,
     refreshSnapshot,
-    loadHistory
+    loadHistory,
+    updateCustomizationSettings
   };
 }

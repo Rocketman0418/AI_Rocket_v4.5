@@ -1,4 +1,4 @@
-import { Activity, RefreshCw, Clock, Calendar } from 'lucide-react';
+import { Activity, RefreshCw, Clock, Calendar, Settings } from 'lucide-react';
 import { TeamPulseSettings } from '../../types';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -8,6 +8,7 @@ interface TeamPulseHeaderProps {
   generating: boolean;
   isAdmin: boolean;
   onGenerate: () => void;
+  onCustomize: () => void;
 }
 
 export function TeamPulseHeader({
@@ -15,7 +16,8 @@ export function TeamPulseHeader({
   settings,
   generating,
   isAdmin,
-  onGenerate
+  onGenerate,
+  onCustomize
 }: TeamPulseHeaderProps) {
   const formatLastGenerated = () => {
     if (!lastGeneratedAt) return 'Never';
@@ -71,23 +73,34 @@ export function TeamPulseHeader({
             </div>
 
             {isAdmin && (
-              <button
-                onClick={() => {
-                  console.log('[TeamPulseHeader] Generate button clicked');
-                  onGenerate();
-                }}
-                disabled={generating}
-                className={`
-                  flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
-                  ${generating
-                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white hover:from-cyan-600 hover:to-teal-600'
-                  }
-                `}
-              >
-                <RefreshCw className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
-                {generating ? 'Generating...' : 'Generate Now'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={onCustomize}
+                  disabled={generating}
+                  className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-700/50 text-white rounded-lg text-sm transition-colors"
+                  title="Customize Team Pulse style and settings"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span className="hidden sm:inline">Customize</span>
+                </button>
+                <button
+                  onClick={() => {
+                    console.log('[TeamPulseHeader] Generate button clicked');
+                    onGenerate();
+                  }}
+                  disabled={generating}
+                  className={`
+                    flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all
+                    ${generating
+                      ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-cyan-500 to-teal-500 text-white hover:from-cyan-600 hover:to-teal-600'
+                    }
+                  `}
+                >
+                  <RefreshCw className={`w-4 h-4 ${generating ? 'animate-spin' : ''}`} />
+                  {generating ? 'Generating...' : 'Generate Now'}
+                </button>
+              </div>
             )}
           </div>
         </div>

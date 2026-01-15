@@ -81,6 +81,8 @@ export interface DashboardSettings {
   last_generated_at: string | null;
   next_generation_at: string | null;
   custom_instructions: string | null;
+  generation_in_progress?: boolean;
+  generation_error?: string | null;
 }
 
 interface UseTeamDashboardReturn {
@@ -143,10 +145,20 @@ export function useTeamDashboard(): UseTeamDashboardReturn {
       }
 
       setCurrentSnapshot(snapshotResult.data as DashboardSnapshot | null);
-      setSettings(settingsResult.data as DashboardSettings | null);
+      const settingsData = settingsResult.data as DashboardSettings | null;
+      setSettings(settingsData);
 
-      if (settingsResult.data?.last_generated_at) {
-        setLastRegeneratedAt(new Date(settingsResult.data.last_generated_at));
+      if (settingsData?.last_generated_at) {
+        setLastRegeneratedAt(new Date(settingsData.last_generated_at));
+      }
+
+      if (settingsData?.generation_in_progress) {
+        setIsRegenerating(true);
+      } else {
+        setIsRegenerating(false);
+        if (settingsData?.generation_error) {
+          setError(settingsData.generation_error);
+        }
       }
     } catch (err) {
       console.error('Error fetching team dashboard:', err);
@@ -174,11 +186,39 @@ export function useTeamDashboard(): UseTeamDashboardReturn {
           filter: `team_id=eq.${teamId}`
         },
         (payload) => {
+          console.log('[useTeamDashboard] Snapshot change detected');
           if (payload.eventType === 'INSERT' && (payload.new as DashboardSnapshot).is_current) {
             setCurrentSnapshot(payload.new as DashboardSnapshot);
-            setIsRegenerating(false);
           } else if (payload.eventType === 'UPDATE' && (payload.new as DashboardSnapshot).is_current) {
             setCurrentSnapshot(payload.new as DashboardSnapshot);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'team_dashboard_settings',
+          filter: `team_id=eq.${teamId}`
+        },
+        (payload) => {
+          console.log('[useTeamDashboard] Settings change detected:', payload.new);
+          const newSettings = payload.new as DashboardSettings;
+
+          if (newSettings.generation_in_progress === false) {
+            console.log('[useTeamDashboard] Generation completed');
+            setIsRegenerating(false);
+            setSettings(newSettings);
+
+            if (newSettings.generation_error) {
+              setError(newSettings.generation_error);
+            } else {
+              setError(null);
+              if (newSettings.last_generated_at) {
+                setLastRegeneratedAt(new Date(newSettings.last_generated_at));
+              }
+            }
           }
         }
       )
@@ -211,7 +251,9 @@ export function useTeamDashboard(): UseTeamDashboardReturn {
           }, { onConflict: 'team_id' });
       }
 
-      const response = await fetch(
+      console.log('[useTeamDashboard] Starting background generation (fire and forget)');
+
+      fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-team-dashboard-v2`,
         {
           method: 'POST',
@@ -225,24 +267,22 @@ export function useTeamDashboard(): UseTeamDashboardReturn {
             custom_instructions: customInstructions || settings?.custom_instructions || undefined
           })
         }
-      );
+      ).then(async (response) => {
+        console.log('[useTeamDashboard] Background generation response:', response.status);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('[useTeamDashboard] Background generation error:', errorData);
+        }
+      }).catch((err) => {
+        console.error('[useTeamDashboard] Background generation fetch error:', err);
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Request failed: ${response.status}`);
-      }
-
-      const result = await response.json();
-      if (result.success && result.snapshot) {
-        setLastRegeneratedAt(new Date());
-        await fetchDashboard();
-      }
     } catch (err) {
-      console.error('Error regenerating dashboard:', err);
-      setError(err instanceof Error ? err.message : 'Failed to regenerate dashboard');
+      console.error('Error starting dashboard regeneration:', err);
+      setError(err instanceof Error ? err.message : 'Failed to start regeneration');
       setIsRegenerating(false);
     }
-  }, [teamId, canRegenerate, fetchDashboard, settings?.custom_instructions]);
+  }, [teamId, canRegenerate, settings?.custom_instructions]);
 
   const updateCustomInstructions = useCallback(async (instructions: string | null) => {
     if (!teamId || !isAdmin) return;

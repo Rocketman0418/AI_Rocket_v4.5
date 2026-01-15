@@ -561,9 +561,20 @@ Deno.serve(async (req: Request) => {
 
     console.log(`Generating Team Dashboard for team ${team_id}`);
 
-    const { data: dashboardData, error: dataError } = await supabase.rpc('get_team_dashboard_data', {
-      p_team_id: team_id
-    });
+    await supabase
+      .from('team_dashboard_settings')
+      .upsert({
+        team_id,
+        generation_in_progress: true,
+        generation_started_at: new Date().toISOString(),
+        generation_error: null,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'team_id' });
+
+    try {
+      const { data: dashboardData, error: dataError } = await supabase.rpc('get_team_dashboard_data', {
+        p_team_id: team_id
+      });
 
     if (dataError) {
       console.error('Error getting dashboard data:', dataError);
@@ -627,6 +638,8 @@ Deno.serve(async (req: Request) => {
         is_enabled: true,
         last_generated_at: new Date().toISOString(),
         next_generation_at: tomorrow.toISOString(),
+        generation_in_progress: false,
+        generation_error: null,
         updated_at: new Date().toISOString()
       }, { onConflict: 'team_id' });
 
@@ -646,6 +659,20 @@ Deno.serve(async (req: Request) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+    } catch (innerError) {
+      console.error('Error during dashboard generation:', innerError);
+
+      await supabase
+        .from('team_dashboard_settings')
+        .upsert({
+          team_id,
+          generation_in_progress: false,
+          generation_error: innerError instanceof Error ? innerError.message : 'Generation failed',
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'team_id' });
+
+      throw innerError;
+    }
   } catch (error) {
     console.error('Error in generate-team-dashboard:', error);
     return new Response(

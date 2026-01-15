@@ -7,6 +7,148 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+interface DesignStyleConfig {
+  name: string;
+  vibe: string;
+  colorPalette: string;
+  dataVisualization: string[];
+}
+
+const DESIGN_STYLES: Record<string, DesignStyleConfig> = {
+  pixel_power: {
+    name: 'Pixel Power (8-Bit Arcade)',
+    vibe: 'Nostalgic, blocky, vibrant, and digital-first retro gaming aesthetics.',
+    colorPalette: 'Bright neon colors on dark backgrounds, pixel art gradients, classic 8-bit game palettes (cyan, magenta, yellow, green).',
+    dataVisualization: [
+      'Health Bars represent budget or resource levels',
+      'Experience Points (XP) bars track progress toward goals',
+      'Leaderboards replace standard ranked lists',
+      'Pixel art icons and blocky typography'
+    ]
+  },
+  blueprint: {
+    name: 'The Blueprint (Technical Sketch)',
+    vibe: 'Structural, technical, precise - framing data as business architecture.',
+    colorPalette: 'Indigo or dark blue backgrounds, stark white grid lines, technical cyan accents.',
+    dataVisualization: [
+      'Foundation blocks represent base metrics',
+      'Pillars represent key growth drivers',
+      'Schematic arrows show workflow processes',
+      'Hand-drawn technical annotation style'
+    ]
+  },
+  botanical_garden: {
+    name: 'Botanical Garden (Organic Growth)',
+    vibe: 'Natural, nurturing, gentle - using nature as metaphor for growth.',
+    colorPalette: 'Soft greens, earthy tones, sage and moss colors, watercolor textures, cream backgrounds.',
+    dataVisualization: [
+      'Tree Rings show year-over-year expansion',
+      'Root Systems visualize underlying causes',
+      'Blooming Flowers where petal size represents metrics',
+      'Organic flowing lines and natural shapes'
+    ]
+  },
+  interstellar_voyage: {
+    name: 'Interstellar Voyage (Space & Sci-Fi)',
+    vibe: 'Cosmic, exploratory, visionary - for moonshots and the unknown.',
+    colorPalette: 'Deep blacks and dark blues, neon highlights (cyan, magenta), starfield backgrounds, aurora effects.',
+    dataVisualization: [
+      'Planetary Size compares project budgets',
+      'Orbits track recurring patterns or cycles',
+      'Constellations connect related data points',
+      'Nebula effects for category groupings'
+    ]
+  },
+  papercraft_popup: {
+    name: 'Papercraft Pop-Up (3D Collage)',
+    vibe: 'Tactile, artistic, crafted - making data feel tangible.',
+    colorPalette: 'Matte colors, textured paper effects, warm tones, construction paper aesthetic.',
+    dataVisualization: [
+      'Stacked Layers for accumulation data',
+      'Unfolding Paper reveals step-by-step processes',
+      'Cut-outs highlight key metrics',
+      'Shadow effects create depth and dimension'
+    ]
+  },
+  neon_noir: {
+    name: 'Neon Noir (Cyberpunk City)',
+    vibe: 'Futuristic, high-energy, sophisticated - data as city pulse.',
+    colorPalette: 'Dark backgrounds, neon pinks and teals, rain-slicked reflections, glowing lines, high contrast.',
+    dataVisualization: [
+      'Traffic flows represent data movement',
+      'Skyscraper heights for competitive metrics',
+      'Glowing circuitry maps for connections',
+      'Holographic overlays for highlights'
+    ]
+  },
+  retro_cartoon: {
+    name: 'Retro Cartoon (Rubber Hose Style)',
+    vibe: '1930s animation energy - making data approachable and alive.',
+    colorPalette: 'Sepia tones, grainy vintage textures, bold black outlines, limited warm palette.',
+    dataVisualization: [
+      'Anthropomorphic Charts that express emotion',
+      'Speech bubbles and Bang/Pow clouds for alerts',
+      'Whimsical vintage icons',
+      'Bouncy rubber hose style elements'
+    ]
+  },
+  modern_superhero: {
+    name: 'Modern Superhero (Comic Book Bold)',
+    vibe: 'Heroic, powerful, impactful - data as epic narrative.',
+    colorPalette: 'Deep shadows, halftone dots (Ben-Day dots), bold primary colors, dramatic contrast.',
+    dataVisualization: [
+      'Power Meters like superhero energy cores',
+      'Action Sequences showing before/after battles',
+      'Heroic Portraits for top performers',
+      'Dynamic perspective angles'
+    ]
+  },
+  animal_kingdom: {
+    name: 'Animal Kingdom (Ecosystem Logic)',
+    vibe: 'Natural hierarchy, ecosystem thinking - explaining complex relationships.',
+    colorPalette: 'Earthy natural textures, wildlife photography style, woodcut illustration aesthetic.',
+    dataVisualization: [
+      'Food Chain/Pyramid for hierarchy',
+      'Migration Maps for movement tracking',
+      'Herd Size for scale comparisons',
+      'Natural habitat backdrops'
+    ]
+  },
+  vintage_board_game: {
+    name: 'Vintage Board Game (Path to Success)',
+    vibe: 'Playful journey, strategic progress - data as game being won.',
+    colorPalette: 'Warm wood tones, vintage game aesthetics, parchment backgrounds, classic game colors.',
+    dataVisualization: [
+      'Winding Path board game track for lifecycle',
+      'Property Cards for KPIs',
+      'Dice/Tokens for allocations',
+      'Isometric game board views'
+    ]
+  },
+  pop_art: {
+    name: 'Pop Art (The Warhol Report)',
+    vibe: 'Bold, repetitive, commercial art - making data impossible to miss.',
+    colorPalette: 'Neon high-saturation colors, heavy black outlines, clashing color combinations, screen print style.',
+    dataVisualization: [
+      'Icon Grids with color variations',
+      'High-Contrast Callouts for outliers',
+      'Stylized Pop-art portraits',
+      'Repetitive pattern backgrounds'
+    ]
+  },
+  expedition_map: {
+    name: 'Expedition Map (Antique Cartography)',
+    vibe: 'Discovery, exploration, navigation - data as uncharted territory.',
+    colorPalette: 'Parchment textures, hand-drawn ink lines, sepia and aged paper tones, compass rose accents.',
+    dataVisualization: [
+      'Archipelago of Data (business units as islands)',
+      'Trade Routes with dashed lines',
+      'The Unknown (fading into clouds for projections)',
+      'Nautical and cartographic elements'
+    ]
+  }
+};
+
 interface TeamPulseData {
   team_info: {
     team_id: string;
@@ -236,11 +378,18 @@ Respond ONLY with valid JSON.`;
   }
 }
 
+interface DesignOptions {
+  design_style?: string | null;
+  design_description?: string | null;
+  custom_instructions?: string | null;
+}
+
 async function generateInfographic(
   teamName: string,
   analysis: AnalysisResult,
   memberCount: number,
-  apiKey: string
+  apiKey: string,
+  designOptions?: DesignOptions
 ): Promise<{ url?: string; base64?: string; error?: string }> {
   const focusAreas = analysis.key_metrics.team_focus_areas || '';
   const activeProjects = analysis.key_metrics.active_projects || '';
@@ -249,27 +398,56 @@ async function generateInfographic(
   const upcomingDeadlines = analysis.key_metrics.upcoming_deadlines || '';
   const teamSnapshot = analysis.team_snapshot || '';
 
-  const businessContext = `${focusAreas} ${activeProjects} ${financialStatus}`.toLowerCase();
+  let styleInstructions = '';
+  let themeContext = '';
+  let accentStyle = '';
 
-  let themeContext = 'technology and innovation';
-  let accentStyle = 'electric blue (#3B82F6), cyan (#06B6D4), and dark slate (#1E293B) with gradient accents';
+  if (designOptions?.design_description) {
+    styleInstructions = `
+=== CUSTOM DESIGN STYLE ===
+Follow this custom design direction: ${designOptions.design_description}
+`;
+    themeContext = 'custom style as described';
+    accentStyle = 'colors and style as specified in the custom description';
+  } else if (designOptions?.design_style && DESIGN_STYLES[designOptions.design_style]) {
+    const style = DESIGN_STYLES[designOptions.design_style];
+    styleInstructions = `
+=== DESIGN STYLE: ${style.name} ===
+VIBE: ${style.vibe}
+COLOR PALETTE: ${style.colorPalette}
+DATA VISUALIZATION TECHNIQUES:
+${style.dataVisualization.map(d => `- ${d}`).join('\n')}
 
-  if (businessContext.includes('health') || businessContext.includes('medical') || businessContext.includes('wellness')) {
-    themeContext = 'healthcare and wellness';
-    accentStyle = 'calming teal (#14B8A6), green (#22C55E), clean white, and soft gradients';
-  } else if (businessContext.includes('financ') || businessContext.includes('invest') || businessContext.includes('banking')) {
-    themeContext = 'finance and investment';
-    accentStyle = 'deep navy (#1E3A5F), gold (#F59E0B), professional gray, and metallic accents';
-  } else if (businessContext.includes('market') || businessContext.includes('brand') || businessContext.includes('creative')) {
-    themeContext = 'marketing and creative';
-    accentStyle = 'vibrant coral (#F97316), warm orange, charcoal (#374151), and dynamic gradients';
-  } else if (businessContext.includes('real estate') || businessContext.includes('property') || businessContext.includes('homes')) {
-    themeContext = 'real estate and property';
-    accentStyle = 'warm terracotta (#C2410C), sage green (#84CC16), cream, and earthy professional tones';
-  } else if (businessContext.includes('consult') || businessContext.includes('service') || businessContext.includes('client')) {
-    themeContext = 'professional services';
-    accentStyle = 'sophisticated slate (#475569), copper (#EA580C), cream (#FEF3C7), and elegant highlights';
+IMPORTANT: Fully embrace this design style throughout the entire infographic. Every element should reflect this aesthetic.
+`;
+    themeContext = style.name;
+    accentStyle = style.colorPalette;
+  } else {
+    const businessContext = `${focusAreas} ${activeProjects} ${financialStatus}`.toLowerCase();
+    themeContext = 'technology and innovation';
+    accentStyle = 'electric blue (#3B82F6), cyan (#06B6D4), and dark slate (#1E293B) with gradient accents';
+
+    if (businessContext.includes('health') || businessContext.includes('medical') || businessContext.includes('wellness')) {
+      themeContext = 'healthcare and wellness';
+      accentStyle = 'calming teal (#14B8A6), green (#22C55E), clean white, and soft gradients';
+    } else if (businessContext.includes('financ') || businessContext.includes('invest') || businessContext.includes('banking')) {
+      themeContext = 'finance and investment';
+      accentStyle = 'deep navy (#1E3A5F), gold (#F59E0B), professional gray, and metallic accents';
+    } else if (businessContext.includes('market') || businessContext.includes('brand') || businessContext.includes('creative')) {
+      themeContext = 'marketing and creative';
+      accentStyle = 'vibrant coral (#F97316), warm orange, charcoal (#374151), and dynamic gradients';
+    } else if (businessContext.includes('real estate') || businessContext.includes('property') || businessContext.includes('homes')) {
+      themeContext = 'real estate and property';
+      accentStyle = 'warm terracotta (#C2410C), sage green (#84CC16), cream, and earthy professional tones';
+    } else if (businessContext.includes('consult') || businessContext.includes('service') || businessContext.includes('client')) {
+      themeContext = 'professional services';
+      accentStyle = 'sophisticated slate (#475569), copper (#EA580C), cream (#FEF3C7), and elegant highlights';
+    }
   }
+
+  const customInstructionsSection = designOptions?.custom_instructions
+    ? `\n=== CUSTOM INSTRUCTIONS ===\n${designOptions.custom_instructions}\n`
+    : '';
 
   const shortHighlights = analysis.short_highlights || ['Strong team momentum', 'Solid execution focus', 'Building foundation'];
   const shortInsights = analysis.short_insights || ['Active project development', 'Growing collaboration', 'Clear goal alignment'];
@@ -278,9 +456,10 @@ async function generateInfographic(
   const fullRecommendations = analysis.recommendations || [];
 
   const prompt = `Create an infographic for "${teamName}" Team Pulse report. Focus on VISUAL STORYTELLING with MINIMAL TEXT.
-
-INDUSTRY: ${themeContext}
-COLORS: ${accentStyle}. Light background (#F8FAFC or white).
+${styleInstructions}
+${customInstructionsSection}
+THEME: ${themeContext}
+COLORS: ${accentStyle}.
 
 === SPECS ===
 - Landscape 1920x1080 (16:9)
@@ -444,7 +623,13 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { team_id, generation_type = 'manual' } = await req.json();
+    const {
+      team_id,
+      generation_type = 'manual',
+      custom_instructions,
+      design_style,
+      design_description
+    } = await req.json();
 
     if (!team_id) {
       return new Response(
@@ -453,11 +638,27 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`Generating Team Pulse for team ${team_id}`);
-
-    const { data: pulseData, error: dataError } = await supabase.rpc('get_team_pulse_data', {
-      p_team_id: team_id
+    console.log(`Generating Team Pulse for team ${team_id}`, {
+      design_style,
+      has_custom_instructions: !!custom_instructions,
+      has_design_description: !!design_description
     });
+
+    await supabase
+      .from('team_pulse_settings')
+      .update({
+        generation_in_progress: true,
+        generation_started_at: new Date().toISOString(),
+        generation_error: null
+      })
+      .eq('team_id', team_id);
+
+    let generationError: string | null = null;
+
+    try {
+      const { data: pulseData, error: dataError } = await supabase.rpc('get_team_pulse_data', {
+        p_team_id: team_id
+      });
 
     if (dataError) {
       console.error('Error getting pulse data:', dataError);
@@ -475,11 +676,18 @@ Deno.serve(async (req: Request) => {
     console.log('Analysis complete. Team snapshot generated.');
 
     console.log('Step 2: Generating infographic with gemini-3-pro-image-preview...');
+    const designOptions: DesignOptions = {
+      design_style: design_style || null,
+      design_description: design_description || null,
+      custom_instructions: custom_instructions || null
+    };
+
     const infographicResult = await generateInfographic(
       teamData.team_info.team_name,
       analysis,
       teamData.member_info.total_members,
-      geminiApiKey
+      geminiApiKey,
+      designOptions
     );
     console.log('Infographic result:', {
       hasBase64: !!infographicResult.base64,
@@ -527,6 +735,8 @@ Deno.serve(async (req: Request) => {
       .eq('team_id', team_id)
       .eq('is_current', true);
 
+    const snapshotDesignStyle = design_style || (design_description ? 'custom' : null);
+
     const { data: snapshot, error: snapshotError } = await supabase
       .from('team_pulse_snapshots')
       .insert({
@@ -558,7 +768,8 @@ Deno.serve(async (req: Request) => {
         },
         generated_by_user_id: user.id,
         generation_type,
-        is_current: true
+        is_current: true,
+        design_style: snapshotDesignStyle
       })
       .select()
       .single();
@@ -578,13 +789,21 @@ Deno.serve(async (req: Request) => {
     nextMonday.setUTCDate(now.getUTCDate() + daysUntilMonday);
     nextMonday.setUTCHours(8, 0, 0, 0);
 
+    const settingsUpdate: Record<string, unknown> = {
+      last_generated_at: new Date().toISOString(),
+      next_generation_at: nextMonday.toISOString(),
+      updated_at: new Date().toISOString(),
+      generation_in_progress: false,
+      generation_error: null
+    };
+
+    if (design_style) {
+      settingsUpdate.last_used_style = design_style;
+    }
+
     await supabase
       .from('team_pulse_settings')
-      .update({
-        last_generated_at: new Date().toISOString(),
-        next_generation_at: nextMonday.toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      .update(settingsUpdate)
       .eq('team_id', team_id);
 
     console.log('Team Pulse generation complete');
@@ -605,8 +824,24 @@ Deno.serve(async (req: Request) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+    } catch (innerError) {
+      generationError = innerError instanceof Error ? innerError.message : 'Generation failed';
+      throw innerError;
+    }
   } catch (error) {
     console.error('Error in generate-team-pulse:', error);
+
+    if (team_id) {
+      await supabase
+        .from('team_pulse_settings')
+        .update({
+          generation_in_progress: false,
+          generation_error: generationError || (error instanceof Error ? error.message : 'Unknown error'),
+          updated_at: new Date().toISOString()
+        })
+        .eq('team_id', team_id);
+    }
+
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

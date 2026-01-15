@@ -237,6 +237,7 @@ export interface TeamPulseSnapshot {
   generation_type: 'scheduled' | 'manual';
   is_current: boolean;
   created_at: string;
+  design_style: string | null;
 }
 
 export interface TeamPulseSettings {
@@ -246,6 +247,12 @@ export interface TeamPulseSettings {
   generation_hour: number;
   last_generated_at: string | null;
   next_generation_at: string | null;
+  custom_instructions: string | null;
+  design_style: string | null;
+  design_description: string | null;
+  rotate_random: boolean;
+  last_used_style: string | null;
+  apply_to_future: boolean;
   created_at: string;
   updated_at: string;
 }

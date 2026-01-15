@@ -23,18 +23,28 @@ const typeLabels: Record<GoalItem['type'], string> = {
   kpi: 'KPI'
 };
 
+function normalizeStatus(status: string): GoalItem['status'] {
+  const normalized = (status || 'not_started').toLowerCase().replace(/\s+/g, '_');
+  if (normalized in statusConfig) {
+    return normalized as GoalItem['status'];
+  }
+  return 'not_started';
+}
+
 function GoalCard({ goal }: { goal: GoalItem }) {
   const [expanded, setExpanded] = useState(false);
-  const config = statusConfig[goal.status];
+  const normalizedStatus = normalizeStatus(goal.status);
+  const config = statusConfig[normalizedStatus];
   const StatusIcon = config.icon;
+  const hasDetails = goal.notes || goal.owner || goal.deadline || goal.source_reference;
 
   return (
-    <div className={`rounded-lg border p-4 ${config.bg} transition-all`}>
+    <div className={`rounded-lg border p-3 ${config.bg} transition-all`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-xs px-2 py-0.5 rounded bg-gray-700 text-gray-300">
-              {typeLabels[goal.type]}
+              {typeLabels[goal.type] || 'Goal'}
             </span>
             <span className={`text-xs px-2 py-0.5 rounded flex items-center gap-1 ${config.bg}`}>
               <StatusIcon className={`w-3 h-3 ${config.color}`} />
@@ -45,14 +55,14 @@ function GoalCard({ goal }: { goal: GoalItem }) {
         </div>
         {goal.progress_percentage !== null && (
           <div className="flex-shrink-0 text-right">
-            <span className="text-2xl font-bold text-white">{goal.progress_percentage}%</span>
+            <span className="text-xl font-bold text-white">{goal.progress_percentage}%</span>
           </div>
         )}
       </div>
 
       {goal.progress_percentage !== null && (
-        <div className="mt-3">
-          <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+        <div className="mt-2">
+          <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${
                 goal.status === 'completed' ? 'bg-blue-500' :
@@ -66,20 +76,20 @@ function GoalCard({ goal }: { goal: GoalItem }) {
         </div>
       )}
 
-      {(goal.notes || goal.owner || goal.deadline || goal.source_reference) && (
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="mt-3 flex items-center gap-1 text-xs text-gray-400 hover:text-gray-300 transition-colors"
-        >
-          {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          {expanded ? 'Hide details' : 'Show details'}
-        </button>
-      )}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="mt-2 flex items-center gap-1 text-xs text-gray-400 hover:text-gray-300 transition-colors"
+      >
+        {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        {expanded ? 'Hide details' : 'Show details'}
+      </button>
 
       {expanded && (
-        <div className="mt-3 pt-3 border-t border-gray-700/50 space-y-2 text-sm">
-          {goal.notes && (
-            <p className="text-gray-300">{goal.notes}</p>
+        <div className="mt-2 pt-2 border-t border-gray-700/50 space-y-2 text-sm">
+          {goal.notes ? (
+            <p className="text-gray-300 text-xs">{goal.notes}</p>
+          ) : (
+            <p className="text-gray-500 text-xs italic">No additional notes available</p>
           )}
           <div className="flex flex-wrap gap-3 text-xs text-gray-400">
             {goal.owner && (
@@ -99,6 +109,9 @@ function GoalCard({ goal }: { goal: GoalItem }) {
                 <FileText className="w-3 h-3" />
                 {goal.source_reference}
               </span>
+            )}
+            {!hasDetails && (
+              <span className="text-gray-500 italic">No owner or deadline specified</span>
             )}
           </div>
         </div>
@@ -138,11 +151,6 @@ function EmptyState({ suggestions }: { suggestions: string[] }) {
 }
 
 export const GoalsProgressSection: React.FC<GoalsProgressSectionProps> = ({ data }) => {
-  const statusGroups = {
-    active: data.items.filter(g => ['on_track', 'at_risk', 'blocked', 'not_started'].includes(g.status)),
-    completed: data.items.filter(g => g.status === 'completed')
-  };
-
   if (!data.has_data || data.items.length === 0) {
     return (
       <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-6 h-full">
@@ -161,35 +169,15 @@ export const GoalsProgressSection: React.FC<GoalsProgressSectionProps> = ({ data
 
   return (
     <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-6 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Target className="w-5 h-5 text-sky-400" />
-          <h3 className="text-lg font-semibold text-white">Goals & Targets</h3>
-        </div>
-        <span className="text-xs text-gray-400">
-          {data.items.length} item{data.items.length !== 1 ? 's' : ''} tracked
-        </span>
+      <div className="flex items-center gap-2 mb-4">
+        <Target className="w-5 h-5 text-sky-400" />
+        <h3 className="text-lg font-semibold text-white">Goals & Targets</h3>
       </div>
 
-      <div className="space-y-4 flex-1 overflow-auto">
-        {statusGroups.active.length > 0 && (
-          <div className="space-y-3">
-            {statusGroups.active.map((goal, index) => (
-              <GoalCard key={`${goal.name}-${index}`} goal={goal} />
-            ))}
-          </div>
-        )}
-
-        {statusGroups.completed.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-700">
-            <h4 className="text-sm font-medium text-gray-400 mb-3">Completed</h4>
-            <div className="space-y-3">
-              {statusGroups.completed.map((goal, index) => (
-                <GoalCard key={`completed-${goal.name}-${index}`} goal={goal} />
-              ))}
-            </div>
-          </div>
-        )}
+      <div className="space-y-3 flex-1 overflow-auto">
+        {data.items.map((goal, index) => (
+          <GoalCard key={`${goal.name}-${index}`} goal={goal} />
+        ))}
       </div>
     </div>
   );
