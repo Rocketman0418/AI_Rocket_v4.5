@@ -3,10 +3,11 @@ import { FolderPlus, CheckCircle, Folder, Loader2, FolderOpen, Plus, Search, Fil
 import { SetupGuideProgress } from '../../lib/setup-guide-utils';
 import { getGoogleDriveConnection } from '../../lib/google-drive-oauth';
 import { getMicrosoftDriveConnection } from '../../lib/microsoft-graph-oauth';
-import { getActiveConnection } from '../../lib/unified-drive-utils';
+import { getActiveConnection, getConnectionByProvider } from '../../lib/unified-drive-utils';
 import { supabase } from '../../lib/supabase';
 import { useFeatureFlag } from '../../hooks/useFeatureFlag';
 import { GoogleDriveFolderPicker } from '../GoogleDriveFolderPicker';
+import { useAuth } from '../../contexts/AuthContext';
 
 type DriveProvider = 'google' | 'microsoft';
 
@@ -44,6 +45,7 @@ const STRATEGY_DOCUMENT_EXAMPLES = [
 ];
 
 export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, onProceed, provider: propProvider }) => {
+  const { user } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('initial');
   const [loading, setLoading] = useState(true);
   const [folders, setFolders] = useState<GoogleDriveFolder[]>([]);
@@ -66,11 +68,36 @@ export const ChooseFolderStep: React.FC<ChooseFolderStepProps> = ({ onComplete, 
 
   useEffect(() => {
     checkExistingSetup();
-  }, []);
+  }, [propProvider]);
 
   const checkExistingSetup = async () => {
     setLoading(true);
     try {
+      let teamId = user?.user_metadata?.team_id;
+      if (!teamId && user) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('team_id')
+          .eq('id', user.id)
+          .maybeSingle();
+        teamId = userData?.team_id;
+      }
+
+      if (propProvider && teamId) {
+        const providerConnection = await getConnectionByProvider(teamId, propProvider);
+        if (providerConnection) {
+          setActiveProvider(propProvider);
+          if (propProvider === 'microsoft' && providerConnection.microsoft_drive_id) {
+            setMicrosoftDriveId(providerConnection.microsoft_drive_id);
+          }
+          if (providerConnection.root_folder_id || providerConnection.strategy_folder_id) {
+            setHasExistingFolders(true);
+          }
+          setLoading(false);
+          return;
+        }
+      }
+
       const connection = await getActiveConnection();
 
       if (!connection) {

@@ -223,15 +223,28 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
           hasProjectsFolder: connection?.projects_folder_id
         });
 
-        // Check if returning from OAuth (session storage flag)
         const shouldReopenFuel = sessionStorage.getItem('reopen_fuel_stage');
-        if (shouldReopenFuel === 'true') {
+        const msOAuthComplete = sessionStorage.getItem('microsoft_oauth_complete');
+        const selectMicrosoftDrive = new URLSearchParams(window.location.search).get('selectMicrosoftDrive');
+
+        if (shouldReopenFuel === 'true' || selectMicrosoftDrive === 'true') {
           sessionStorage.removeItem('reopen_fuel_stage');
-          console.log('🚀 [FuelStage] Reopening modal after OAuth return');
-          // Open modal and go to folder selection step
-          setDriveFlowStep('choose-folder');
+
+          if (msOAuthComplete === 'true' || selectMicrosoftDrive === 'true') {
+            sessionStorage.removeItem('microsoft_oauth_complete');
+            console.log('🚀 [FuelStage] Reopening modal after Microsoft OAuth return');
+            setCloudProvider('microsoft');
+            setDriveFlowStep('connect-drive');
+          } else {
+            console.log('🚀 [FuelStage] Reopening modal after Google OAuth return');
+            setCloudProvider('google');
+            setDriveFlowStep('choose-folder');
+          }
+
           setShowDriveFlow(true);
-          // Refresh fuel level to get latest document counts
+          if (selectMicrosoftDrive) {
+            window.history.replaceState({}, '', window.location.pathname);
+          }
           await refreshFuelLevel();
           if (onRefresh) {
             await onRefresh();
@@ -856,16 +869,14 @@ export const FuelStage: React.FC<FuelStageProps> = ({ progress, fuelProgress, bo
               )}
               {driveFlowStep === 'choose-folder' && (
                 <ChooseFolderStep
+                  provider={cloudProvider || undefined}
                   onComplete={async (data) => {
                     console.log('Folder selected:', data);
-                    // Store folder data for next steps
                     setFolderData(data);
                     await persistFlowState('choose-folder', data);
-                    // Refresh counts in background
                     await refreshCounts();
                   }}
                   onProceed={async () => {
-                    // User clicked "Next: Place Your Files" button
                     setDriveFlowStep('place-files');
                     await persistFlowState('place-files');
                   }}

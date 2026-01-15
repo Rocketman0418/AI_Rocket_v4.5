@@ -208,8 +208,16 @@ Deno.serve(async (req: Request) => {
           );
         }
 
+        let errorDetail = 'Failed to get default drive';
+        try {
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.error?.message) {
+            errorDetail = `${errorDetail}: ${errorJson.error.message}`;
+          }
+        } catch {}
+
         return new Response(
-          JSON.stringify({ error: 'Failed to get default drive' }),
+          JSON.stringify({ error: errorDetail, status: meResponse.status }),
           {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },

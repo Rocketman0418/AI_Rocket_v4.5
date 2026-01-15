@@ -207,7 +207,11 @@ export const AddMoreFoldersStep: React.FC<AddMoreFoldersStepProps> = ({ onComple
       setDriveFolders(data.folders || []);
     } catch (err: any) {
       console.error('Error loading drive folders:', err);
-      setError(err.message || `Failed to load ${providerName} folders`);
+      let errorMessage = err.message || `Failed to load ${providerName} folders`;
+      if (errorMessage.includes('SPO license')) {
+        errorMessage = 'This Microsoft account does not have OneDrive enabled. Please use a different account or contact your Microsoft 365 admin.';
+      }
+      setError(errorMessage);
     } finally {
       setLoadingDriveFolders(false);
     }
