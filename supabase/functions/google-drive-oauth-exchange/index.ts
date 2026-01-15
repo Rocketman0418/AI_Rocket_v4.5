@@ -187,6 +187,7 @@ Deno.serve(async (req: Request) => {
     const upsertData: Record<string, unknown> = {
       user_id: user.id,
       team_id: teamId || null,
+      provider: 'google',
       access_token: cleanAccessToken,
       refresh_token: cleanRefreshToken,
       token_expires_at: expiresAt.toISOString(),
@@ -206,7 +207,7 @@ Deno.serve(async (req: Request) => {
     const { data, error: dbError } = await supabase
       .from('user_drive_connections')
       .upsert(upsertData, {
-        onConflict: 'user_id'
+        onConflict: 'user_id,provider'
       })
       .select();
 

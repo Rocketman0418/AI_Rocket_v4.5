@@ -61,7 +61,7 @@ export interface SyncNowPayload {
 }
 
 export async function triggerSyncNow(payload: SyncNowPayload): Promise<{ success: boolean; message: string }> {
-  console.log('[triggerSyncNow] Triggering sync via astra-sync-now webhook...');
+  console.log('[triggerSyncNow] Triggering sync via n8n-proxy...');
   console.log('[triggerSyncNow] Payload:', {
     team_id: payload.team_id,
     user_id: payload.user_id,
@@ -70,12 +70,32 @@ export async function triggerSyncNow(payload: SyncNowPayload): Promise<{ success
   });
 
   try {
-    const response = await fetch(N8N_SYNC_NOW_URL, {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session) {
+      console.error('[triggerSyncNow] No auth session available');
+      return {
+        success: false,
+        message: 'No authentication session',
+      };
+    }
+
+    const proxyUrl = getN8nProxyUrl();
+    const response = await fetch(proxyUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.session.access_token}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        webhook_path: 'astra-sync-now',
+        method: 'GET',
+        query_params: {
+          team_id: payload.team_id,
+          user_id: payload.user_id,
+          folder_ids: payload.folder_ids?.join(',') || '',
+          source: payload.source,
+        },
+      }),
       keepalive: true,
     });
 

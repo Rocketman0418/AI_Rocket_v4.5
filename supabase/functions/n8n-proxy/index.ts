@@ -55,18 +55,37 @@ Deno.serve(async (req: Request) => {
       const webhookPath = requestBody.webhook_path;
       const webhookMethod = requestBody.method || 'POST';
       const webhookPayload = requestBody.payload;
+      const queryParams = requestBody.query_params;
 
       console.log(`[n8n-proxy] Calling webhook: ${webhookPath} with method: ${webhookMethod}`);
 
-      const webhookUrl = `${N8N_WEBHOOK_BASE}/${webhookPath}`;
+      let webhookUrl = `${N8N_WEBHOOK_BASE}/${webhookPath}`;
 
-      const webhookResponse = await fetch(webhookUrl, {
+      if (queryParams && webhookMethod === 'GET') {
+        const params = new URLSearchParams();
+        for (const [key, value] of Object.entries(queryParams)) {
+          if (value !== undefined && value !== null && value !== '') {
+            params.append(key, String(value));
+          }
+        }
+        const queryString = params.toString();
+        if (queryString) {
+          webhookUrl += `?${queryString}`;
+        }
+      }
+
+      const fetchOptions: RequestInit = {
         method: webhookMethod,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: webhookPayload ? JSON.stringify(webhookPayload) : undefined,
-      });
+      };
+
+      if (webhookMethod !== 'GET' && webhookPayload) {
+        fetchOptions.body = JSON.stringify(webhookPayload);
+      }
+
+      const webhookResponse = await fetch(webhookUrl, fetchOptions);
 
       const responseText = await webhookResponse.text();
       console.log(`[n8n-proxy] Webhook response: ${webhookResponse.status} - ${responseText}`);
