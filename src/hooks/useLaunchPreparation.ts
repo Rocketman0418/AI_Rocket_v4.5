@@ -466,19 +466,23 @@ export function useLaunchPreparation() {
         updateData.is_launched = true;
         updateData.launched_at = new Date().toISOString();
 
-        // Clear onboarding metadata flags so Welcome Modal and Tour will show
-        console.log('🚀 [Launch] Clearing onboarding metadata to trigger Welcome Modal and Tour');
-        const { error: metadataError } = await supabase.auth.updateUser({
-          data: {
-            onboarding_completed: false,
-            onboarding_dismissed: false
-          }
-        });
+        const isAlreadyLaunched = launchStatus?.is_launched === true;
+        if (!isAlreadyLaunched) {
+          console.log('🚀 [Launch] First launch - clearing onboarding metadata to trigger Welcome Modal and Tour');
+          const { error: metadataError } = await supabase.auth.updateUser({
+            data: {
+              onboarding_completed: false,
+              onboarding_dismissed: false
+            }
+          });
 
-        if (metadataError) {
-          console.error('Error clearing onboarding metadata:', metadataError);
+          if (metadataError) {
+            console.error('Error clearing onboarding metadata:', metadataError);
+          } else {
+            console.log('✅ [Launch] Onboarding metadata cleared successfully');
+          }
         } else {
-          console.log('✅ [Launch] Onboarding metadata cleared successfully');
+          console.log('🚀 [Launch] User already launched - skipping onboarding metadata reset');
         }
       }
 
