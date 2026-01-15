@@ -214,10 +214,121 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    console.log('[Token Refresh] Checking Microsoft tokens...');
+    const microsoftClientId = Deno.env.get('MICROSOFT_CLIENT_ID');
+    const microsoftClientSecret = Deno.env.get('MICROSOFT_CLIENT_SECRET');
+
+    let microsoftTokensRefreshed = 0;
+
+    if (microsoftClientId && microsoftClientSecret) {
+      const { data: msConnections, error: msError } = await supabase
+        .from('user_drive_connections')
+        .select('*')
+        .eq('provider', 'microsoft')
+        .eq('is_active', true)
+        .eq('connection_status', 'connected')
+        .lt('token_expires_at', refreshThreshold);
+
+      if (msError) {
+        console.error('[Token Refresh] Error fetching Microsoft connections:', msError);
+      } else {
+        console.log(`[Token Refresh] Found ${msConnections?.length || 0} Microsoft tokens to refresh`);
+
+        for (const connection of msConnections || []) {
+          const previousExpiry = connection.token_expires_at;
+
+          try {
+            console.log(`[Token Refresh] Refreshing Microsoft token for team: ${connection.team_id}`);
+
+            const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({
+                client_id: microsoftClientId,
+                client_secret: microsoftClientSecret,
+                refresh_token: connection.refresh_token,
+                grant_type: 'refresh_token'
+              })
+            });
+
+            const tokens = await tokenResponse.json();
+
+            if (!tokenResponse.ok) {
+              console.error(`[Token Refresh] Failed to refresh Microsoft token for ${connection.team_id}:`, tokens);
+
+              await supabase.from('token_refresh_logs').insert({
+                user_id: connection.user_id,
+                team_id: connection.team_id,
+                service: 'microsoft_drive',
+                success: false,
+                error_code: tokens.error || 'unknown',
+                error_message: tokens.error_description || 'Token refresh failed',
+                previous_expiry: previousExpiry
+              });
+
+              if (tokens.error === 'invalid_grant') {
+                await supabase
+                  .from('user_drive_connections')
+                  .update({
+                    connection_status: 'token_expired'
+                  })
+                  .eq('id', connection.id);
+                console.log(`[Token Refresh] Marked Microsoft connection as expired: ${connection.id}`);
+              }
+              continue;
+            }
+
+            const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
+
+            const cleanAccessToken = tokens.access_token?.replace?.(/[\r\n]/g, '') || tokens.access_token;
+            const cleanRefreshToken = tokens.refresh_token?.replace?.(/[\r\n]/g, '') || tokens.refresh_token || connection.refresh_token;
+
+            await supabase
+              .from('user_drive_connections')
+              .update({
+                access_token: cleanAccessToken,
+                refresh_token: cleanRefreshToken,
+                token_expires_at: expiresAt.toISOString(),
+                connection_status: 'connected',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', connection.id);
+
+            await supabase.from('token_refresh_logs').insert({
+              user_id: connection.user_id,
+              team_id: connection.team_id,
+              service: 'microsoft_drive',
+              success: true,
+              previous_expiry: previousExpiry,
+              new_expiry: expiresAt.toISOString()
+            });
+
+            microsoftTokensRefreshed++;
+            console.log(`[Token Refresh] Microsoft token refreshed for connection: ${connection.id}`);
+          } catch (err) {
+            console.error(`[Token Refresh] Error refreshing Microsoft token for ${connection.team_id}:`, err);
+
+            await supabase.from('token_refresh_logs').insert({
+              user_id: connection.user_id,
+              team_id: connection.team_id,
+              service: 'microsoft_drive',
+              success: false,
+              error_code: 'exception',
+              error_message: err instanceof Error ? err.message : 'Unknown error',
+              previous_expiry: previousExpiry
+            });
+          }
+        }
+      }
+    } else {
+      console.log('[Token Refresh] Microsoft OAuth credentials not configured, skipping Microsoft token refresh');
+    }
+
     const summary = {
       success: true,
       gmail_tokens_checked: gmailAuths?.length || 0,
       drive_tokens_checked: driveConnections?.length || 0,
+      microsoft_tokens_refreshed: microsoftTokensRefreshed,
       timestamp: new Date().toISOString()
     };
 
