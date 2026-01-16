@@ -13,6 +13,20 @@ export interface DesignStyle {
 
 export const DESIGN_STYLES: DesignStyle[] = [
   {
+    id: 'infographic',
+    name: 'Infographic',
+    shortDescription: 'Clean, professional business intelligence view',
+    fullDescription: 'Infographic (Business Intelligence) - A clean, professional design focused on clarity and data comprehension. Uses structured layouts, clear hierarchies, and professional typography to present business insights in an educational format.',
+    vibe: 'Professional, clean, structured, and data-focused with modern corporate aesthetics.',
+    dataVisualization: [
+      'Clean bar charts and pie charts with clear labels',
+      'Structured sections with visual hierarchy',
+      'Icon-based callouts for key metrics',
+      'Professional color palette with strong contrast'
+    ],
+    bestFor: 'Executive summaries, team updates, stakeholder presentations, and general business reporting.'
+  },
+  {
     id: 'pixel_power',
     name: 'Pixel Power',
     shortDescription: '8-Bit Arcade style with retro gaming aesthetics',
@@ -239,13 +253,12 @@ export function TeamPulseCustomizeModal({
   const [activeTab, setActiveTab] = useState<TabType>('design');
   const [customInstructions, setCustomInstructions] = useState(currentSettings.custom_instructions || '');
   const [focusMode, setFocusMode] = useState<FocusMode>('highlights');
-  const [selectedStyle, setSelectedStyle] = useState<string | null>(currentSettings.design_style);
+  const [selectedStyle, setSelectedStyle] = useState<string | null>(currentSettings.design_style || 'infographic');
   const [designDescription, setDesignDescription] = useState(currentSettings.design_description || '');
   const [selectionMode, setSelectionMode] = useState<SelectionMode>(() => {
     if (currentSettings.design_description) return 'custom';
     if (currentSettings.rotate_random) return 'random';
-    if (currentSettings.design_style) return 'preset';
-    return 'random';
+    return 'preset';
   });
   const [applyToFuture, setApplyToFuture] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -254,16 +267,14 @@ export function TeamPulseCustomizeModal({
   useEffect(() => {
     if (isOpen) {
       setCustomInstructions(currentSettings.custom_instructions || '');
-      setSelectedStyle(currentSettings.design_style);
+      setSelectedStyle(currentSettings.design_style || 'infographic');
       setDesignDescription(currentSettings.design_description || '');
       if (currentSettings.design_description) {
         setSelectionMode('custom');
       } else if (currentSettings.rotate_random) {
         setSelectionMode('random');
-      } else if (currentSettings.design_style) {
-        setSelectionMode('preset');
       } else {
-        setSelectionMode('random');
+        setSelectionMode('preset');
       }
       setApplyToFuture(false);
       setSaved(false);
@@ -273,13 +284,8 @@ export function TeamPulseCustomizeModal({
   if (!isOpen) return null;
 
   const handleStyleSelect = (styleId: string) => {
-    if (selectedStyle === styleId && selectionMode === 'preset') {
-      setSelectedStyle(null);
-      setSelectionMode('random');
-    } else {
-      setSelectedStyle(styleId);
-      setSelectionMode('preset');
-    }
+    setSelectedStyle(styleId);
+    setSelectionMode('preset');
   };
 
   const handleRotateRandomSelect = () => {
@@ -401,32 +407,37 @@ export function TeamPulseCustomizeModal({
                 </p>
 
                 <button
-                  onClick={handleRotateRandomSelect}
+                  onClick={() => handleStyleSelect('infographic')}
                   className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all mb-3 ${
-                    selectionMode === 'random'
+                    selectedStyle === 'infographic' && selectionMode === 'preset'
                       ? 'border-cyan-500 bg-cyan-500/10'
                       : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      selectionMode === 'random' ? 'bg-cyan-500/20' : 'bg-gray-700'
+                      selectedStyle === 'infographic' && selectionMode === 'preset' ? 'bg-cyan-500/20' : 'bg-gray-700'
                     }`}>
-                      <Shuffle className={`w-4 h-4 ${selectionMode === 'random' ? 'text-cyan-400' : 'text-gray-400'}`} />
+                      <Layers className={`w-4 h-4 ${selectedStyle === 'infographic' && selectionMode === 'preset' ? 'text-cyan-400' : 'text-gray-400'}`} />
                     </div>
                     <div className="text-left">
-                      <p className={`text-sm font-medium ${selectionMode === 'random' ? 'text-cyan-400' : 'text-white'}`}>
-                        Rotate Random
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className={`text-sm font-medium ${selectedStyle === 'infographic' && selectionMode === 'preset' ? 'text-cyan-400' : 'text-white'}`}>
+                          Infographic
+                        </p>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-teal-500/20 text-teal-400 border border-teal-500/30">
+                          Default
+                        </span>
+                      </div>
                       <p className="text-xs text-gray-500">
-                        Automatically cycle through different styles each generation
+                        Clean, professional business intelligence view
                       </p>
                     </div>
                   </div>
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    selectionMode === 'random' ? 'border-cyan-400 bg-cyan-400' : 'border-gray-600'
+                    selectedStyle === 'infographic' && selectionMode === 'preset' ? 'border-cyan-400 bg-cyan-400' : 'border-gray-600'
                   }`}>
-                    {selectionMode === 'random' && <Check className="w-3 h-3 text-gray-900" />}
+                    {selectedStyle === 'infographic' && selectionMode === 'preset' && <Check className="w-3 h-3 text-gray-900" />}
                   </div>
                 </button>
 
@@ -481,7 +492,7 @@ Example: A minimalist corporate style with clean lines, muted blue and gray tone
                 )}
 
                 <div className="grid grid-cols-2 gap-3">
-                  {DESIGN_STYLES.map((style) => (
+                  {DESIGN_STYLES.filter(style => style.id !== 'infographic').map((style) => (
                     <button
                       key={style.id}
                       onClick={() => handleStyleSelect(style.id)}
@@ -507,6 +518,36 @@ Example: A minimalist corporate style with clean lines, muted blue and gray tone
                     </button>
                   ))}
                 </div>
+
+                <button
+                  onClick={handleRotateRandomSelect}
+                  className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all mt-4 ${
+                    selectionMode === 'random'
+                      ? 'border-cyan-500 bg-cyan-500/10'
+                      : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      selectionMode === 'random' ? 'bg-cyan-500/20' : 'bg-gray-700'
+                    }`}>
+                      <Shuffle className={`w-4 h-4 ${selectionMode === 'random' ? 'text-cyan-400' : 'text-gray-400'}`} />
+                    </div>
+                    <div className="text-left">
+                      <p className={`text-sm font-medium ${selectionMode === 'random' ? 'text-cyan-400' : 'text-white'}`}>
+                        Rotate Random
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Automatically cycle through different styles each generation
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    selectionMode === 'random' ? 'border-cyan-400 bg-cyan-400' : 'border-gray-600'
+                  }`}>
+                    {selectionMode === 'random' && <Check className="w-3 h-3 text-gray-900" />}
+                  </div>
+                </button>
               </div>
             </div>
           )}

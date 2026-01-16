@@ -37,7 +37,24 @@ export default function TeamPulseView({ onClose }: TeamPulseViewProps) {
 
   const handleGenerate = async () => {
     console.log('[TeamPulse] Generate button clicked, calling generatePulse...');
-    const result = await generatePulse();
+
+    let effectiveDesignStyle: string | null = customizationSettings.design_style;
+
+    if (customizationSettings.rotate_random && !customizationSettings.design_style) {
+      const styleIds = DESIGN_STYLES.map(s => s.id);
+      const lastUsed = settings?.last_used_style;
+      const availableStyles = lastUsed
+        ? styleIds.filter(id => id !== lastUsed)
+        : styleIds;
+      effectiveDesignStyle = availableStyles[Math.floor(Math.random() * availableStyles.length)];
+      console.log('[TeamPulse] Rotate random selected style:', effectiveDesignStyle);
+    }
+
+    const result = await generatePulse({
+      custom_instructions: customizationSettings.custom_instructions,
+      design_style: effectiveDesignStyle,
+      design_description: customizationSettings.design_description
+    });
     console.log('[TeamPulse] generatePulse result:', result);
   };
 
@@ -141,6 +158,8 @@ export default function TeamPulseView({ onClose }: TeamPulseViewProps) {
                 imageBase64={currentSnapshot.infographic_base64}
                 generatedAt={currentSnapshot.generated_at}
                 designStyle={currentSnapshot.design_style}
+                isAdmin={isAdmin}
+                onCustomize={() => setShowCustomizeModal(true)}
               />
             )}
 

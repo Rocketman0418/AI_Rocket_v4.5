@@ -34,7 +34,7 @@ interface UseTeamPulseReturn {
 
 const DEFAULT_CUSTOMIZATION: TeamPulseCustomizationSettings = {
   custom_instructions: null,
-  design_style: null,
+  design_style: 'infographic',
   design_description: null,
   rotate_random: false,
   apply_to_future: true
@@ -92,11 +92,12 @@ export function useTeamPulse(): UseTeamPulseReturn {
       setSettings(data);
 
       if (data) {
+        const isRotateRandom = data.rotate_random || false;
         setCustomizationSettings({
           custom_instructions: data.custom_instructions || null,
-          design_style: data.design_style || null,
+          design_style: data.design_style || (isRotateRandom ? null : 'infographic'),
           design_description: data.design_description || null,
-          rotate_random: data.rotate_random || false,
+          rotate_random: isRotateRandom,
           apply_to_future: data.apply_to_future !== false
         });
 

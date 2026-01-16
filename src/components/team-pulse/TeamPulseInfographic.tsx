@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { Download, ZoomIn, ZoomOut, X, Maximize2, FlaskConical, Info } from 'lucide-react';
+import { Download, ZoomIn, ZoomOut, X, Maximize2, FlaskConical, Info, Settings } from 'lucide-react';
 
 interface TeamPulseInfographicProps {
   imageUrl: string | null;
   imageBase64: string | null;
   generatedAt: string;
   designStyle: string | null;
+  isAdmin?: boolean;
+  onCustomize?: () => void;
 }
 
 const STYLE_DISPLAY_NAMES: Record<string, string> = {
+  infographic: 'Infographic',
   pixel_power: 'Pixel Power',
   blueprint: 'The Blueprint',
   botanical_garden: 'Botanical Garden',
@@ -27,11 +30,13 @@ export function TeamPulseInfographic({
   imageUrl,
   imageBase64,
   generatedAt,
-  designStyle
+  designStyle,
+  isAdmin = false,
+  onCustomize
 }: TeamPulseInfographicProps) {
   const styleDisplayName = designStyle
     ? (STYLE_DISPLAY_NAMES[designStyle] || 'Custom')
-    : null;
+    : 'Infographic';
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -85,14 +90,28 @@ export function TeamPulseInfographic({
             </button>
           </div>
           <div className="flex items-center gap-2">
-            {styleDisplayName && (
-              <>
-                <span className="px-2 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs">
-                  {styleDisplayName}
-                </span>
-                <div className="w-px h-4 bg-slate-700 mx-1" />
-              </>
-            )}
+            <div className="flex items-center gap-1.5 group relative">
+              <span className="px-2 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs">
+                {styleDisplayName}
+              </span>
+              {isAdmin && onCustomize ? (
+                <button
+                  onClick={onCustomize}
+                  className="p-0.5 rounded hover:bg-slate-700 text-slate-500 hover:text-cyan-400 transition-colors"
+                  title="Customize design style"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <div className="relative">
+                  <Info className="w-3.5 h-3.5 text-slate-500 cursor-help" />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-xs text-slate-300 whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-10">
+                    Admins can customize this in settings
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="w-px h-4 bg-slate-700 mx-1" />
             <button
               onClick={handleZoomOut}
               disabled={zoom <= 0.5}

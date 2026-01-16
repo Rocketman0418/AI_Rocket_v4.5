@@ -15,6 +15,18 @@ interface DesignStyleConfig {
 }
 
 const DESIGN_STYLES: Record<string, DesignStyleConfig> = {
+  infographic: {
+    name: 'Infographic (Business Intelligence)',
+    vibe: 'Professional, clean, structured, and data-focused with modern corporate aesthetics. Educational format emphasizing clarity and comprehension.',
+    colorPalette: 'Professional blues, teals, and grays with clean white backgrounds. High contrast for readability, subtle gradients for depth.',
+    dataVisualization: [
+      'Clean bar charts and pie charts with clear labels',
+      'Structured sections with visual hierarchy',
+      'Icon-based callouts for key metrics',
+      'Professional typography with clear data presentation',
+      'Numbered insights and clear section headers'
+    ]
+  },
   pixel_power: {
     name: 'Pixel Power (8-Bit Arcade)',
     vibe: 'Nostalgic, blocky, vibrant, and digital-first retro gaming aesthetics.',
@@ -453,8 +465,9 @@ Follow this custom design direction: ${designOptions.design_description}
 `;
     themeContext = 'custom style as described';
     accentStyle = 'colors and style as specified in the custom description';
-  } else if (designOptions?.design_style && DESIGN_STYLES[designOptions.design_style]) {
-    const style = DESIGN_STYLES[designOptions.design_style];
+  } else {
+    const styleKey = designOptions?.design_style || 'infographic';
+    const style = DESIGN_STYLES[styleKey] || DESIGN_STYLES.infographic;
     styleInstructions = `
 === DESIGN STYLE: ${style.name} ===
 VIBE: ${style.vibe}
@@ -466,27 +479,6 @@ IMPORTANT: Fully embrace this design style throughout the entire infographic. Ev
 `;
     themeContext = style.name;
     accentStyle = style.colorPalette;
-  } else {
-    const businessContext = `${focusAreas} ${activeProjects} ${financialStatus}`.toLowerCase();
-    themeContext = 'technology and innovation';
-    accentStyle = 'electric blue (#3B82F6), cyan (#06B6D4), and dark slate (#1E293B) with gradient accents';
-
-    if (businessContext.includes('health') || businessContext.includes('medical') || businessContext.includes('wellness')) {
-      themeContext = 'healthcare and wellness';
-      accentStyle = 'calming teal (#14B8A6), green (#22C55E), clean white, and soft gradients';
-    } else if (businessContext.includes('financ') || businessContext.includes('invest') || businessContext.includes('banking')) {
-      themeContext = 'finance and investment';
-      accentStyle = 'deep navy (#1E3A5F), gold (#F59E0B), professional gray, and metallic accents';
-    } else if (businessContext.includes('market') || businessContext.includes('brand') || businessContext.includes('creative')) {
-      themeContext = 'marketing and creative';
-      accentStyle = 'vibrant coral (#F97316), warm orange, charcoal (#374151), and dynamic gradients';
-    } else if (businessContext.includes('real estate') || businessContext.includes('property') || businessContext.includes('homes')) {
-      themeContext = 'real estate and property';
-      accentStyle = 'warm terracotta (#C2410C), sage green (#84CC16), cream, and earthy professional tones';
-    } else if (businessContext.includes('consult') || businessContext.includes('service') || businessContext.includes('client')) {
-      themeContext = 'professional services';
-      accentStyle = 'sophisticated slate (#475569), copper (#EA580C), cream (#FEF3C7), and elegant highlights';
-    }
   }
 
   const customInstructionsSection = designOptions?.custom_instructions
