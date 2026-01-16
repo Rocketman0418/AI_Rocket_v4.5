@@ -764,7 +764,7 @@ The user has provided specific instructions for what they want to see. Follow th
 Do NOT use any predefined layout structure. Let the user's instructions drive the content and layout.
 
 === USER'S CUSTOM INSTRUCTIONS ===
-${customInstructions || 'Create a balanced overview of the team'}
+${designOptions?.custom_instructions || 'Create a balanced overview of the team'}
 
 === SPECS ===
 - Landscape 1920x1080 (16:9)
