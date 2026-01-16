@@ -37,7 +37,7 @@ interface TeamDashboardData {
   general_content: Array<{ file_name: string; content: string; category: string; date: string }>;
   team_discussions: Array<{ user_name: string; message: string; date: string }>;
   recent_reports: Array<{ prompt: string; response: string; date: string }>;
-  category_summary: Array<{ category: string; document_count: number; recent_count: number }>;
+  category_summary: Array<{ category: string; document_count: number; recent_count: number; has_access?: boolean }>;
   member_info: {
     total_members: number;
     members: Array<{ name: string; role: string }>;
@@ -48,6 +48,8 @@ interface TeamDashboardData {
     alignment_metrics?: any;
     health_overview?: any;
   };
+  accessible_categories?: string[];
+  target_user_id?: string;
   generated_at: string;
 }
 
@@ -550,7 +552,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { team_id, generation_type = 'manual' } = await req.json();
+    const { team_id, generation_type = 'manual', target_user_id = null } = await req.json();
 
     if (!team_id) {
       return new Response(
@@ -559,7 +561,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`Generating Team Dashboard for team ${team_id}`);
+    const effectiveTargetUserId = target_user_id || user.id;
+    console.log(`Generating Team Dashboard for team ${team_id}, target user: ${effectiveTargetUserId}`);
 
     await supabase
       .from('team_dashboard_settings')
@@ -572,8 +575,9 @@ Deno.serve(async (req: Request) => {
       }, { onConflict: 'team_id' });
 
     try {
-      const { data: dashboardData, error: dataError } = await supabase.rpc('get_team_dashboard_data', {
-        p_team_id: team_id
+      const { data: dashboardData, error: dataError } = await supabase.rpc('get_user_dashboard_data', {
+        p_team_id: team_id,
+        p_user_id: effectiveTargetUserId
       });
 
     if (dataError) {
@@ -590,16 +594,28 @@ Deno.serve(async (req: Request) => {
     const analysis = await analyzeTeamData(teamData, geminiApiKey);
     console.log('All 4 analysis steps complete.');
 
-    await supabase
+    const updateQuery = supabase
       .from('team_dashboard_snapshots')
       .update({ is_current: false })
       .eq('team_id', team_id)
       .eq('is_current', true);
 
+    if (effectiveTargetUserId) {
+      updateQuery.eq('target_user_id', effectiveTargetUserId);
+    } else {
+      updateQuery.is('target_user_id', null);
+    }
+
+    await updateQuery;
+
+    const accessibleCategories = teamData.accessible_categories || [];
+    console.log(`User has access to ${accessibleCategories.length} categories:`, accessibleCategories);
+
     const { data: snapshot, error: snapshotError } = await supabase
       .from('team_dashboard_snapshots')
       .insert({
         team_id,
+        target_user_id: effectiveTargetUserId,
         goals_progress: analysis.goals_progress,
         alignment_metrics: analysis.alignment_metrics,
         health_overview: analysis.health_overview,
@@ -609,7 +625,8 @@ Deno.serve(async (req: Request) => {
           member_info: teamData.member_info,
           documents_analyzed: teamData.category_summary.reduce((sum, c) => sum + c.document_count, 0),
           mission_values_docs_found: teamData.mission_values_context?.total_found || 0,
-          goals_docs_found: teamData.goals_context?.total_found || 0
+          goals_docs_found: teamData.goals_context?.total_found || 0,
+          accessible_categories: accessibleCategories
         },
         generated_by_user_id: generation_type === 'manual' ? user.id : null,
         generation_type,

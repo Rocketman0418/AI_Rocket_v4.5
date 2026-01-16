@@ -59,22 +59,23 @@ async function callAstraWebhook(
 
 ${customInstructions ? `USER FOCUS AREAS:\n${customInstructions}\n\n` : ''}
 
-CONTEXT:
-${storedMission ? `- Team Mission: "${storedMission}"` : '- No mission statement on file'}
-${storedValues.length > 0 ? `- Core Values: ${storedValues.join(', ')}` : ''}
+EXISTING TEAM CONTEXT (from prior analysis):
+${storedMission ? `- Team Mission: "${storedMission}"` : '- Team Mission: Not yet defined - try to extract from documents if available'}
+${storedValues.length > 0 ? `- Core Values: ${storedValues.join(', ')}` : '- Core Values: Not yet defined - try to extract from documents if available'}
 
 Please analyze the team's documents and provide insights on:
 
 1. MISSION & ALIGNMENT:
-- What is the team's mission statement? (use stored if accurate, or extract from documents)
-- What are the core values? (use stored if accurate, or extract from documents)
-- How well are recent activities aligned with the mission? Give specific examples.
+- What is the team's mission statement? (use existing if accurate, or extract from documents, or indicate "Not enough data" if neither exists)
+- What are the core values? (use existing if accurate, or extract from documents, or indicate "Not enough data" if neither exists)
+- How well are recent activities aligned with the mission? Give specific examples. If no mission/values exist, note this limitation.
 - What could improve alignment?
 
 2. GOALS & PROGRESS:
 - What are the team's active goals, OKRs, rocks, or key projects?
 - What is the status of each? (on track, at risk, blocked, completed)
 - Any deadlines or owners mentioned?
+- If no goals found in documents, clearly state "No goals data found - add strategic planning documents or goal tracking files to enable this section"
 
 3. TEAM HEALTH:
 - How comprehensive is the connected data?
@@ -84,6 +85,8 @@ Please analyze the team's documents and provide insights on:
 - Any financial indicators or trajectory?
 - Any risks, blockers, or concerns?
 - What are your top recommendations?
+
+IMPORTANT: Be honest about data gaps. If there isn't enough data for a section, clearly indicate what's missing and what the user should add to improve that section.
 
 Provide a thorough analysis with specific details from the documents.`;
 
@@ -236,26 +239,31 @@ Return this exact JSON structure (fill in real data from the analysis):
 function getDefaultDashboardData(storedMission: string | null, storedValues: string[]): DashboardData {
   return {
     mission_alignment: {
-      mission_statement: storedMission || 'Mission statement not yet defined',
+      mission_statement: storedMission || 'Not enough data - add strategy documents or define your mission in Team Settings',
       core_values: storedValues.length > 0 ? storedValues : [],
-      alignment_score: 50,
+      alignment_score: 0,
       alignment_examples: [],
-      key_improvement: 'Define and document team mission and values'
+      key_improvement: 'Add documents containing your team mission, values, and strategic goals to enable alignment analysis'
     },
     goals_targets: { items: [] },
     team_health: {
-      overall_score: 50,
+      overall_score: 0,
       trend: 'Stable',
       metrics: {
-        data_richness: { score: 50, trend: 'stable' },
-        goal_progress: { score: 50, trend: 'stable' },
-        team_engagement: { score: 50, trend: 'stable' },
-        meeting_cadence: { score: 50, trend: 'stable' },
-        financial_health: { score: 50, trend: 'stable' },
-        risk_indicators: { score: 50, trend: 'stable' }
+        data_richness: { score: 0, trend: 'stable', explanation: 'Not enough data - connect more folders or upload documents to improve this score' },
+        goal_progress: { score: 0, trend: 'stable', explanation: 'Not enough data - add goal tracking documents, OKRs, or project plans' },
+        team_engagement: { score: 0, trend: 'stable', explanation: 'Not enough data - add meeting notes or collaboration documents' },
+        meeting_cadence: { score: 0, trend: 'stable', explanation: 'Not enough data - add meeting notes to track meeting frequency' },
+        financial_health: { score: 0, trend: 'stable', explanation: 'Not enough data - add financial documents to the Financial folder' },
+        risk_indicators: { score: 0, trend: 'stable', explanation: 'Not enough data - add strategic documents to identify risks' }
       },
-      summary_statement: 'Analysis in progress. Add more team documents for detailed insights.',
-      recommendations: ['Upload more documents', 'Define team goals', 'Schedule regular check-ins']
+      summary_statement: 'Insufficient data to generate insights. Add team documents to your connected folders to enable detailed analysis.',
+      recommendations: [
+        'Connect Google Drive or Microsoft OneDrive folders with team documents',
+        'Add strategic planning documents, OKRs, or goal tracking files',
+        'Upload meeting notes and project documentation',
+        'Define your team mission and values in Team Settings'
+      ]
     }
   };
 }
@@ -306,7 +314,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { team_id, generation_type = 'manual', custom_instructions } = await req.json();
+    const { team_id, target_user_id, generation_type = 'manual', custom_instructions } = await req.json();
 
     if (!team_id) {
       return new Response(
@@ -406,10 +414,13 @@ Deno.serve(async (req: Request) => {
       geminiApiKey
     );
 
+    const targetUserId = target_user_id || user.id;
+
     await supabase
       .from('team_dashboard_snapshots')
       .update({ is_current: false })
       .eq('team_id', team_id)
+      .eq('target_user_id', targetUserId)
       .eq('is_current', true);
 
     const goalsProgress = {
@@ -466,6 +477,7 @@ Deno.serve(async (req: Request) => {
       .from('team_dashboard_snapshots')
       .insert({
         team_id,
+        target_user_id: targetUserId,
         goals_progress: goalsProgress,
         alignment_metrics: alignmentMetrics,
         health_overview: healthOverview,

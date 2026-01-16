@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Send, Clock, CheckCircle, Eye, Edit, Copy, Trash2, RefreshCw, Pause, Play, History, Rocket, FileText, AlertCircle, Sparkles, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { MarketingEmailComposer } from './MarketingEmailComposer';
-import { MOONSHOT_EMAIL_TEMPLATE } from '../lib/email-templates';
+import { EMAIL_TEMPLATES, MOONSHOT_EMAIL_TEMPLATE, WELCOME_WEEK_EMAIL_TEMPLATE } from '../lib/email-templates';
+import type { EmailTemplate } from '../lib/email-templates';
 
 interface MarketingEmail {
   id: string;
@@ -37,7 +38,7 @@ export function MarketingEmailsPanel() {
     return sessionStorage.getItem('marketingEmailEditingId');
   });
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [selectedTemplate, setSelectedTemplate] = useState<typeof MOONSHOT_EMAIL_TEMPLATE | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
 
   useEffect(() => {
     loadEmails();
@@ -403,31 +404,44 @@ export function MarketingEmailsPanel() {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <button
-            onClick={() => {
-              setEditingEmail(null);
-              setSelectedTemplate(MOONSHOT_EMAIL_TEMPLATE);
-              setShowComposer(true);
-            }}
-            className="bg-slate-800/80 border border-slate-700 rounded-lg p-4 hover:border-orange-500 hover:bg-slate-800 transition-all text-left group"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Rocket className="w-5 h-5 text-white" />
+          {EMAIL_TEMPLATES.map((template) => (
+            <button
+              key={template.id}
+              onClick={() => {
+                setEditingEmail(null);
+                setSelectedTemplate(template);
+                setShowComposer(true);
+              }}
+              className={`bg-slate-800/80 border border-slate-700 rounded-lg p-4 hover:bg-slate-800 transition-all text-left group ${
+                template.color === 'orange' ? 'hover:border-orange-500' : 'hover:border-blue-500'
+              }`}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform ${
+                  template.color === 'orange'
+                    ? 'bg-gradient-to-br from-orange-500 to-emerald-500'
+                    : 'bg-gradient-to-br from-blue-500 to-cyan-500'
+                }`}>
+                  <Rocket className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <div className="font-semibold text-white">{template.name}</div>
+                  <div className="text-xs text-gray-400">
+                    {template.id === 'moonshot-challenge' ? 'Registration announcement' : 'Welcome & onboarding'}
+                  </div>
+                </div>
               </div>
-              <div>
-                <div className="font-semibold text-white">$5M Moonshot Challenge</div>
-                <div className="text-xs text-gray-400">Registration announcement</div>
+              <p className="text-sm text-gray-400">
+                {template.description}
+              </p>
+              <div className={`mt-3 flex items-center gap-2 text-xs ${
+                template.color === 'orange' ? 'text-orange-400' : 'text-blue-400'
+              }`}>
+                <Send className="w-3.5 h-3.5" />
+                <span>Ready to send</span>
               </div>
-            </div>
-            <p className="text-sm text-gray-400">
-              Announce the AI Moonshot Challenge with $5M in prizes, key stats, features, and registration CTA.
-            </p>
-            <div className="mt-3 flex items-center gap-2 text-xs text-orange-400">
-              <Send className="w-3.5 h-3.5" />
-              <span>Ready to send</span>
-            </div>
-          </button>
+            </button>
+          ))}
         </div>
       </div>
 

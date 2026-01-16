@@ -58,16 +58,18 @@ export interface DataSufficiency {
 export interface DashboardSnapshot {
   id: string;
   team_id: string;
+  target_user_id: string | null;
   generated_at: string;
   goals_progress: GoalsProgress;
   alignment_metrics: AlignmentMetrics;
   health_overview: HealthOverview;
   data_sufficiency: DataSufficiency;
   source_data_summary: {
-    category_summary?: Array<{ category: string; document_count: number }>;
+    category_summary?: Array<{ category: string; document_count: number; has_access?: boolean }>;
     member_info?: { total_members: number };
     documents_analyzed?: number;
     generated_by?: string;
+    accessible_categories?: string[];
   };
   generation_type: 'scheduled' | 'manual';
   is_current: boolean;
@@ -109,13 +111,14 @@ export function useTeamDashboard(): UseTeamDashboardReturn {
   const [lastRegeneratedAt, setLastRegeneratedAt] = useState<Date | null>(null);
 
   const teamId = user?.user_metadata?.team_id;
+  const userId = user?.id;
   const teamName = user?.user_metadata?.team_name || null;
   const isAdmin = user?.user_metadata?.role === 'admin' || user?.user_metadata?.role === 'owner';
 
   const canRegenerate = isAdmin && !isRegenerating;
 
   const fetchDashboard = useCallback(async () => {
-    if (!teamId) {
+    if (!teamId || !userId) {
       setLoading(false);
       return;
     }
@@ -128,6 +131,7 @@ export function useTeamDashboard(): UseTeamDashboardReturn {
           .from('team_dashboard_snapshots')
           .select('*')
           .eq('team_id', teamId)
+          .eq('target_user_id', userId)
           .eq('is_current', true)
           .maybeSingle(),
         supabase
@@ -166,17 +170,17 @@ export function useTeamDashboard(): UseTeamDashboardReturn {
     } finally {
       setLoading(false);
     }
-  }, [teamId]);
+  }, [teamId, userId]);
 
   useEffect(() => {
     fetchDashboard();
   }, [fetchDashboard]);
 
   useEffect(() => {
-    if (!teamId) return;
+    if (!teamId || !userId) return;
 
     const channel = supabase
-      .channel(`team-dashboard-${teamId}`)
+      .channel(`team-dashboard-${teamId}-${userId}`)
       .on(
         'postgres_changes',
         {
@@ -186,11 +190,14 @@ export function useTeamDashboard(): UseTeamDashboardReturn {
           filter: `team_id=eq.${teamId}`
         },
         (payload) => {
-          console.log('[useTeamDashboard] Snapshot change detected');
-          if (payload.eventType === 'INSERT' && (payload.new as DashboardSnapshot).is_current) {
-            setCurrentSnapshot(payload.new as DashboardSnapshot);
-          } else if (payload.eventType === 'UPDATE' && (payload.new as DashboardSnapshot).is_current) {
-            setCurrentSnapshot(payload.new as DashboardSnapshot);
+          const snapshot = payload.new as DashboardSnapshot;
+          if (snapshot.target_user_id !== userId) return;
+
+          console.log('[useTeamDashboard] User snapshot change detected');
+          if (payload.eventType === 'INSERT' && snapshot.is_current) {
+            setCurrentSnapshot(snapshot);
+          } else if (payload.eventType === 'UPDATE' && snapshot.is_current) {
+            setCurrentSnapshot(snapshot);
           }
         }
       )
@@ -227,10 +234,10 @@ export function useTeamDashboard(): UseTeamDashboardReturn {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [teamId]);
+  }, [teamId, userId]);
 
   const regenerate = useCallback(async (customInstructions?: string, applyToFuture?: boolean) => {
-    if (!teamId || !canRegenerate) return;
+    if (!teamId || !userId || !canRegenerate) return;
 
     setIsRegenerating(true);
     setError(null);
@@ -251,7 +258,7 @@ export function useTeamDashboard(): UseTeamDashboardReturn {
           }, { onConflict: 'team_id' });
       }
 
-      console.log('[useTeamDashboard] Starting background generation (fire and forget)');
+      console.log('[useTeamDashboard] Starting background generation for user (fire and forget)');
 
       fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-team-dashboard-v2`,
@@ -263,6 +270,7 @@ export function useTeamDashboard(): UseTeamDashboardReturn {
           },
           body: JSON.stringify({
             team_id: teamId,
+            target_user_id: userId,
             generation_type: 'manual',
             custom_instructions: customInstructions || settings?.custom_instructions || undefined
           })
@@ -282,7 +290,7 @@ export function useTeamDashboard(): UseTeamDashboardReturn {
       setError(err instanceof Error ? err.message : 'Failed to start regeneration');
       setIsRegenerating(false);
     }
-  }, [teamId, canRegenerate, settings?.custom_instructions]);
+  }, [teamId, userId, canRegenerate, settings?.custom_instructions]);
 
   const updateCustomInstructions = useCallback(async (instructions: string | null) => {
     if (!teamId || !isAdmin) return;

@@ -21,7 +21,7 @@ interface TeamDashboardData {
   general_content: Array<{ file_name: string; content: string; category: string; date: string }>;
   team_discussions: Array<{ user_name: string; message: string; date: string }>;
   recent_reports: Array<{ prompt: string; response: string; date: string }>;
-  category_summary: Array<{ category: string; document_count: number; recent_count: number }>;
+  category_summary: Array<{ category: string; document_count: number; recent_count: number; has_access?: boolean }>;
   member_info: {
     total_members: number;
     members: Array<{ name: string; role: string }>;
@@ -32,6 +32,8 @@ interface TeamDashboardData {
     alignment_metrics?: any;
     health_overview?: any;
   };
+  accessible_categories?: string[];
+  target_user_id?: string;
   generated_at: string;
 }
 
@@ -220,7 +222,7 @@ Deno.serve(async (req: Request) => {
       .select('team_id')
       .eq('is_enabled', true)
       .lte('next_generation_at', new Date().toISOString())
-      .limit(20);
+      .limit(10);
 
     if (teamsError) {
       console.error('Error fetching due teams:', teamsError);
@@ -240,52 +242,87 @@ Deno.serve(async (req: Request) => {
 
     console.log(`Processing ${dueTeams.length} teams for dashboard generation`);
 
-    const results: Array<{ team_id: string; success: boolean; error?: string }> = [];
+    const results: Array<{ team_id: string; user_id: string | null; success: boolean; error?: string }> = [];
 
     for (const team of dueTeams) {
       try {
         console.log(`Processing team ${team.team_id}`);
 
-        const { data: dashboardData, error: dataError } = await supabase.rpc('get_team_dashboard_data', {
-          p_team_id: team.team_id
-        });
+        const { data: teamUsers, error: usersError } = await supabase
+          .from('users')
+          .select('id, email, name')
+          .eq('team_id', team.team_id);
 
-        if (dataError) {
-          console.error(`Error getting data for team ${team.team_id}:`, dataError);
-          results.push({ team_id: team.team_id, success: false, error: 'Failed to get data' });
+        if (usersError) {
+          console.error(`Error fetching users for team ${team.team_id}:`, usersError);
+          results.push({ team_id: team.team_id, user_id: null, success: false, error: 'Failed to fetch users' });
           continue;
         }
 
-        const teamData = dashboardData as TeamDashboardData;
-        const analysis = await analyzeTeamData(teamData, geminiApiKey);
+        const users = teamUsers || [];
+        console.log(`Found ${users.length} users in team ${team.team_id}`);
 
-        await supabase
-          .from('team_dashboard_snapshots')
-          .update({ is_current: false })
-          .eq('team_id', team.team_id)
-          .eq('is_current', true);
+        for (const user of users) {
+          try {
+            console.log(`Generating dashboard for user ${user.email} in team ${team.team_id}`);
 
-        const { error: snapshotError } = await supabase
-          .from('team_dashboard_snapshots')
-          .insert({
-            team_id: team.team_id,
-            goals_progress: analysis.goals_progress,
-            alignment_metrics: analysis.alignment_metrics,
-            health_overview: analysis.health_overview,
-            data_sufficiency: analysis.data_sufficiency,
-            source_data_summary: {
-              category_summary: teamData.category_summary,
-              member_info: teamData.member_info
-            },
-            generated_by_user_id: null,
-            generation_type: 'scheduled',
-            is_current: true
-          });
+            const { data: dashboardData, error: dataError } = await supabase.rpc('get_user_dashboard_data', {
+              p_team_id: team.team_id,
+              p_user_id: user.id
+            });
 
-        if (snapshotError) {
-          console.error(`Error saving snapshot for team ${team.team_id}:`, snapshotError);
-          results.push({ team_id: team.team_id, success: false, error: 'Failed to save' });
-          continue;
+            if (dataError) {
+              console.error(`Error getting data for user ${user.id}:`, dataError);
+              results.push({ team_id: team.team_id, user_id: user.id, success: false, error: 'Failed to get data' });
+              continue;
+            }
+
+            const teamData = dashboardData as TeamDashboardData;
+            const accessibleCategories = teamData.accessible_categories || [];
+            console.log(`User ${user.email} has access to ${accessibleCategories.length} categories`);
+
+            const analysis = await analyzeTeamData(teamData, geminiApiKey);
+
+            await supabase
+              .from('team_dashboard_snapshots')
+              .update({ is_current: false })
+              .eq('team_id', team.team_id)
+              .eq('target_user_id', user.id)
+              .eq('is_current', true);
+
+            const { error: snapshotError } = await supabase
+              .from('team_dashboard_snapshots')
+              .insert({
+                team_id: team.team_id,
+                target_user_id: user.id,
+                goals_progress: analysis.goals_progress,
+                alignment_metrics: analysis.alignment_metrics,
+                health_overview: analysis.health_overview,
+                data_sufficiency: analysis.data_sufficiency,
+                source_data_summary: {
+                  category_summary: teamData.category_summary,
+                  member_info: teamData.member_info,
+                  accessible_categories: accessibleCategories
+                },
+                generated_by_user_id: null,
+                generation_type: 'scheduled',
+                is_current: true
+              });
+
+            if (snapshotError) {
+              console.error(`Error saving snapshot for user ${user.id}:`, snapshotError);
+              results.push({ team_id: team.team_id, user_id: user.id, success: false, error: 'Failed to save' });
+              continue;
+            }
+
+            results.push({ team_id: team.team_id, user_id: user.id, success: true });
+            console.log(`Successfully generated dashboard for user ${user.email}`);
+
+            await sleep(30000);
+          } catch (userErr) {
+            console.error(`Error processing user ${user.id}:`, userErr);
+            results.push({ team_id: team.team_id, user_id: user.id, success: false, error: userErr instanceof Error ? userErr.message : 'Unknown error' });
+          }
         }
 
         const tomorrow = new Date();
@@ -301,18 +338,17 @@ Deno.serve(async (req: Request) => {
           })
           .eq('team_id', team.team_id);
 
-        results.push({ team_id: team.team_id, success: true });
-        console.log(`Successfully generated dashboard for team ${team.team_id}`);
+        console.log(`Completed all users for team ${team.team_id}`);
 
-        await sleep(5000);
+        await sleep(2000);
       } catch (err) {
         console.error(`Error processing team ${team.team_id}:`, err);
-        results.push({ team_id: team.team_id, success: false, error: err instanceof Error ? err.message : 'Unknown error' });
+        results.push({ team_id: team.team_id, user_id: null, success: false, error: err instanceof Error ? err.message : 'Unknown error' });
       }
     }
 
     const successCount = results.filter(r => r.success).length;
-    console.log(`Batch complete. ${successCount}/${results.length} teams processed successfully.`);
+    console.log(`Batch complete. ${successCount}/${results.length} user dashboards processed successfully.`);
 
     return new Response(
       JSON.stringify({
